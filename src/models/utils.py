@@ -1,8 +1,31 @@
 import numpy as np
 import os
 import json
+import keras
 
 
+def masked_categorical_crossentropy(y_true, y_pred):
+    # find out which timesteps in `y_true` are not the padding character '#'
+    mv = np.array([0] * 74)
+    mv[4] = 1
+    mask = keras.ops.equal(y_true, mv)
+    mask = 1 - keras.ops.cast(mask, "float32")
+
+    # multiply categorical_crossentropy with the mask
+    loss = keras.losses.categorical_crossentropy(y_true, y_pred) * mask
+
+    # take average w.r.t. the number of unmasked entries
+    return keras.ops.sum(loss) / keras.ops.sum(mask)
+def custom_loss(y_true, y_pred):
+
+    #find which values in yTrue (target) are the mask value
+
+    print(y_true)
+    #isMask = keras.ops.equal(yTrue, mv) #true for all mask values
+    indices = keras.ops.where(y_true == mv)
+    mask = keras.ops.take_along_axis(y_true, indices)
+    print(mask)
+    return keras.losses.categorical_crossentropy(y_true, y_pred)
 def pad(size, array_list):
     padded_arrays = []
     target_shape = (size, size)
@@ -70,43 +93,31 @@ def load_data(json_dir, solver_dir, max_examples = 20):
     print(train.shape)
     return train, test, solver_list
 
-def decode_sequence(images, encoder_model, decoder_model,
-                    num_decoder_tokens,
-                    target_token_index,
-                    reverse_target_char_index,
-                    max_decoder_seq_length):
-    # Encode the input as state vectors.
-    states_value = encoder_model.predict(images)
 
-    # Generate empty target sequence of length 1.
-    target_seq = np.zeros((1, 1, num_decoder_tokens))
-    # Populate the first character of target sequence with the start character.
-    target_seq[0, 0, target_token_index['\t']] = 1.
+def generate_text(model, images, start_token, max_len=20):
+    # Initialize the input sequence with the start token
+    input_seq = np.array([[start_token]])
 
-    # Sampling loop for a batch of sequences
-    # (to simplify, here we assume a batch of size 1).
-    stop_condition = False
-    decoded_sentence = ''
-    while not stop_condition:
-        output_tokens, h, c = decoder_model.predict(
-            [target_seq] + states_value)
+    # Loop to generate each token
+    for _ in range(max_len - 1):
+        # Predict the next token
+        predictions = model.predict(images + [input_seq], verbose=0)
 
-        # Sample a token
-        sampled_token_index = np.argmax(output_tokens[0, -1, :])
-        sampled_char = reverse_target_char_index[sampled_token_index]
-        decoded_sentence += sampled_char
+        # Get the token with the highest probability
+        next_token = np.argmax(predictions[0, -1, :])
 
-        # Exit condition: either hit max length
-        # or find stop character.
-        if (sampled_char == '\n' or
-           len(decoded_sentence) > max_decoder_seq_length):
-            stop_condition = True
+        # Append the predicted token to the input sequence
+        input_seq = np.append(input_seq, [[next_token]], axis=1)
 
-        # Update the target sequence (of length 1).
-        target_seq = np.zeros((1, 1, num_decoder_tokens))
-        target_seq[0, 0, sampled_token_index] = 1.
+        # If the predicted token is the end token, break the loop
+        if next_token == 0:  # Assuming '0' is the end token
+            break
 
-        # Update states
-        states_value = [h, c]
+    return input_seq[0]
 
-    return decoded_sentence
+
+# # Example usage
+# start_token = 1  # Assuming '1' is the start token
+# generated_sequence = generate_text(model, [images[i][:1] for i in range(6)], start_token)
+# print("Generated sequence:", generated_sequence)
+

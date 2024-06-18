@@ -42,11 +42,11 @@ class CharacterTokenizer(PreTrainedTokenizer):
         mask_token = AddedToken("[MASK]", lstrip=True, rstrip=False)
 
         self._vocab_str_to_int = {
-            "[CLS]": 0,
+            "[CLS]": 4,
             "[SEP]": 1,
             "[BOS]": 2,
             "[MASK]": 3,
-            "[PAD]": 4,
+            "[PAD]": 0,
             "[RESERVED]": 5,
             "[UNK]": 6,
             **{ch: i + 7 for i, ch in enumerate(characters)},
