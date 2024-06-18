@@ -5,8 +5,8 @@ import json
 
 from random import seed as set_seed
 
-import dsl
-from dsl import *
+import dsls
+from dsls import *
 
 import utils
 from utils import *

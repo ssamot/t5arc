@@ -26,12 +26,15 @@ endif
 
 
 train_full:
-	#$(PYTHON_INTERPRETER) src/models/train_model.py data/processed models/ google/flan-t5-small False
-	CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=4 src/models/train_model.py data/processed models/ google/flan-t5-small False
+	KERAS_BACKEND="jax" $(PYTHON_INTERPRETER) src/models/train_model.py data/raw/arc_original/training data/processed/train models/ False
+	#CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=4 src/models/train_model.py data/processed models/ False
 
 
 predict:
 	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/predict_model.py data/processed/ models/full_data_model.hf data/processed/eval/spider dev
+
+create_solver_files:
+	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_solver_files.py data/raw/solvers.py data/processed/train
 
 
 

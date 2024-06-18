@@ -1,191 +1,142 @@
-from transformers import T5Tokenizer, T5ForConditionalGeneration, AutoConfig
-from transformers import TrainingArguments, Trainer
-import torch
+import keras
 import click
-import pandas as pd
-import glob
 import os
 import logging
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
+import json
 import secrets
-
-class NLP2SQL(torch.utils.data.Dataset):
-    def __init__(self, input_ids, attention_masks, target_ids):
-        self.input_ids = input_ids
-        self.attention_masks = attention_masks
-        self.target_ids = target_ids
-        print(input_ids.shape, target_ids.shape)
-        #exit()
-
-    def to_cuda(self):
-        self.input_ids.to("cuda")
-        self.attention_masks.to("cuda")
-        self.target_ids.to("cuda")
-
-    def __len__(self):
-        return len(self.input_ids)
-
-    def __getitem__(self, idx):
-        input_ids = self.input_ids[idx]
-        attention_mask = self.attention_masks[idx]
-        target_ids = self.target_ids[idx]
-
-        return {
-            'input_ids': input_ids,
-            'attention_mask': attention_mask,
-            'labels': target_ids,
-        }
-
-def load_data(input_filepath, type,tokenizer, bootstrap ):
-
-    pickle_files = glob.glob(os.path.join(os.path.join(input_filepath, type), "*.pkl"))
+from tokenizer import CharacterTokenizer
+import numpy as np
+from utils import load_data
+import string
 
 
+def build_model(input_shape, num_decoder_tokens, latent_dim):
 
-    dfs = []
-    # Loop through the pickle files
-    for file_path in pickle_files:
-        # Load the DataFrame from the pickle file
-        df = pd.read_pickle(file_path)
-        logging.info(f"Read data file {file_path} with {len(df)} data points")
-        dfs.append(df)
-    # Merge the loaded DataFrame into the main merged DataFrame
-    train_merged_df = pd.concat(dfs, ignore_index=True)
+    conv_input = keras.layers.Input(shape=input_shape)
+    x = keras.layers.Conv2D(4, (1, 1), activation='relu', padding='same')(conv_input)
+    x = keras.layers.Conv2D(32, input_shape[1:], activation='relu', padding='same')(x)
+    x = keras.layers.Flatten()(x)
+    conv_model = keras.models.Model(conv_input, x)
 
-    # random sample
-    if(bootstrap):
-        logging.info("Bootstrapping..")
-        train_merged_df = train_merged_df.sample(frac=1, replace=True)
+    # Inputs
+    encoder_inputs = [keras.layers.Input(shape=input_shape) for _ in range(20)]
+    # Apply the convolutional base to each input
+    conv_outputs = [conv_model(img_input) for img_input in encoder_inputs]
 
-    logging.info(f"Read {type} data")
+    differences = []
+    for i in range(1, len(conv_outputs), 2):
+        differences.append(keras.layers.subtract([conv_outputs[i], conv_outputs[i - 1]]))
 
-    # the following 2 hyperparameters are task-specific
-
-    encoding = tokenizer(
-        train_merged_df['nl_inputs'].tolist(),
-        padding="longest",
-        truncation=False,
-        return_tensors="pt",
-    )
-
-    input_ids, attention_mask = encoding.input_ids, encoding.attention_mask
-
-    # encode the targets
-    #print(train_merged_df['queries'].tolist())
-    target_encoding = tokenizer(
-        train_merged_df['queries'].tolist(),
-        padding="longest",
-        truncation=False,
-        return_tensors="pt",
-    )
-    labels = target_encoding.input_ids
-    #print(encoding.input_ids.shape)
-    #print(target_encoding.input_ids.shape)
-
-    # replace padding token id's of the labels by -100 so it's ignored by the loss
-    labels[labels == tokenizer.pad_token_id] = -100
+    encoder_states = keras.layers.add(conv_outputs)
+    encoder_states = keras.layers.Dense(latent_dim, activation="relu")(encoder_states)
+    #encoder_states = keras.ops.expand_dims(encoder_states, 1)
 
 
-    #target_encoding.to('cuda')
-    #encoding.to('cuda')
+    # Set up the decoder, using `encoder_states` as initial state.
+    decoder_inputs = keras.layers.Input(shape=(None, num_decoder_tokens))
+    # We set up our decoder to return full output sequences,
+    # and to return internal states as well. We don't use the
+    # return states in the training model, but we will use them in inference.
+    mask = keras.layers.Masking(mask_value=4.)
+
+    decoder_lstm = keras.layers.LSTM(latent_dim, return_sequences=True, return_state=True)
+    decoder_outputs, _, _ = decoder_lstm(mask(decoder_inputs),
+                                         initial_state=[encoder_states, encoder_states])
+    decoder_dense = keras.layers.Dense(num_decoder_tokens, activation='softmax')
+    decoder_outputs = decoder_dense(decoder_outputs)
+
+    encoder_model = keras.models.Model(encoder_inputs, encoder_states)
+
+    model = keras.models.Model(encoder_inputs +  [decoder_inputs], decoder_outputs)
+
+    decoder_state_input_h = keras.layers.Input(shape=(latent_dim,))
+    decoder_state_input_c = keras.layers.Input(shape=(latent_dim,))
+    decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
+    decoder_outputs, state_h, state_c = decoder_lstm(
+        decoder_inputs, initial_state=decoder_states_inputs)
+    decoder_states = [state_h, state_c]
+    decoder_outputs = decoder_dense(decoder_outputs)
+    decoder_model = keras.models.Model(
+        [decoder_inputs] + decoder_states_inputs,
+        [decoder_outputs] + decoder_states)
+    model.compile(optimizer='adamw', loss='categorical_crossentropy')
+
+    #encoder_model.compile()
 
 
-    return NLP2SQL(input_ids=input_ids, attention_masks=attention_mask, target_ids=labels),train_merged_df
-
+    return model, encoder_model, decoder_model
 
 
 @click.command()
-@click.argument('input_filepath', type=click.Path(exists=True))
+@click.argument('json_files', type=click.Path(exists=True))
+@click.argument('programme_files', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
-@click.argument('pretrained', type=click.STRING)
 @click.argument('bootstrap', type=click.BOOL)
-def main(input_filepath, output_filepath,pretrained, bootstrap):
+def main(json_files, programme_files, output_filepath, bootstrap):
+    #build_model()
+    # Initialize a list to store the contents of the JSON files
+    train_data, test_data, solvers = load_data(json_files,programme_files)
+    chars = set("".join(solvers))  # This is character vocab
 
-    bootstrap = bool(bootstrap)
+    #print(chars)
+    #exit()
+    num_decoder_tokens = len(chars) + 10
 
-    configuration = AutoConfig.from_pretrained(pretrained)
-    #configuration.dropout_rate = 0.2
-
-    training_args = TrainingArguments(output_dir="test_trainer",
-                                      evaluation_strategy="epoch",
-                                      optim="adamw_torch",
-                                      per_device_train_batch_size=2,
-                                      per_device_eval_batch_size=8,
-                                      # gradient_checkpointing = True,
-                                      gradient_accumulation_steps=3,
-                                      torch_compile=True,
-
-                                      logging_dir=f"./logs",
-                                      logging_strategy="steps",
-                                      logging_steps=200,
-                                      report_to="tensorboard",
-
-                                      # fp16 = True
-                                      )
-
-    training_args.set_lr_scheduler("constant", num_epochs=10)
-    training_args.set_optimizer("adamw_torch", learning_rate=0.0001,
-                                weight_decay=0.001)
-
-
-    #training_args.set_optimizer("adamw_torch", weight_decay=0.01, learning_rate=0.0001)
-    #training_args.set_lr_scheduler("constant")
-
-    new_words = ['<', '<=']
-
-
-    tokenizer = T5Tokenizer.from_pretrained(pretrained, legacy=False)
-    model = T5ForConditionalGeneration.from_pretrained(pretrained, config = configuration)
-
-    tokenizer.add_tokens(new_words)
-    model.resize_token_embeddings(len(tokenizer))
-
-
-    # Get the vocabulary and find tokens mapped to <unk>
-
-
-    #model.to('cuda')
+    print("num_decoder_tokens", num_decoder_tokens)
+    model, encoder_model, decoder_model = build_model((1, 32,32), num_decoder_tokens, 256)
 
 
 
-    train_data = load_data(input_filepath, "train",tokenizer, bootstrap)[0]
-    dev_data = load_data(input_filepath, "dev",tokenizer, False)[0]
+    model_max_length = 20000
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_data,
-        eval_dataset=dev_data,
-
-        # compute_metrics=compute_metrics,
+    tokenizer = CharacterTokenizer(chars, model_max_length)
+    encoding = tokenizer(
+        solvers,
+        padding="longest",
+        truncation=False,
+        return_tensors="np",
     )
 
-    trainer.train()
+    inputs = [c for c in train_data]
+    labels = encoding.input_ids
+    print(labels.shape)
 
-    model.to('cuda')
-    train_data.to_cuda()
-    dev_data.to_cuda()
+    # Create an empty array for the one-hot encoded data
+    one_hot_encoded = np.zeros((labels.shape[0], labels.shape[1], num_decoder_tokens))
 
-    if(bootstrap):
-        model_id = secrets.token_hex(nbytes=16)
-    else:
-        model_id = "full_data_model"
-    model_id = model_id + ".hf"
-    tokenizer.save_pretrained(os.path.join(output_filepath, model_id))
-    model.save_pretrained(os.path.join(output_filepath, model_id))
+    # Perform one-hot encoding
+    rows = np.arange(labels.shape[0])[:, None]
+    cols = np.arange(labels.shape[1])
+    one_hot_encoded[rows, cols, labels] = 1
 
+    #print(one_hot_encoded.shape)
+    #exit()
+
+
+    decoder_input_data = np.zeros((labels.shape[0], 1, num_decoder_tokens))
+    decoder_input_data[:, 0, 0] = 1.
+
+    print(decoder_input_data.shape)
+    (model.summary())
+
+
+    model.fit(inputs + [decoder_input_data], one_hot_encoded[:, :1, :],
+              batch_size=32,
+              epochs=32,
+              validation_split=0.2)
 
 
 if __name__ == '__main__':
-    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
+        log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        logging.basicConfig(level=logging.INFO, format=log_fmt)
 
-    # not used in this stub but often useful for finding various files
-    project_dir = Path(__file__).resolve().parents[2]
+        # not used in this stub but often useful for finding various files
+        project_dir = Path(__file__).resolve().parents[2]
 
-    # find .env automagically by walking up directories until it's found, then
-    # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
+        # find .env automagically by walking up directories until it's found, then
+        # load up the .env entries as environment variables
+        load_dotenv(find_dotenv())
 
-    main()
+        main()
