@@ -14,6 +14,8 @@ eval_solutions_path = join(raw_data_path, 'arc-agi_evaluation_solutions.json')
 test_path = join(raw_data_path, 'arc-agi_test_challenges.json')
 sample_path = join(raw_data_path, 'sample_submission.json')
 
+names: list
+
 
 def from_json(data_type='train'):
     """
@@ -21,6 +23,8 @@ def from_json(data_type='train'):
     :param data_type: str => 'train' OR 'eval' OR 'test'
     :return: names of set, input images of set, (output images of set)
     """
+    global names
+
     if data_type == 'train':
         challenges_path = train_challenges_path
         solutions_path = train_solutions_path
@@ -33,6 +37,9 @@ def from_json(data_type='train'):
         # Load challenges and solutions
     with open(challenges_path, 'r') as f:
         challenges_names = list(json.load(f).keys())
+
+    names = challenges_names
+
     if data_type != 'test':
         with open(solutions_path, 'r') as f:
             solutions_names = list(json.load(f).keys())
@@ -54,3 +61,10 @@ def from_json(data_type='train'):
         return challenges_names, challenges_tasks
 
 
+def get_index_from_name(name):
+    result = [i for i, j in enumerate(names) if j == name]
+    return result[0]
+
+
+def get_name_from_index(index):
+    return names[index]
