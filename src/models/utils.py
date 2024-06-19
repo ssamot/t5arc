@@ -130,7 +130,7 @@ def load_data(json_dir, solver_dir, max_examples = 20):
     return train, test, solver_list
 
 
-def generate_text(model, images, start_token, max_len=20):
+def generate_text(model, images, start_token = 4, max_len=20):
     # Initialize the input sequence with the start token
     input_seq = np.array([[start_token]])
 
@@ -146,7 +146,7 @@ def generate_text(model, images, start_token, max_len=20):
         input_seq = np.append(input_seq, [[next_token]], axis=1)
 
         # If the predicted token is the end token, break the loop
-        if next_token == 0:  # Assuming '0' is the end token
+        if next_token == 1:  # Assuming '0' is the end token
             break
 
     return input_seq[0]

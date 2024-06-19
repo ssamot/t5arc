@@ -80,8 +80,10 @@ def main(data_file, output_filepath, bootstrap):
     inputs = [c for c in inputs]
     model = build_model((32, 32,1), int(num_decoder_tokens), 32)
 
+    model.summary()
 
-    model.fit(inputs + [targets_inputs], targets_one_hot_encoded, epochs=10, batch_size=32)
+
+    model.fit(inputs + [targets_inputs], targets_one_hot_encoded, epochs=30, batch_size=32)
 
 
 if __name__ == '__main__':

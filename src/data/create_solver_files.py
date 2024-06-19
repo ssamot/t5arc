@@ -7,6 +7,21 @@ from pathlib import Path
 import ast
 
 
+def cleanup(input_string):
+    # Split the string into lines
+    lines = input_string.split('\n')
+
+    # Remove the first line
+    lines = lines[1:]
+
+    # Remove leading whitespace (spaces and tabs) from each line
+    lines = [line.lstrip() for line in lines]
+
+    # Join the lines back into a single string
+    result_string = '\n'.join(lines)
+
+    return result_string
+
 
 @click.command()
 @click.argument('input_file', type=click.Path(exists=True))
@@ -43,7 +58,12 @@ def main(input_file, output_directory):
     extractor.visit(tree)
 
     # Write each function to a separate file
+
+
     for function_signature, function_body in extractor.functions:
+        function_body = cleanup(function_body)
+        #print(function_body)
+        #exit()
         output_file_path = os.path.join(output_directory, f'{function_signature}.py')
         with open(output_file_path, 'w') as output_file:
             output_file.write(function_body)

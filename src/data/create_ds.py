@@ -51,6 +51,9 @@ def main(json_files, programme_files, output_filepath, max_token_length, repetit
     inputs = [c for c in np.transpose(train_data[indices], (1, 0, 2, 3, 4))]
 
     encoded_solutions = tokenized_inputs.input_ids
+    #print(encoded_solutions[0])
+    #print(tokenizer.decode(encoded_solutions[0], skip_special_tokens=True))
+    #exit()
 
     # Create an empty array for the one-hot encoded data
     one_hot_encoded = np.zeros(
