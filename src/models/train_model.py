@@ -9,12 +9,13 @@ import secrets
 from tokenizer import CharacterTokenizer
 import numpy as np
 from utils import load_data, masked_categorical_crossentropy
-
+import keras_nlp
 
 def build_model(input_shape, num_decoder_tokens, latent_dim):
     conv_input = keras.layers.Input(shape=input_shape)
-    x = keras.layers.Conv2D(4, (1, 1), activation='relu', padding='same')(conv_input)
-    x = keras.layers.Conv2D(32, input_shape[1:], activation='relu', padding='same')(x)
+    print(input_shape[:-1])
+    x = keras.layers.Conv2D(4, (1, 1), activation='relu', padding='valid')(conv_input)
+    x = keras.layers.Conv2D(4, input_shape[:-1], activation='relu', padding='valid')(x)
     x = keras.layers.Flatten()(x)
     conv_model = keras.models.Model(conv_input, x)
 
@@ -25,20 +26,27 @@ def build_model(input_shape, num_decoder_tokens, latent_dim):
 
     differences = []
     for i in range(1, len(conv_outputs), 2):
-        differences.append(keras.layers.subtract([conv_outputs[i], conv_outputs[i - 1]]))
+        diff = keras.layers.subtract([conv_outputs[i], conv_outputs[i - 1]])
+        print(diff.shape)
+        differences.append(diff)
+    #exit()
 
-    encoder_states = keras.layers.add(conv_outputs)
+    encoder_states = keras.layers.add(differences)
+
     encoder_states = keras.layers.Dense(latent_dim, activation="relu")(encoder_states)
-    # encoder_states = keras.ops.expand_dims(encoder_states, 1)
+    encoder_states = keras.ops.expand_dims(encoder_states, 1)
 
     decoder_inputs = keras.layers.Input(shape=(None,))  # (batch_size, sequence_length)
     dec_embedding = keras.layers.Embedding(input_dim=num_decoder_tokens, output_dim=latent_dim, mask_zero=True)(
         decoder_inputs)
 
-    lstm_out = dec_embedding
 
-    lstm_out = keras.layers.LSTM(latent_dim, return_sequences=True)(lstm_out,
-                                                                    initial_state=[encoder_states, encoder_states])
+    lstm_out = keras_nlp.layers.TransformerDecoder(
+        intermediate_dim=latent_dim, num_heads=8)(dec_embedding,encoder_states)
+
+    # lstm_out = keras.layers.LSTM(latent_dim, return_sequences=True)(dec_embedding,
+    #                                                                 initial_state=[encoder_states, encoder_states])
+
 
     decoder_outputs = keras.layers.TimeDistributed(keras.layers.Dense(num_decoder_tokens, activation='softmax'))(
         lstm_out)
@@ -54,63 +62,26 @@ def build_model(input_shape, num_decoder_tokens, latent_dim):
 
 
 @click.command()
-@click.argument('json_files', type=click.Path(exists=True))
-@click.argument('programme_files', type=click.Path(exists=True))
+@click.argument('data_file', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
 @click.argument('bootstrap', type=click.BOOL)
-def main(json_files, programme_files, output_filepath, bootstrap):
-    # build_model()
-    # Initialize a list to store the contents of the JSON files
-    train_data, test_data, solvers = load_data(json_files, programme_files)
-    chars = set("".join(solvers))  # This is character vocab
+def main(data_file, output_filepath, bootstrap):
+    x = np.load(data_file, allow_pickle=True)
 
-    x = 65
-    indices = [i for i, sublist in enumerate(solvers) if len(sublist) < x]
-    solvers = [sublist for sublist in  solvers if len(sublist) < x]
-    print(indices)
-    #exit()
+    inputs = x["inputs"]
+    targets_inputs = x["targets_inputs"]
+    targets_one_hot_encoded = x["targets_one_hot_encoded"]
+    test_data = x["test_data"]
+    chars = x["chars"]
+    max_token_length = x["max_token_length"]
+    num_decoder_tokens = x["num_decoder_tokens"]
+    print(num_decoder_tokens)
 
-    # print(chars)
-    # exit()
-    num_decoder_tokens = len(chars) + 10
+    inputs = [c for c in inputs]
+    model = build_model((32, 32,1), int(num_decoder_tokens), 32)
 
-    print("num_decoder_tokens", num_decoder_tokens)
-    model = build_model((1, 32, 32), num_decoder_tokens, 256)
 
-    model_max_length = 2000000
-
-    tokenizer = CharacterTokenizer(chars, model_max_length)
-    encoding = tokenizer(
-        solvers,
-        padding="longest",
-        truncation=True,
-        return_tensors="np",
-    )
-
-    inputs = [c[indices] for c in train_data]
-    print(encoding.input_ids.shape)
-    # print(list(encoding.input_ids[0]))
-
-    texts = encoding.input_ids
-
-    # Create an empty array for the one-hot encoded data
-    one_hot_encoded = np.zeros((encoding.input_ids.shape[0], encoding.input_ids.shape[1], num_decoder_tokens))
-    rows = np.arange(encoding.input_ids.shape[0])[:, None]
-    cols = np.arange(encoding.input_ids.shape[1])
-    one_hot_encoded[rows, cols, encoding.input_ids] = 1
-
-    # print(one_hot_encoded.shape)
-    # exit()
-
-    target_texts = np.zeros_like(texts)
-    target_texts[:, :-1] = texts[:, 1:]
-
-    # print(decoder_input_data.shape)
-    (model.summary())
-
-    print("Train shape", one_hot_encoded.shape)
-
-    model.fit(inputs + [texts[:, :-1]], one_hot_encoded[:, 1:, :], epochs=10, batch_size=32)
+    model.fit(inputs + [targets_inputs], targets_one_hot_encoded, epochs=10, batch_size=32)
 
 
 if __name__ == '__main__':

@@ -26,8 +26,10 @@ endif
 
 
 train_full:
-	KERAS_BACKEND="jax" $(PYTHON_INTERPRETER) src/models/train_model.py data/raw/arc_original/training data/processed/train models/ False
+	KERAS_BACKEND="jax" $(PYTHON_INTERPRETER) src/models/train_model.py data/processed/train.npz models/ False
 	#CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=4 src/models/train_model.py data/processed models/ False
+data:
+	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/raw/arc_original/training data/processed/train data/processed/train.npz 100 30
 
 
 predict:

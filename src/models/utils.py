@@ -45,6 +45,40 @@ def pad(size, array_list):
     return padded_arrays
 
 
+import numpy as np
+
+
+def pad_array_with_random_position(small_array, m):
+    """
+    Embeds a small array of any shape into an mxm array at a random position.
+
+    Parameters:
+    small_array (numpy array): The small array to be embedded.
+    m (int): The size of the larger mxm array.
+
+    Returns:
+    numpy array: The mxm array with the small array embedded at a random position.
+    """
+    small_shape = small_array.shape
+    if any(dim > m for dim in small_shape):
+        raise ValueError("The larger array must be at least as large as the dimensions of the small array.")
+
+    # Create the larger mxm array filled with zeros (or any other background value)
+    large_array = np.zeros((m, m))
+
+    # Determine the random position for the top-left corner of the small array
+    max_row_position = m - small_shape[0]
+    max_col_position = m - small_shape[1]
+    random_row = np.random.randint(0, max_row_position + 1)
+    random_col = np.random.randint(0, max_col_position + 1)
+
+    # Place the small array into the random position in the mxm array
+    large_array[random_row:random_row + small_shape[0], random_col:random_col + small_shape[1]] = small_array
+
+    return large_array
+
+
+
 def load_data(json_dir, solver_dir, max_examples = 20):
     json_data_list = []
     solver_list = []
@@ -82,15 +116,17 @@ def load_data(json_dir, solver_dir, max_examples = 20):
         train[i] = [np.array(e) for e in train[i]]
         # print(train[i])
         # exit([e.shape for e in train[i]])
-        train[i] = pad(32, train[i])
+        #train[i] = pad(32, train[i])
+
+        train[i] = [pad_array_with_random_position(e, 32) for e in train[i]]
         test[i] = dict(data["test"])
         # print(train[i])
 
     train = np.array(train)
     train = train[:,:,np.newaxis,:, :]
-    train = np.transpose(train, (1,0,2,3,4))
+    train = np.transpose(train, (0,1, 3,4,2))
 
-    print(train.shape)
+    #print(train.shape)
     return train, test, solver_list
 
 
