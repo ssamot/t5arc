@@ -13,9 +13,9 @@ import keras_nlp
 
 def build_model(input_shape, num_decoder_tokens, latent_dim):
     conv_input = keras.layers.Input(shape=input_shape)
-    print(input_shape[:-1])
-    x = keras.layers.Conv2D(4, (1, 1), activation='relu', padding='valid')(conv_input)
-    x = keras.layers.Conv2D(4, input_shape[:-1], activation='relu', padding='valid')(x)
+    #print(input_shape[:-1])
+    x = keras.layers.Conv2D(8, (1, 1), activation='relu', padding='valid')(conv_input)
+    x = keras.layers.Conv2D(32, input_shape[:-1], activation='relu', padding='valid')(x)
     x = keras.layers.Flatten()(x)
     conv_model = keras.models.Model(conv_input, x)
 
@@ -27,7 +27,7 @@ def build_model(input_shape, num_decoder_tokens, latent_dim):
     differences = []
     for i in range(1, len(conv_outputs), 2):
         diff = keras.layers.subtract([conv_outputs[i], conv_outputs[i - 1]])
-        print(diff.shape)
+        #print(diff.shape)
         differences.append(diff)
     #exit()
 
@@ -69,6 +69,8 @@ def main(data_file, output_filepath, bootstrap):
     x = np.load(data_file, allow_pickle=True)
 
     inputs = x["inputs"]
+    print(inputs.shape)
+
     targets_inputs = x["targets_inputs"]
     targets_one_hot_encoded = x["targets_one_hot_encoded"]
     test_data = x["test_data"]
@@ -78,12 +80,12 @@ def main(data_file, output_filepath, bootstrap):
     print(num_decoder_tokens)
 
     inputs = [c for c in inputs]
-    model = build_model((32, 32,1), int(num_decoder_tokens), 32)
+    model = build_model((32, 32,1), int(num_decoder_tokens), 128)
 
     model.summary()
 
 
-    model.fit(inputs + [targets_inputs], targets_one_hot_encoded, epochs=30, batch_size=32)
+    model.fit(inputs + [targets_inputs], targets_one_hot_encoded, epochs=10000, batch_size=128)
 
 
 if __name__ == '__main__':

@@ -85,8 +85,9 @@ def load_data(json_dir, solver_dir, max_examples = 20):
 
     # Iterate over each file in the directory
     for filename in os.listdir(json_dir):
-        if filename.endswith('.json'):
+        if filename.endswith('.json') and (not filename.startswith(".")):
             file_path = os.path.join(json_dir, filename)
+            #print(filename)
             solver_file = filename.split(".json")[0] + ".py"
 
 
