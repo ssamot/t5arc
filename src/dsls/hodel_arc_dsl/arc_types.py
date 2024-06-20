@@ -1,12 +1,8 @@
 from typing import (
-    List,
     Union,
     Tuple,
-    Any,
     Container,
-    Callable,
-    FrozenSet,
-    Iterable
+    FrozenSet
 )
 
 Boolean = bool

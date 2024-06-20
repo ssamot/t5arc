@@ -1,4 +1,4 @@
-from dsls import *
+from src.dsls.hodel_arc_dsl.dsl import *
 
 
 A = ((1, 0), (0, 1), (1, 0))

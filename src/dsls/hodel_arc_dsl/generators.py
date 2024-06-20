@@ -1,6 +1,7 @@
-from dsls import *
-from utils import *
 
+
+from src.dsls.hodel_arc_dsl.dsl import *
+from src.dsls.hodel_arc_dsl.utils import *
 
 
 def generate_dbc1a6ce(diff_lb: float, diff_ub: float) -> dict:

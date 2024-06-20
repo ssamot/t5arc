@@ -1,5 +1,6 @@
-from dsls import *
 
+from src.dsls.hodel_arc_dsl.constants import *
+from src.dsls.hodel_arc_dsl.dsl import *
 
 
 def verify_007bbfb7(I: Grid) -> Grid:
