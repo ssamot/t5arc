@@ -4,14 +4,13 @@ import os
 import logging
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
-import json
-import secrets
-from tokenizer import CharacterTokenizer
-import numpy as np
-from data.utils import load_data
+from functools import partial
+from data.utils import load_data_for_generator, pad_array_with_random_position
 import keras_nlp
+from data.generate_data import CanvasDataGenerator
 
-def build_model(input_shape, num_decoder_tokens, latent_dim):
+
+def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     conv_input = keras.layers.Input(shape=input_shape)
     #print(input_shape[:-1])
     x = keras.layers.Conv2D(8, (1, 1), activation='relu', padding='valid')(conv_input)
@@ -20,7 +19,7 @@ def build_model(input_shape, num_decoder_tokens, latent_dim):
     conv_model = keras.models.Model(conv_input, x)
 
     # Inputs
-    encoder_inputs = [keras.layers.Input(shape=input_shape) for _ in range(20)]
+    encoder_inputs = [keras.layers.Input(shape=input_shape) for _ in range(max_num)]
     # Apply the convolutional base to each input
     conv_outputs = [conv_model(img_input) for img_input in encoder_inputs]
 
@@ -40,17 +39,14 @@ def build_model(input_shape, num_decoder_tokens, latent_dim):
     dec_embedding = keras.layers.Embedding(input_dim=num_decoder_tokens, output_dim=latent_dim, mask_zero=True)(
         decoder_inputs)
 
-
     lstm_out = keras_nlp.layers.TransformerDecoder(
-        intermediate_dim=latent_dim, num_heads=8)(dec_embedding,encoder_states)
+        intermediate_dim=latent_dim, num_heads=8)(dec_embedding, encoder_states)
 
     # lstm_out = keras.layers.LSTM(latent_dim, return_sequences=True)(dec_embedding,
     #                                                                 initial_state=[encoder_states, encoder_states])
 
-
     decoder_outputs = keras.layers.TimeDistributed(keras.layers.Dense(num_decoder_tokens, activation='softmax'))(
         lstm_out)
-
 
     model = keras.models.Model(encoder_inputs + [decoder_inputs], decoder_outputs)
 
@@ -62,30 +58,36 @@ def build_model(input_shape, num_decoder_tokens, latent_dim):
 
 
 @click.command()
-@click.argument('data_file', type=click.Path(exists=True))
+@click.argument('json_files', type=click.Path(exists=True))
+@click.argument('programme_files', type=click.Path(exists=True))
+@click.argument('max_token_length', type=click.INT)
 @click.argument('output_filepath', type=click.Path())
-@click.argument('bootstrap', type=click.BOOL)
-def main(data_file, output_filepath, bootstrap):
-    x = np.load(data_file, allow_pickle=True)
+def main(json_files, programme_files, max_token_length, output_filepath):
+    # build_model()
+    # Initialize a list to store the contents of the JSON files
 
-    inputs = x["inputs"]
-    print(inputs.shape)
+    max_examples = 20
+    train_data, test_data, solvers = load_data_for_generator(json_files,
+                                                             programme_files,
+                                                             max_examples=max_examples)
 
-    targets_inputs = x["targets_inputs"]
-    targets_one_hot_encoded = x["targets_one_hot_encoded"]
-    test_data = x["test_data"]
-    chars = x["chars"]
-    max_token_length = x["max_token_length"]
-    num_decoder_tokens = x["num_decoder_tokens"]
-    print(num_decoder_tokens)
+    max_pad_size = 32
 
-    inputs = [c for c in inputs]
-    model = build_model((32, 32,1), int(num_decoder_tokens), 128)
+    augment_fn = partial(pad_array_with_random_position, m = max_pad_size)
+
+    training_generator = CanvasDataGenerator(train_data,
+                                            solvers,
+                                             32,
+                                             augment_fn,
+                                             shuffle=True,
+                                             max_token_length=max_token_length, use_multiprocessing=True, workers=12)
+
+    num_decoder_tokens = training_generator.num_decoder_tokens
+    model = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens), 128, max_examples)
 
     model.summary()
 
-
-    model.fit(inputs + [targets_inputs], targets_one_hot_encoded, epochs=10000, batch_size=128, validation_split=0.2)
+    model.fit(x=training_generator, epochs=10000)
 
 
 if __name__ == '__main__':

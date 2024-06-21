@@ -25,15 +25,15 @@ endif
 
 
 
-train_full:
-	KERAS_BACKEND="jax" $(PYTHON_INTERPRETER) src/models/train_model.py data/processed/train.npz models/ False
+train:
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model.py data/processed/train.npz models/ False
 #	KERAS_BACKEND="torch" CUDA_VISIBLE_DEVICES=0 torchrun --standalone --nproc_per_node=1 src/models/train_model.py data/processed/train.npz models/ False
 
-train_full_gpu:
-	KERAS_BACKEND="jax" CUDA_VISIBLE_DEVICES=0,1 $(PYTHON_INTERPRETER) src/models/train_model.py data/processed/train.npz models/ False
+train_generator:
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_generator.py data/raw/arc_original/training data/processed/train 300 models/
 
 data:
-	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/raw/arc_original/training data/processed/train data/processed/train.npz 300 60
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/raw/arc_original/training data/processed/train data/processed/train.npz 300 400
 
 
 predict:
