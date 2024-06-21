@@ -2,8 +2,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, Normalize
 
 from random import choice, randint, sample, shuffle, uniform
+from typing import List
 
-from dsls import *
+from src.dsls.hodel_arc_dsl.dsl import *
 
 
 global rng

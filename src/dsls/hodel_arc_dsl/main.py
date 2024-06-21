@@ -5,14 +5,14 @@ import json
 
 from random import seed as set_seed
 
-import dsls
-from dsls import *
+from src.dsls.hodel_arc_dsl.dsl import *
 
 import utils
-from utils import *
+from src.dsls.hodel_arc_dsl.utils import *
+from src.dsls.hodel_arc_dsl.constants import *
 
-import generators
-import verifiers
+import src.dsls.hodel_arc_dsl.generators as generators
+import src.dsls.hodel_arc_dsl.verifiers as verifiers
 
 
 
