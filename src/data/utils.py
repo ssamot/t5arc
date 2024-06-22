@@ -70,8 +70,9 @@ def load_data_for_generator(json_dir, solver_dir, max_examples = 20):
             train[i].append(example["input"])
             train[i].append(example["output"])
 
-        train[i] = train[i] + [[[-1, -1], [-1, -1]] for _ in range(max_examples - len(train[i]))]
-        train[i] = [np.array(e) for e in train[i]]
+        train[i] = [np.array(e) + 1 for e in train[i]]
+        train[i] = train[i] + [[[0, 0], [0, 0]] for _ in range(max_examples - len(train[i]))]
+
         # print(train[i])
         # exit([e.shape for e in train[i]])
         # train[i] = pad(32, train[i])

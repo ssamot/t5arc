@@ -4,7 +4,9 @@ from models.tokenizer import CharacterTokenizer
 
 
 class CanvasDataGenerator(keras.utils.PyDataset):
-    def __init__(self, train_data, target_data,  batch_size, augment_fn, shuffle=True, max_token_length = 300,**kwargs):
+    def __init__(self, train_data, target_data,  batch_size, augment_fn,
+                 shuffle=True, max_token_length = 300, repeats = 1,
+                 **kwargs):
         """
         :param train_data: List of image paths or pre-loaded images.
         :param batch_size: Size of each batch.
@@ -17,10 +19,12 @@ class CanvasDataGenerator(keras.utils.PyDataset):
         self.batch_size = batch_size
         self.augment_fn = augment_fn
         self.shuffle = shuffle
+        self.repeats = repeats
 
         self.chars = set("".join(target_data))
         indices = [i for i, sublist in enumerate(self.target_data) if len(sublist) < max_token_length]
         self.train_data = [self.train_data[i] for i in indices]
+
 
         self.num_decoder_tokens = len(self.chars) + 10
 
@@ -38,7 +42,7 @@ class CanvasDataGenerator(keras.utils.PyDataset):
 
     def __len__(self):
         """Denotes the number of batches per epoch."""
-        return int(np.floor(len(self.train_data) / self.batch_size))
+        return int(np.floor(len(self.indices) / self.batch_size))
 
     def __getitem__(self, index):
         """Generate one batch of data."""
@@ -52,7 +56,9 @@ class CanvasDataGenerator(keras.utils.PyDataset):
 
     def on_epoch_end(self):
         """Updates indices after each epoch."""
-        self.indices = np.arange(len(self.train_data))
+        self.indices = [np.arange(len(self.train_data)) for i in range(self.repeats)]
+        self.indices = np.concatenate(self.indices)
+
         if self.shuffle:
             np.random.shuffle(self.indices)
 
@@ -81,7 +87,7 @@ class CanvasDataGenerator(keras.utils.PyDataset):
         #print(batch_inputs.shape)
         #exit()
 
-        batch_inputs = [b for b in batch_inputs]
+        batch_inputs = [b/20.0 for b in batch_inputs]
 
 
         one_hot_encoded = np.zeros(

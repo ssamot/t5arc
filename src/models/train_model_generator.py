@@ -13,8 +13,15 @@ from data.generate_data import CanvasDataGenerator
 def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     conv_input = keras.layers.Input(shape=input_shape)
     #print(input_shape[:-1])
-    x = keras.layers.Conv2D(8, (1, 1), activation='relu', padding='valid')(conv_input)
-    x = keras.layers.Conv2D(32, input_shape[:-1], activation='relu', padding='valid')(x)
+    x = keras.layers.Conv2D(8, (1, 1), activation='linear', padding='valid')(conv_input)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.Activation("relu")(x)
+    #x = keras.layers.MaxPool2D()(x)
+
+    x = keras.layers.Conv2D(32, input_shape[:-1], activation='linear', padding='valid')(x)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.Activation("relu")(x)
+    #x = keras.layers.MaxPool2D(x)
     x = keras.layers.Flatten()(x)
     conv_model = keras.models.Model(conv_input, x)
 
@@ -77,10 +84,11 @@ def main(json_files, programme_files, max_token_length, output_filepath):
 
     training_generator = CanvasDataGenerator(train_data,
                                             solvers,
-                                             32,
+                                             128,
                                              augment_fn,
                                              shuffle=True,
-                                             max_token_length=max_token_length, use_multiprocessing=True, workers=12)
+                                             max_token_length=max_token_length,
+                                             use_multiprocessing=True, workers=12, repeats=100)
 
     num_decoder_tokens = training_generator.num_decoder_tokens
     model = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens), 128, max_examples)
