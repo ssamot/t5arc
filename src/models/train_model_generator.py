@@ -11,18 +11,47 @@ from data.generate_data import CanvasDataGenerator
 
 
 def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
-    conv_input = keras.layers.Input(shape=input_shape)
-    #print(input_shape[:-1])
-    x = keras.layers.Conv2D(8, (1, 1), activation='linear', padding='valid')(conv_input)
-    x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.Activation("relu")(x)
-    #x = keras.layers.MaxPool2D()(x)
+    total_features = input_shape[0] * input_shape[1] * input_shape[2]
 
-    x = keras.layers.Conv2D(32, input_shape[:-1], activation='linear', padding='valid')(x)
+    conv_input = keras.layers.Input(shape=input_shape)
+    x = conv_input
+    x = keras.layers.Reshape(input_shape, input_shape=total_features)(x)
+    x = keras.layers.Embedding(input_dim=20, output_dim=2, input_length=total_features)(x)
+    x = keras.layers.Flatten()(x)
+
+    n_neurons = 64
+    x = keras.layers.Dense(n_neurons, activation='relu')(x)
     x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.Activation("relu")(x)
+    xs = [x]
+    for i in range(4):
+        # skip connections
+        x_new = keras.layers.Dense(n_neurons, activation='relu')(x)
+        x_new = keras.layers.BatchNormalization()(x_new)
+        xs.append(x_new)
+        x = keras.layers.add(xs)
+
+
+    # #print(input_shape[:-1])
+    # x = keras.layers.Conv2D(4, (1, 1), activation='linear', padding='valid')(conv_input)
+    # x = keras.layers.BatchNormalization()(x)
+    # x = keras.layers.Activation("relu")(x)
+    # print(x.shape)
+    # #x = keras.layers.MaxPool2D()(x)
+    # # x = conv_input
+    # x = keras.layers.Conv2D(8, (2, 2), activation='linear', padding='valid')(x)
+    # x = keras.layers.BatchNormalization()(x)
+    # x = keras.layers.Activation("relu")(x)
+    # print(x.shape)
+    #
+    # x = keras.layers.Conv2D(8, (4, 4), activation='linear', padding='valid')(x)
+    # x = keras.layers.BatchNormalization()(x)
+    # x = keras.layers.Activation("relu")(x)
+    # print(x.shape)
+    #exit()
+
     #x = keras.layers.MaxPool2D(x)
     x = keras.layers.Flatten()(x)
+#    print(x.shape)
     conv_model = keras.models.Model(conv_input, x)
 
     # Inputs
@@ -38,6 +67,7 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     #exit()
 
     encoder_states = keras.layers.add(differences)
+    print(encoder_states.shape)
 
     encoder_states = keras.layers.Dense(latent_dim, activation="relu")(encoder_states)
     encoder_states = keras.ops.expand_dims(encoder_states, 1)
@@ -56,8 +86,8 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
         lstm_out)
 
     model = keras.models.Model(encoder_inputs + [decoder_inputs], decoder_outputs)
-
-    model.compile(optimizer='adamw', loss="categorical_crossentropy", metrics=["accuracy"])
+    optimizer = keras.optimizers.AdamW(learning_rate=0.001)
+    model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
 
     # encoder_model.compile()
 
@@ -91,7 +121,7 @@ def main(json_files, programme_files, max_token_length, output_filepath):
                                              use_multiprocessing=True, workers=12, repeats=100)
 
     num_decoder_tokens = training_generator.num_decoder_tokens
-    model = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens), 128, max_examples)
+    model = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens), 64, max_examples)
 
     model.summary()
 

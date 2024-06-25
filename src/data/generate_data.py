@@ -87,7 +87,10 @@ class CanvasDataGenerator(keras.utils.PyDataset):
         #print(batch_inputs.shape)
         #exit()
 
-        batch_inputs = [b/20.0 for b in batch_inputs]
+        batch_inputs = [np.array(b, dtype="int") for b in batch_inputs]
+        # for b in batch_inputs:
+        #     print(np.max(b), np.min(b))
+        # exit()
 
 
         one_hot_encoded = np.zeros(
