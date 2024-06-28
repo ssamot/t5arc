@@ -13,6 +13,8 @@ Contents:
 
    getting-started
    commands
+   notes_on_logic
+   bibliography
 
 
 
