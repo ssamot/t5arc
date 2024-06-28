@@ -8,7 +8,7 @@ from functools import partial
 from data.utils import load_data_for_generator, pad_array_with_random_position
 import keras_nlp
 from data.generate_data import CanvasDataGenerator
-
+import constants as consts
 
 def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     total_features = input_shape[0] * input_shape[1] * input_shape[2]
@@ -108,7 +108,7 @@ def main(json_files, programme_files, max_token_length, output_filepath):
                                                              programme_files,
                                                              max_examples=max_examples)
 
-    max_pad_size = 32
+    max_pad_size = consts.MAX_PAD_SIZE
 
     augment_fn = partial(pad_array_with_random_position, m = max_pad_size)
 
