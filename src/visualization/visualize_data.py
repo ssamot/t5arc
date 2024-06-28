@@ -13,6 +13,13 @@ color_list = ["black", "blue", "red", "green", "yellow", "gray", "magenta", "ora
 
 # ......................................................................................................
 
+def add_vhlines_to_plot(axis, data):
+    data = np.array(data)
+    num_y = data.shape[0]
+    num_x = data.shape[1]
+    axis.vlines(np.arange(-0.5, num_x - 0.5), ymin=-0.5, ymax=num_y - 0.5, colors='#101010', linewidths=0.5)
+    axis.hlines(np.arange(-0.5, num_y - 0.5), xmin=-0.5, xmax=num_x - 0.5, colors='#101010', linewidths=0.5)
+
 
 def plot_pic(x):
     x =  np.array(x)
@@ -22,14 +29,6 @@ def plot_pic(x):
     plt.vlines(np.arange(-0.5, num_x - 0.5), ymin=-0.5, ymax=num_y - 0.5, colors='#101010', linewidths=0.5)
     plt.hlines(np.arange(-0.5, num_y - 0.5), xmin=-0.5, xmax=num_x - 0.5, colors='#101010', linewidths=0.5)
     # plt.show()
-
-
-def add_lines(axis, data):
-    data = np.array(data)
-    num_y = data.shape[0]
-    num_x = data.shape[1]
-    axis.vlines(np.arange(-0.5, num_x - 0.5), ymin=-0.5, ymax=num_y - 0.5, colors='#101010', linewidths=0.5)
-    axis.hlines(np.arange(-0.5, num_y - 0.5), xmin=-0.5, xmax=num_x - 0.5, colors='#101010', linewidths=0.5)
 
 
 def plot_task(task):
@@ -44,14 +43,14 @@ def plot_task(task):
         axs[0][fig_num].set_yticks(list(range(t_in.shape[0])))
         axs[0][fig_num].set_xticks(list(range(t_in.shape[1])))
         t_in = np.array(t_in)
-        add_lines(axs[0][fig_num], t_in)
+        add_vhlines_to_plot(axs[0][fig_num], t_in)
 
         axs[1][fig_num].imshow(t_out, cmap=cmap, norm=norm)
         axs[1][fig_num].set_title(f'Train-{i} out')
         axs[1][fig_num].set_yticks(list(range(t_out.shape[0])))
         axs[1][fig_num].set_xticks(list(range(t_out.shape[1])))
         t_out = np.array(t_out)
-        add_lines(axs[1][fig_num], t_out)
+        add_vhlines_to_plot(axs[1][fig_num], t_out)
 
         fig_num += 1
     for i, t in enumerate(task["test"]):
@@ -61,7 +60,7 @@ def plot_task(task):
         axs[0][fig_num].set_yticks(list(range(t_in.shape[0])))
         axs[0][fig_num].set_xticks(list(range(t_in.shape[1])))
         t_in = np.array(t_in)
-        add_lines(axs[0][fig_num], t_in)
+        add_vhlines_to_plot(axs[0][fig_num], t_in)
 
         fig_num += 1
 
