@@ -65,4 +65,3 @@ def plot_task(task):
         fig_num += 1
 
     plt.tight_layout()
-    # plt.show()
