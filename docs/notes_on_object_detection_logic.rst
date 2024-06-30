@@ -1,11 +1,11 @@
 
-Notes on Logic
-===============
+Notes on Object Detection Logic
+===============================
 
 Objects
 -------
 
-The :ref:`ConceptARC` describes a set of core ideas with which to build ARC samples.
+The [Ref1]_ describes a set of core ideas with which to build ARC samples.
 But as they mention it is not feasible to build automatic generators to create samples
 from these ideas. I believe this is because they do not have a generic enough generator
 that understands what an object is. All of their concepts are based on the fact that
@@ -15,8 +15,7 @@ to the objects.
 **Assumption #1:**
 Without correct object identification (or generation) no other logic works.
 
-The idea of objectness is given as one of the possible High-level knowledge priors in
-:ref:`MeasureOfIntelligence`:
+The idea of objectness is given as one of the possible High-level knowledge priors in [Ref12]_
 
 *High-level knowledge priors regarding objects and phenomena in our external environment.
 This may include prior knowledge of* :strong:`visual objectness` *(what defines an object),
@@ -38,8 +37,7 @@ What are (task appropriate) objects?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 **Requirements for objectness**
 
-#. A task appropriate object exists as a group of pixels only as far as this group is same/similar to another group of pixels in the same or another picture.
-#. Hello
+A task appropriate object exists as a group of pixels only as far as this group is same/similar to another group of pixels in the same or another picture.
 
 
 The whole point of being shown three or four examples per task is to first use the similarities
@@ -57,10 +55,12 @@ Defining sameness and similarity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Tricks:
 
+#. Single pixels surrounded by black background
 #. Same shape and colour
 #. Same shape different colour
 #. Same colour different shape
-#. Same shape after affine transform (translate, rotate, scale)
+#. Same shape (and colour) after affine transform (translate, rotate, scale) (in respect to other objects)
+#. Same shape after a non-affine transformation (e.g. moving parts of the object)
 #. Almost same colour (some noise)
 #. Almost same shape (some noise)
 #. Inverting colours gives same shape (really difficult)
@@ -69,6 +69,10 @@ Tricks:
 #. Same colour patterns (could that be a compound trick)
 #. Combinations of the above. E.g . Scale and almost same colors (large shape made of smaller ones).
 
+Sameness over what
+^^^^^^^^^^^^^^^^^^
+#. Over the Input - Output pair
+#. Over multiple Inputs (in this case they should exist also in the Test Input)
 
 Symmetries
 ^^^^^^^^^^^^
@@ -82,6 +86,8 @@ What should the networks output (as objects)
 The network should be trained to output the following:
 #. The bounding box of an object on all images.
 #. Any axes of symmetry on all images.
+#. Any repeating parts of an object also as objects
+#. Object composition (addition, subtraction)
 
 
 

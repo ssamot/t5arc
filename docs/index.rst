@@ -13,7 +13,8 @@ Contents:
 
    getting-started
    commands
-   notes_on_logic
+   data_format_for_object_detection_generator
+   notes_on_object_detection_logic
    bibliography
 
 
