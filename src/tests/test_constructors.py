@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from data_generators.object_recognition import object_data_generator as odg
+from data_generators.object_recognition.object import Object
 import constants as const
 
 
@@ -28,7 +29,21 @@ class TestConstructors:
                 assert len(canvas.shape) == 3
                 assert canvas.shape[2] == 1
 
-    def test_scale_pic(self):
+    def test_creating_object(self):
+        object_1 = Object(height=10, width=5)
+        assert np.all(object_1.bbox == np.array([0, 5, 0, 10]))
+
+        pic = np.array([[1, 1, 1, 1, 1, 1, 1],
+                         [1, 1, 1, 1, 1, 1, 1],
+                         [1, 1, 2, 3, 4, 1, 1],
+                         [1, 1, 2, 3, 4, 1, 1],
+                         [1, 1, 2, 3, 4, 1, 1],
+                         [1, 1, 1, 1, 1, 1, 1],
+                         [1, 1, 1, 1, 1, 1, 1]])
+        object_2 = Object(pixels=pic)
+        assert np.all(object_2.bbox == np.array([0, 7, 0, 7]))
+
+    def test_scale_object(self):
         pic1 = np.array([[1, 1, 1, 1, 1, 1, 1],
                         [1, 1, 1, 1, 1, 1, 1],
                         [1, 1, 2, 3, 4, 1, 1],

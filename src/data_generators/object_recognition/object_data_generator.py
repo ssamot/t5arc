@@ -59,45 +59,6 @@ def random_embed_pic_in_image(image: np.ndarray, pic: np.ndarray) -> np.ndarray:
     return embed_pic_in_image(image, pic, x0, y0)
 
 
-def scale(pic: np.ndarray, factor: int) -> np.ndarray:
-    """
-    Scales a pic. A positive factor adds pixels and a negative factor removes pixels.
-    :param pic: ndArray
-    :param factor: Integer
-    :return: ndArray. The scaled pic
-    """
-    assert factor != 0, print('factor cannot be 0')
-
-    if factor < 0:
-        assert np.abs(factor) * np.min(pic.shape) < 3, print(f'Downsizing by {np.abs(factor)} will result in too small an image')
-
-    if factor > 0:
-        scaled = np.zeros(np.array(pic.shape) * factor)
-        for x in range(pic.shape[0]):
-            for y in range(pic.shape[1]):
-                scaled[x*factor:(x+1)*factor, y*factor:(y+1)*factor] = pic[x, y]
-    else:
-        factor = np.abs(factor)
-        scaled = np.zeros(np.ceil(np.array(pic.shape)/factor).astype(np.int32))
-        for x in range(scaled.shape[0]):
-            for y in range(scaled.shape[1]):
-                scaled[x, y] = pic[x*factor, y*factor]
-
-    return scaled
-
-
-def rotate(pic: np.ndarray, times: Union[1, 2, 3]) -> np.ndarray:
-    """
-    Rotate the picture by some multiple of 90 degrees
-    :param pic: ndArray, The pic
-    :param times: 1, 2 or 3 times
-    :return:
-    """
-    degrees = 90 * times
-
-    return skimage.transform.rotate(pic, degrees)
-
-
 def translate(image: np.ndarray, dx: int, dy: int):
     """
     Translate the whole image by dx x dy
@@ -113,7 +74,7 @@ def translate(image: np.ndarray, dx: int, dy: int):
     for i in range(image.shape[0]):
         for j in range(image.shape[1]):
             if 0 <= i - dy < result.shape[0] and 0 <= j - dx < result.shape[1]:
-                result[i, j] = image[i-dy, j-dx]
+                result[i, j] = image[i - dy, j - dx]
 
     return result
 
