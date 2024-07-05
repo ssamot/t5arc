@@ -6,6 +6,7 @@ import skimage
 from dataclasses import dataclass, field
 from enum import Enum
 import copy as cp
+import matplotlib.pyplot as plt
 from data_generators.object_recognition.object_recognition_output_dict import *
 
 
@@ -77,8 +78,8 @@ class Bbox:
         self.center: Point = self._calculate_center()
 
     def _calculate_center(self):
-        center = Point(x=(self.bottom_right.x - self.top_left.x) / 2 - 0.5,
-                       y=(self.bottom_right.y - self.top_left.y)/2 - 0.5)
+        center = Point(x=(self.bottom_right.x - self.top_left.x) / 2,
+                       y=(self.bottom_right.y - self.top_left.y)/2)
         return center
 
     def __getattr__(self, center: str) -> Point:
@@ -127,7 +128,8 @@ class Object:
         else:
             self.pixels = pixels
         self.dimensions = Dimension2D(self.pixels.shape[1], self.pixels.shape[0])
-        self.bbox = Bbox(top_left=canvas_pos, bottom_right=canvas_pos+Point(self.dimensions.dx, self.dimensions.dy))
+        self.bbox = Bbox(top_left=canvas_pos, bottom_right=canvas_pos+Point(self.dimensions.dx - 1,
+                                                                            self.dimensions.dy - 1))
         self.number_of_coloured_pixels: int = 0
         self.symmetries: List[Symmetry] = []
         self.orientation: Union[Orientation, None]
@@ -136,7 +138,7 @@ class Object:
         self.dimensions.dx = self.pixels.shape[1]
         self.dimensions.dy = self.pixels.shape[0]
         bb_top_left = Point(self.bbox.top_left.x + translation.dx, self.bbox.top_left.y + translation.dy)
-        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx, bb_top_left.y + self.dimensions.dy)
+        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, bb_top_left.y + self.dimensions.dy - 1)
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
 
     def scale(self, factor: int):
@@ -183,11 +185,11 @@ class Object:
 
     def flip(self, dir: Orientation, on_axis=False, copy=False):
         """
-        Flips the object along an axis.
+        Flips the object along an axis and possibly copies it
         :param dir: The direction to flip towards. The edge of the bbox toward that direction becomes the axis of the flip.
         :param on_axis: Should the flip happen on axis or over the axis
-        :param copy: Whether to keep the original or not
-        :return:
+        :param copy: Whether to keep the original and add the flipped copy attached to the original or just flip in place
+        :return: Nothing
         """
         if copy:
             if dir == Orientation.Up or dir == Orientation.Down:
@@ -226,5 +228,33 @@ class Object:
             elif dir == Orientation.Left or dir == Orientation.Right:
                 self.pixels = np.fliplr(self.pixels)
 
+    # TODO: Implement copy
+    def copy(self):
+        pass
 
+    def show(self, symmetries_on=True):
+        fig = plt.figure()
+        ax = fig.add_subplot()
+        ax.imshow(self.pixels, const.CMAP)
+        num_y = self.pixels.shape[0]
+        num_x = self.pixels.shape[1]
+        ax.vlines(np.arange(-0.5, num_x - 0.5), ymin=-0.5, ymax=num_y - 0.5, colors='#101010', linewidths=0.5)
+        ax.hlines(np.arange(-0.5, num_y - 0.5), xmin=-0.5, xmax=num_x - 0.5, colors='#101010', linewidths=0.5)
+        '''
+        if symmetries_on:
+            for sym in self.symmetries:
+                if sym.axis.orientation == Orientation.Down:
+                    xs = [sym.axis.origin.x, sym.bbox.bottom_right]
+                    ys = [sym.axis.origin.y, ]
+                elif sym.axis.orientation == Orientation.Right:
+                    xs = [sym.axis.origin.x, ]
+                    ys = [sym.axis.origin.y, ]
+                ax.plot(xs, ys)
 
+                line_at = sym.axis.origin.x if sym.axis.orientation == Orientation.Down else sym.axis.origin.y
+                line_min = sym.bbox.top_left.y - 0.5 if sym.axis.orientation == Orientation.Down else sym.bbox.top_left.x - 0.5
+                line_max = sym.bbox.bottom_right.y + 0.5 if sym.axis.orientation == Orientation.Down else sym.bbox.bottom_right.x + 0.5
+
+                #plt_lines = plt.vlines if sym.axis.orientation == Orientation.Down else plt.hlines
+                #plt_lines(line_at, line_min, line_max)
+        '''
