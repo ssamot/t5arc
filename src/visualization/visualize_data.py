@@ -1,34 +1,38 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import colors
+import constants as const
 
 
-# ......................................................................................................
-cmap = colors.ListedColormap(['#000000', '#0074D9','#FF4136','#2ECC40','#FFDC00',
-                               '#AAAAAA', '#F012BE', '#FF851B', '#7FDBFF', '#870C25'])
+def data_to_colour(pixels):
+    pixels = np.array(pixels)
+    size = pixels.shape
+    result = np.zeros((size[0], size[1], 4))
+    for i in range(size[0]):
+        for j in range(size[1]):
+            result[i, j, :] = const.COLOR_MAP[pixels[i, j]]
+    return result
 
-norm = colors.Normalize(vmin=0, vmax=9)
-color_list = ["black", "blue", "red", "green", "yellow", "gray", "magenta", "orange", "sky", "brown"]
 
-# ......................................................................................................
-
-def add_vhlines_to_plot(axis, data):
+def add_vhlines_to_plot(axis, data, extent):
     data = np.array(data)
     num_y = data.shape[0]
     num_x = data.shape[1]
-    axis.vlines(np.arange(-0.5, num_x - 0.5), ymin=-0.5, ymax=num_y - 0.5, colors='#101010', linewidths=0.5)
-    axis.hlines(np.arange(-0.5, num_y - 0.5), xmin=-0.5, xmax=num_x - 0.5, colors='#101010', linewidths=0.5)
+    linewidths = 0.5 if np.max([num_y, num_x]) > 6 else 1.5
+    axis.vlines(np.arange(extent[0], extent[1]), ymin=extent[2], ymax=extent[3], colors='#BFBFBF', linewidths=linewidths)
+    axis.hlines(np.arange(extent[2], extent[3]), xmin=extent[0], xmax=extent[1], colors='#BFBFBF', linewidths=linewidths)
+
+    return axis
 
 
-def plot_pic(x):
-    x =  np.array(x)
-    plt.imshow(x, cmap=cmap, norm=norm)
-    num_x = x.shape[0]
-    num_y = x.shape[1]
-    plt.vlines(np.arange(-0.5, num_x - 0.5), ymin=-0.5, ymax=num_y - 0.5, colors='#101010', linewidths=0.5)
-    plt.hlines(np.arange(-0.5, num_y - 0.5), xmin=-0.5, xmax=num_x - 0.5, colors='#101010', linewidths=0.5)
-    # plt.show()
+def plot_data(pixels, extent):
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    pixels_for_visualisation = data_to_colour(pixels)
+    ax.imshow(pixels_for_visualisation, origin='upper', extent=extent)
+    ax = add_vhlines_to_plot(ax, pixels, extent)
+
+    return fig, ax
 
 
 def plot_task(task):
@@ -38,14 +42,16 @@ def plot_task(task):
     fig_num = 0
     for i, t in enumerate(task["train"]):
         t_in, t_out = np.array(t["input"]), np.array(t["output"])
-        axs[0][fig_num].imshow(t_in, cmap=cmap, norm=norm)
+        t_in = data_to_colour(t_in)
+        t_out = data_to_colour(t_out)
+        axs[0][fig_num].imshow(t_in)
         axs[0][fig_num].set_title(f'Train-{i} in')
         axs[0][fig_num].set_yticks(list(range(t_in.shape[0])))
         axs[0][fig_num].set_xticks(list(range(t_in.shape[1])))
         t_in = np.array(t_in)
         add_vhlines_to_plot(axs[0][fig_num], t_in)
 
-        axs[1][fig_num].imshow(t_out, cmap=cmap, norm=norm)
+        axs[1][fig_num].imshow(t_out)
         axs[1][fig_num].set_title(f'Train-{i} out')
         axs[1][fig_num].set_yticks(list(range(t_out.shape[0])))
         axs[1][fig_num].set_xticks(list(range(t_out.shape[1])))
@@ -55,7 +61,8 @@ def plot_task(task):
         fig_num += 1
     for i, t in enumerate(task["test"]):
         t_in = np.array(t["input"])
-        axs[0][fig_num].imshow(t_in, cmap=cmap, norm=norm)
+        t_in = data_to_colour(t_in)
+        axs[0][fig_num].imshow(t_in)
         axs[0][fig_num].set_title(f'Test-{i} in')
         axs[0][fig_num].set_yticks(list(range(t_in.shape[0])))
         axs[0][fig_num].set_xticks(list(range(t_in.shape[1])))
