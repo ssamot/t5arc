@@ -7,10 +7,10 @@ import constants as const
 def data_to_colour(pixels):
     pixels = np.array(pixels, np.uint8)
     size = pixels.shape
-    result = np.zeros((size[0], size[1], 4))
+    result = np.zeros((size[0], size[1], 4)).astype(float)
     for i in range(size[0]):
         for j in range(size[1]):
-            result[i, j, :] = const.COLOR_MAP[pixels[i, j]]
+            result[i, j, :] = np.array(const.COLOR_MAP[pixels[i, j]], float)
     return result
 
 
