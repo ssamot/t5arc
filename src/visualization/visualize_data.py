@@ -5,7 +5,7 @@ import constants as const
 
 
 def data_to_colour(pixels):
-    pixels = np.array(pixels)
+    pixels = np.array(pixels, np.uint8)
     size = pixels.shape
     result = np.zeros((size[0], size[1], 4))
     for i in range(size[0]):

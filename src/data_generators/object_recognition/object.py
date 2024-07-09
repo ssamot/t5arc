@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import numpy as np
 import constants as const
-from typing import Union, List, Tuple
+from typing import Union, List
 import skimage
 from dataclasses import dataclass
 from enum import Enum
 from visualization import visualize_data as vis
+import copy as cp
 
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -62,10 +63,18 @@ class Point:
             self.z = array[2]
 
     def __add__(self, other) -> Point:
-        return Point(self.x+other.x, self.y+other.y, self.z+other.z)
+        if type(other) == Point:
+            result = Point(self.x + other.x, self.y + other.y, self.z + other.z)
+        if type(other) == int or type(other) == float:
+            result = Point(self.x + other, self.y + other, self.z + other)
+        return result
 
     def __sub__(self, other) -> Point:
-        return Point(self.x-other.x, self.y-other.y, self.z-other.z)
+        if type(other) == Point:
+            result = Point(self.x-other.x, self.y-other.y, self.z-other.z)
+        if type(other) == int or type(other) == float:
+            result = Point(self.x-other, self.y-other, self.z-other)
+        return result
 
     def __repr__(self) -> str:
         return f'Point(X = {self.x}, Y = {self.y}, Z = {self.z})'
@@ -73,8 +82,14 @@ class Point:
     def to_numpy(self) -> np.ndarray:
         return np.array([self.x, self.y, self.z])
 
-    def __eq__(self, other: Union[List, np.ndarray, Tuple]) -> bool:
-        return np.all(self.x == other[0], self.y == other[1], self.z == other[2])
+    def __eq__(self, other: Point) -> bool:
+        return np.all([self.x == other.x, self.y == other.y, self.z == other.z])
+
+    def __len__(self):
+        return 3
+
+    def __deepcopy__(self, memo):
+        return self
 
     @staticmethod
     def point_from_numpy(array: np.ndarray):
@@ -141,6 +156,10 @@ class Vector:
     def __repr__(self):
         return f'Vector(Orientation: {self.orientation}, Length: {self.length}, Origin Point: {self.origin})'
 
+    def __deepcopy__(self, memo):
+        return self
+
+    # TODO: Need to deal with transformations other than rotation
     def transform(self, affine_matrix: Union[np.ndarray | None] = None,
                   rotation: float = 0,
                   shear: Union[List | np.ndarray | Point | None] = None,
@@ -176,6 +195,9 @@ class Bbox:
 
     def __repr__(self):
         return f'Bbox(Top Left: {self.top_left}, Bottom Right: {self.bottom_right}, Center: {self.center})'
+
+    def __deepcopy__(self, memo):
+        return self
 
     def transform(self, affine_matrix: Union[np.ndarray | None] = None,
                   rotation: float = 0,
@@ -224,12 +246,11 @@ class Bbox:
             self.top_left.transform(affine_matrix, rotation, shear, translation, scale)
             self.bottom_right.transform(affine_matrix, rotation, shear, translation, scale)
 
-        self.center = self.center
+        self.center = self._calculate_center()
 
 
 @dataclass
 class Symmetry:
-    bbox: Bbox = Bbox()
     axis: Vector = Vector()
 
 
@@ -253,6 +274,7 @@ class Canvas:
         self.objects = []
 
 
+# TODO: This is not used at the moment. Either use it or delete it.
 class ObjectType(Enum):
     Point: int = 0
     Parallelogram: int = 1
@@ -271,7 +293,7 @@ class ObjectType(Enum):
 
 class Object:
 
-    def __init__(self, height: int = 3, width: int = 3, actual_pixels: Union[None, np.ndarray] = None,
+    def __init__(self, name: str = 'Zero', height: int = 3, width: int = 3, actual_pixels: Union[None, np.ndarray] = None,
                  imagined_pixels: Union[None, np.ndarray] = None,
                  canvas_pos: Union[List | np.ndarray] = (0, 0)):
         if actual_pixels is None:
@@ -288,18 +310,18 @@ class Object:
         self.dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 
         self.number_of_coloured_pixels: int = int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
-        self.symmetry: Symmetry = Symmetry()
+        self.symmetries: List = []
 
         self.reset_dimensions()
 
         self.child_objects = {}
 
-    def reset_dimensions(self, translation: Dimension2D = Dimension2D(0, 0)):
+    def reset_dimensions(self):
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
-        bb_top_left = Point(self.canvas_pos[0] + translation.dx, self.canvas_pos[1] + translation.dy + self.dimensions.dy)
-        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx, self.canvas_pos[1] + translation.dy)
+        bb_top_left = Point(self.canvas_pos[0], self.canvas_pos[1] + self.dimensions.dy)
+        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx, self.canvas_pos[1])
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
 
@@ -336,6 +358,7 @@ class Object:
         """
         Rotate the object counter-clockwise by times multiple of 90 degrees
         :param times: 1, 2 or 3 times
+        :param center: The point of the axis of rotation
         :return:
         """
         radians = np.pi/2 * times
@@ -348,20 +371,11 @@ class Object:
         if len(center) == 2:
             center = np.array([center[0], center[1], 0])
 
-        print(center)
-        print(self.canvas_pos)
         center += np.array([self.canvas_pos[0], self.canvas_pos[1], 0])
-        print(center)
-        print('--------')
-        print(self.bbox)
         self.bbox.transform(translation=-center)
-        print(-center)
-        print(self.bbox)
         self.bbox.transform(rotation=radians)
-        print(self.bbox)
-        print(center)
         self.bbox.transform(translation=center)
-        print(self.bbox)
+
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
@@ -373,29 +387,50 @@ class Object:
 
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=0) if axis == Orientation.Down else \
                 np.concatenate((concat_pixels, self.actual_pixels), axis=0)
-            new_symmetry_axis_origin = Point(0, self.actual_pixels.shape[0] / 2 - 0.5)
-            new_symmetry_axis = Vector(orientation=Orientation.Right, origin=new_symmetry_axis_origin,
-                                       length=self.actual_pixels.shape[1])
+
+            new_symmetry_axis_origin = Point(self.canvas_pos[0], self.actual_pixels.shape[0] / 2 + self.canvas_pos[1]) \
+                if axis == Orientation.Up else Point(self.canvas_pos[0], self.canvas_pos[1])
+            new_symmetry_axis_origin -= 0.5
+            if on_axis and axis == Orientation.Down:
+                new_symmetry_axis_origin -= 0.5
+
+            if on_axis and axis == Orientation.Down:
+                for sym in self.symmetries:
+                    if sym.orientation == Orientation.Right and sym.origin.y > new_symmetry_axis_origin.y:
+                        sym.origin.y -= 1
+
+            symmetry_vector = Vector(orientation=Orientation.Right, origin=new_symmetry_axis_origin,
+                                     length=self.actual_pixels.shape[1])
 
         elif axis == Orientation.Left or axis == Orientation.Right:
             concat_pixels = np.fliplr(self.actual_pixels)
             if on_axis:
-                concat_pixels = concat_pixels[:, -1] if axis == Orientation.Right else concat_pixels[:, 1:]
+                concat_pixels = concat_pixels[:, 1:] if axis == Orientation.Right else concat_pixels[:, :-1]
+
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=1) if axis == Orientation.Right else \
                 np.concatenate((concat_pixels, self.actual_pixels), axis=1)
-            new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 - 0.5, 0)
-            new_symmetry_axis = Vector(orientation=Orientation.Down, origin=new_symmetry_axis_origin,
-                                       length=self.actual_pixels.shape[0])
 
-        bbox_translation = Dimension2D(0, 0)
+            new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self.canvas_pos[0], self.canvas_pos[1])\
+                if axis == Orientation.Right else Point(self.canvas_pos[0], self.canvas_pos[1])
+            new_symmetry_axis_origin -= 0.5
+            if on_axis and axis == Orientation.Left:
+                new_symmetry_axis_origin -= 0.5
+            symmetry_vector = Vector(orientation=Orientation.Up, origin=new_symmetry_axis_origin,
+                                     length=self.actual_pixels.shape[0])
+
+            if on_axis and axis == Orientation.Left:
+                for sym in self.symmetries:
+                    if sym.orientation == Orientation.Up and sym.origin.x > new_symmetry_axis_origin.x:
+                        sym.origin.x -= 1
+
         if axis == Orientation.Left:
-            bbox_translation = Dimension2D(concat_pixels.shape[1], 0)
-        if axis == Orientation.Up:
-            bbox_translation = Dimension2D(0, concat_pixels.shape[0])
+            self.canvas_pos[0] -= self.dimensions.dx
+        if axis == Orientation.Down:
+            self.canvas_pos[1] -= self.dimensions.dy
 
-        #TODO fix the symmetry
-        #self.symmetries.append(Symmetry(axis=new_symmetry_axis, bbox=cp.deepcopy(self.bbox)))
-        self.reset_dimensions(translation=bbox_translation)
+        self.symmetries.append(symmetry_vector)
+
+        self.reset_dimensions()
 
     def flip(self, axis: Orientation, on_axis=False):
         """
@@ -427,29 +462,20 @@ class Object:
         pass
 
     def show(self, symmetries_on=True):
-        xmin = self.bbox.top_left.x + 0.5
-        xmax = self.bbox.bottom_right.x + 0.5
-        ymin = self.bbox.bottom_right.y + 0.5
-        ymax = self.bbox.top_left.y + 0.5
-        extent = [xmin , xmax , ymin , ymax]
-        print(extent)
+        xmin = self.bbox.top_left.x - 0.5
+        xmax = self.bbox.bottom_right.x - 0.5
+        ymin = self.bbox.bottom_right.y - 0.5
+        ymax = self.bbox.top_left.y - 0.5
+        extent = [xmin, xmax, ymin, ymax]
         fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
 
-        '''
         if symmetries_on:
             for sym in self.symmetries:
-                if sym.axis.orientation == Orientation.Down:
-                    xs = [sym.axis.origin.x, sym.bbox.bottom_right]
-                    ys = [sym.axis.origin.y, ]
-                elif sym.axis.orientation == Orientation.Right:
-                    xs = [sym.axis.origin.x, ]
-                    ys = [sym.axis.origin.y, ]
-                ax.plot(xs, ys)
 
-                line_at = sym.axis.origin.x if sym.axis.orientation == Orientation.Down else sym.axis.origin.y
-                line_min = sym.bbox.top_left.y - 0.5 if sym.axis.orientation == Orientation.Down else sym.bbox.top_left.x - 0.5
-                line_max = sym.bbox.bottom_right.y + 0.5 if sym.axis.orientation == Orientation.Down else sym.bbox.bottom_right.x + 0.5
+                line_at = sym.origin.x if sym.orientation == Orientation.Up else sym.origin.y
 
-                #plt_lines = plt.vlines if sym.axis.orientation == Orientation.Down else plt.hlines
-                #plt_lines(line_at, line_min, line_max)
-        '''
+                line_min = self.bbox.top_left.y - 0.5 if sym.orientation == Orientation.Up else self.bbox.top_left.x - 0.5
+                line_max = self.bbox.bottom_right.y - 0.5 if sym.orientation == Orientation.Up else self.bbox.bottom_right.x - 0.5
+
+                plt_lines = ax.vlines if sym.orientation == Orientation.Up else ax.hlines
+                plt_lines(line_at, line_min, line_max)
