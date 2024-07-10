@@ -42,6 +42,11 @@ class Orientation(Enum):
         return Orientation(value=value)
 
 
+class OrientationZ(Enum):
+    Away: int = -1
+    Towards: int = 1
+
+
 @dataclass
 class Dimension2D:
     dx: int = 3

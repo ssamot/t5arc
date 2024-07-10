@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import numpy as np
 import constants as const
+import copy as cp
 from typing import Union, List
 import skimage
 from enum import Enum
 from visualization import visualize_data as vis
-from data_generators.object_recognition.basic_geometry import Point, Vector, Bbox, Orientation, Dimension2D
+from data_generators.object_recognition.basic_geometry import Point, Vector, Bbox, Orientation, Dimension2D, OrientationZ
 
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -54,18 +55,21 @@ class Object:
 
     def __init__(self, name: str = 'Zero', height: int = 3, width: int = 3, actual_pixels: Union[None, np.ndarray] = None,
                  imagined_pixels: Union[None, np.ndarray] = None,
-                 canvas_pos: Union[List | np.ndarray] = (0, 0)):
+                 canvas_pos: Union[List | np.ndarray | Point] = (0, 0, 0)):
         if actual_pixels is None:
             self.actual_pixels = np.ones((height, width))
         else:
             self.actual_pixels = actual_pixels
+        
+        self.canvas_pos = canvas_pos
+        if type(canvas_pos) != Point:
+            self.canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
 
         if imagined_pixels is None:
             self.imagined_pixels = self.actual_pixels
         else:
             self.imagined_pixels = imagined_pixels
 
-        self.canvas_pos = np.array(canvas_pos)
         self.dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 
         self.number_of_coloured_pixels: int = int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
@@ -79,8 +83,8 @@ class Object:
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
-        bb_top_left = Point(self.canvas_pos[0], self.canvas_pos[1] + self.dimensions.dy - 1)
-        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self.canvas_pos[1])
+        bb_top_left = Point(self.canvas_pos.x, self.canvas_posy + self.dimensions.dy - 1)
+        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self.canvas_pos.y)
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
 
@@ -130,7 +134,7 @@ class Object:
         if len(center) == 2:
             center = np.array([center[0], center[1], 0])
 
-        center += np.array([self.canvas_pos[0], self.canvas_pos[1], 0])
+        center += np.array([self.canvas_pos.x, self.canvas_pos.y, 0])
         self.bbox.transform(translation=-center)
         self.bbox.transform(rotation=radians)
         self.bbox.transform(translation=center)
@@ -152,8 +156,8 @@ class Object:
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=0) if axis == Orientation.Down else \
                 np.concatenate((concat_pixels, self.actual_pixels), axis=0)
 
-            new_symmetry_axis_origin = Point(self.canvas_pos[0], self.actual_pixels.shape[0] / 2 + self.canvas_pos[1]) \
-                if axis == Orientation.Up else Point(self.canvas_pos[0], self.canvas_pos[1])
+            new_symmetry_axis_origin = Point(self.canvas_pos.x, self.actual_pixels.shape[0] / 2 + self.canvas_pos.y) \
+                if axis == Orientation.Up else Point(self.canvas_pos.x, self.canvas_pos.y)
             new_symmetry_axis_origin.y -= 0.5
             if on_axis and axis == Orientation.Down:
                 new_symmetry_axis_origin.y -= 0.5
@@ -174,8 +178,8 @@ class Object:
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=1) if axis == Orientation.Right else \
                 np.concatenate((concat_pixels, self.actual_pixels), axis=1)
 
-            new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self.canvas_pos[0], self.canvas_pos[1])\
-                if axis == Orientation.Right else Point(self.canvas_pos[0], self.canvas_pos[1])
+            new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self.canvas_pos.x, self.canvas_pos.y)\
+                if axis == Orientation.Right else Point(self.canvas_pos.x, self.canvas_pos.y)
             new_symmetry_axis_origin.x -= 0.5
             if on_axis and axis == Orientation.Left:
                 new_symmetry_axis_origin.x -= 0.5
@@ -188,9 +192,9 @@ class Object:
                         sym.origin.x -= 1
 
         if axis == Orientation.Left:
-            self.canvas_pos[0] -= self.dimensions.dx
+            self.canvas_pos.x -= self.dimensions.dx
         if axis == Orientation.Down:
-            self.canvas_pos[1] -= self.dimensions.dy
+            self.canvas_pos.y -= self.dimensions.dy
 
         self.symmetries.append(symmetry_vector)
 
@@ -211,19 +215,33 @@ class Object:
             self.actual_pixels = np.fliplr(self.actual_pixels)
 
     def copy(self):
+        return cp.deepcopy(self)
+
+    def __add__(self, other: Object):
         pass
 
-    def add(self, other: Object):
+    def __sub__(self, other: object):
         pass
 
-    def subtract(self, other: Object):
+    def superimpose(self, other: Object, z_order: int = 1):
         pass
 
-    def superimpose(self, other: Object, z_order :int = 1):
-        pass
+    def move_along_z(self, orientation: Union[OrientationZ | None] = None, to_z: Union[float | None] = None):
+        assert orientation is not None or to_z is not None, print('Either Orientation or to_z must ')
 
-    def move_along_z(self):
-        pass
+        if orientation is not None:
+            self.canvas_pos.z += -1 if orientation == OrientationZ.Away else 1
+            self.bbox.top_left.z += -1 if orientation == OrientationZ.Away else 1
+            self.bbox.bottom_right.z += -1 if orientation == OrientationZ.Away else 1
+            for sym in self.symmetries:
+                sym.origin.z += -1 if orientation == OrientationZ.Away else 1
+
+        if to_z is not None:
+            self.canvas_pos.z = to_z
+            self.bbox.top_left.z = to_z
+            self.bbox.bottom_right.z = to_z
+            for sym in self.symmetries:
+                sym.origin.z  = to_z
 
     def show(self, symmetries_on=True):
         xmin = self.bbox.top_left.x - 0.5
@@ -235,11 +253,15 @@ class Object:
 
         if symmetries_on:
             for sym in self.symmetries:
+                if sym.orientation == Orientation.Up or sym.orientation == Orientation.Down:
+                    line_at = sym.origin.x
+                    line_min = self.bbox.top_left.y + 0.5
+                    line_max = self.bbox.bottom_right.y - 0.5
+                    plt_lines = ax.vlines
+                else:
+                    line_at = sym.origin.y
+                    line_min = self.bbox.top_left.x - 0.5
+                    line_max = self.bbox.bottom_right.x + 0.5
+                    plt_lines = ax.hlines
 
-                line_at = sym.origin.x if (sym.orientation == Orientation.Up or sym.orientation == Orientation.Down) else sym.origin.y
-
-                line_min = self.bbox.top_left.y + 0.5 if (sym.orientation == Orientation.Up or sym.orientation == Orientation.Down) else self.bbox.top_left.x - 0.5
-                line_max = self.bbox.bottom_right.y - 0.5 if (sym.orientation == Orientation.Up or sym.orientation == Orientation.Down) else self.bbox.bottom_right.x + 0.5
-
-                plt_lines = ax.vlines if (sym.orientation == Orientation.Up or sym.orientation == Orientation.Down) else ax.hlines
                 plt_lines(line_at, line_min, line_max, linewidth=2)
