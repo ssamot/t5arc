@@ -6,7 +6,6 @@ import constants as const
 import copy as cp
 from typing import Union, List
 import skimage
-from enum import Enum
 from visualization import visualize_data as vis
 from data_generators.object_recognition.basic_geometry import Point, Vector, Bbox, Orientation, Dimension2D, OrientationZ
 
@@ -34,33 +33,13 @@ class Canvas:
         self.objects = []
 
 
-# TODO: This is not used at the moment. Either use it or delete it.
-class ObjectType(Enum):
-    Point: int = 0
-    Parallelogram: int = 1
-    Cross: int = 2
-    Line: int = 3
-    Pi: int = 4
-    Angle: int = 5
-    ZigZag: int = 6
-    Fish: int = 7
-    Bolt: int = 8
-    Spiral: int = 9
-    InverseCross: int = 10
-    Tie: int = 11
-    Random: int = 12
-
-
 class Object:
 
-    def __init__(self, name: str = 'Zero', height: int = 3, width: int = 3, actual_pixels: Union[None, np.ndarray] = None,
-                 imagined_pixels: Union[None, np.ndarray] = None,
+    def __init__(self, actual_pixels: np.ndarray,
+                 imagined_pixels: None | np.ndarray = None,
                  canvas_pos: Union[List | np.ndarray | Point] = (0, 0, 0)):
-        if actual_pixels is None:
-            self.actual_pixels = np.ones((height, width))
-        else:
-            self.actual_pixels = actual_pixels
-        
+
+        self.actual_pixels = actual_pixels
         self.canvas_pos = canvas_pos
         if type(canvas_pos) != Point:
             self.canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
@@ -77,13 +56,11 @@ class Object:
 
         self.reset_dimensions()
 
-        self.child_objects = {}
-
     def reset_dimensions(self):
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
-        bb_top_left = Point(self.canvas_pos.x, self.canvas_posy + self.dimensions.dy - 1)
+        bb_top_left = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy - 1)
         bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self.canvas_pos.y)
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
@@ -117,7 +94,7 @@ class Object:
         self.actual_pixels = scaled
         self.reset_dimensions()
 
-    def rotate(self, times: Union[1, 2, 3], center: Union[np.ndarray, List, Point] = (0, 0)):
+    def rotate(self, times: Union[1, 2, 3], center: np.ndarray | List | Point = (0, 0)):
         """
         Rotate the object counter-clockwise by times multiple of 90 degrees
         :param times: 1, 2 or 3 times
@@ -200,7 +177,7 @@ class Object:
 
         self.reset_dimensions()
 
-    def flip(self, axis: Orientation, on_axis=False):
+    def flip(self, axis: Orientation):
         """
         Flips the object along an axis and possibly copies it
         :param axis: The direction to flip towards. The edge of the bbox toward that direction becomes the axis of the flip.
@@ -226,7 +203,7 @@ class Object:
     def superimpose(self, other: Object, z_order: int = 1):
         pass
 
-    def move_along_z(self, orientation: Union[OrientationZ | None] = None, to_z: Union[float | None] = None):
+    def move_along_z(self, orientation: OrientationZ | None = None, to_z: float | None = None):
         assert orientation is not None or to_z is not None, print('Either Orientation or to_z must ')
 
         if orientation is not None:

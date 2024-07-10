@@ -54,7 +54,7 @@ class Dimension2D:
 
 
 class Point:
-    def __init__(self, x: float = 0, y: float = 0, z: float = 0, array: Union[None, List, np.ndarray] = None):
+    def __init__(self, x: float = 0, y: float = 0, z: float = 0, array: None | List | np.ndarray = None):
         if array is None:
             self.x = x
             self.y = y
@@ -114,11 +114,11 @@ class Point:
     def point_from_numpy(array: np.ndarray):
         return Point(array[0], array[1], array[2])
 
-    def transform(self, affine_matrix: Union[np.ndarray | None] = None,
+    def transform(self, affine_matrix: np.ndarray | None = None,
                   rotation: float = 0,
-                  shear: Union[List | np.ndarray | Point | None] = None,
-                  translation: Union[List | np.ndarray | Point | None] = None,
-                  scale: Union[List | np.ndarray | Point | None] = None):
+                  shear: List | np.ndarray | Point | None = None,
+                  translation: List | np.ndarray | Point | None = None,
+                  scale: List | np.ndarray | Point | None = None):
 
         assert affine_matrix is None or np.all([rotation == 0, shear is None, translation is None, scale is None])
 
@@ -172,7 +172,7 @@ class Point:
 
 class Vector:
     def __init__(self, orientation:Orientation = Orientation.Up,
-                 length: Union[None, int] = 0,
+                 length: None | int = 0,
                  origin: Point = Point(0, 0, 0)):
         self.orientation = orientation
         self.length = length
@@ -185,11 +185,11 @@ class Vector:
         return self
 
     # TODO: Need to deal with transformations other than rotation
-    def transform(self, affine_matrix: Union[np.ndarray | None] = None,
+    def transform(self, affine_matrix: np.ndarray | None = None,
                   rotation: float = 0,
-                  shear: Union[List | np.ndarray | Point | None] = None,
-                  translation: Union[List | np.ndarray | Point | None] = None,
-                  scale: Union[List | np.ndarray | Point | None] = None):
+                  shear: List | np.ndarray | Point | None = None,
+                  translation: List | np.ndarray | Point | None = None,
+                  scale: List | np.ndarray | Point | None = None):
         assert affine_matrix is None or np.all([rotation == 0, shear is None, translation is None, scale is None])
 
         if rotation != 0:
@@ -221,11 +221,11 @@ class Bbox:
                        y=(self.bottom_right.y - self.top_left.y)/2)
         return center
 
-    def transform(self, affine_matrix: Union[np.ndarray | None] = None,
+    def transform(self, affine_matrix: np.ndarray | None = None,
                   rotation: float = 0,
-                  shear: Union[List | np.ndarray | Point | None] = None,
-                  translation: Union[List | np.ndarray | Point | None] = None,
-                  scale: Union[List | np.ndarray | Point | None] = None):
+                  shear: List | np.ndarray | Point | None = None,
+                  translation: List | np.ndarray | Point | None = None,
+                  scale: List | np.ndarray | Point | None = None):
         assert affine_matrix is None or np.all([rotation == 0, shear is None, translation is None, scale is None])
 
         rot = 0
