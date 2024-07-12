@@ -13,26 +13,6 @@ np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
-class Example:
-    def __init__(self):
-        self.number_of_canvasses = np.random.randint(4, const.MAX_EXAMPLE_PAIRS + 2, 2)
-        self.input_size = Dimension2D(np.random.randint(const.MIN_PAD_SIZE, const.MAX_PAD_SIZE),
-                                      np.random.randint(const.MIN_PAD_SIZE, const.MAX_PAD_SIZE))
-        self.output_size = Dimension2D(np.random.randint(self.input_size.dx, const.MAX_PAD_SIZE),
-                                       np.random.randint(self.input_size.dy, const.MAX_PAD_SIZE))
-        print(self.input_size, self.output_size)
-
-    def generate_canvasses(self):
-        pass
-
-
-class Canvas:
-    def __init__(self, width: int = 10, height: int = 10):
-        self.width = width
-        self.height = height
-        self.objects = []
-
-
 class Object:
 
     def __init__(self, actual_pixels: np.ndarray,
@@ -69,7 +49,7 @@ class Object:
         """
         Scales the object. A positive factor adds pixels and a negative factor removes pixels.
         :param factor: Integer
-        :return: ndArray. The scaled pic
+        :return: Nothing
         """
         assert factor != 0, print('factor cannot be 0')
 
@@ -124,7 +104,25 @@ class Object:
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
+    def shear(self, _shear: np.ndarray | List):
+        self.flip(Orientation.Left)
+        transform = skimage.transform.AffineTransform(shear=_shear)
+
+        self.actual_pixels = skimage.transform.warp(self.actual_pixels, inverse_map=transform.inverse, order=0)
+
+        white_pixels = np.argwhere(self.actual_pixels == 0)
+        self.actual_pixels[np.array([i[0] for i in white_pixels]), np.array([i[1] for i in white_pixels])] = 1
+
+        self.flip(Orientation.Right)
+
     def mirror(self, axis: Orientation, on_axis=False):
+        """
+        Mirrors to object (copy, flip and move) along one of the edges (up, down, left or right). If on_axis is on the
+        pixels along the mirror axis do not get copied
+        :param axis: The axis of mirroring (e.g. Orientation.Up means along the top edge of the object)
+        :param on_axis: If it is True
+        :return:
+        """
         if axis == Orientation.Up or axis == Orientation.Down:
             concat_pixels = np.flipud(self.actual_pixels)
             if on_axis:
