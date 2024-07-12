@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.lib.index_tricks as ndi
 import constants as const
@@ -18,7 +19,7 @@ class ObjectType(Enum):
     Dot: int = 0
     Parallelogram: int = 1
     Cross: int = 2
-    #Line: int = 3  # Same as Parallelogram
+    Hole: int = 3
     Pi: int = 4
     Angle: int = 5
     ZigZag: int = 6
@@ -31,7 +32,7 @@ class ObjectType(Enum):
 
 
 class Dot(Object):
-    def __init__(self, size: None | np.ndarray | Bbox | List = np.array([1, 1]), canvas_pos: Point = Point(0, 0),
+    def __init__(self, size: None | np.ndarray | Dimension2D | List = np.array([1, 1]), canvas_pos: Point = Point(0, 0),
                  colour: None | int = None, dot_pos: None | np.ndarray | List = np.array([0, 0])):
         """
         A single coloured pixel in a black background
@@ -43,55 +44,64 @@ class Dot(Object):
 
         assert dot_pos is None if size is None else True, print("To make a random Dot both size and dot_pos must be None")
 
-        if type(size) == Bbox:
-            size = np.array([size.bottom_right.x, size.top_left.y])
-        elif type(size) == list:
-            size = np.array(size)
+        if type(size) == Dimension2D:
+            self.size = size
+        elif type(size) == list or type(size) == np.ndarray:
+            self.size = Dimension2D(size[0], size[1])
         elif size is None:
             size = np.random.randint(1, 6, 2)
-
-        size = np.flip(size)
+            self.size = Dimension2D(size[0], size[1])
 
         if colour is None:
             color = np.random.randint(2, len(const.COLOR_MAP))
 
         if dot_pos is None:
-            all_indices = np.array([i for i in ndi.ndindex(tuple(size))])
+            all_indices = np.array([i for i in ndi.ndindex((self.size.dx, self.size.dy))])
             dot_pos = tuple(all_indices[np.random.choice(range(len(all_indices)))])
         else:
             dot_pos = tuple(np.transpose(dot_pos))
 
         dot_pos = dot_pos
 
-        actual_pixels = np.ones(size)
+        actual_pixels = np.ones((self.size.dx, self.size.dy))
         actual_pixels[dot_pos] = color
 
         super().__init__(canvas_pos=canvas_pos, actual_pixels=actual_pixels)
 
 
 class Primitive(Object):
-    def __init__(self, size: np.ndarray | Bbox | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  colour: None | int = None):
 
-        if type(size) == Bbox:
-            size = np.array([size.bottom_right.x, size.top_left.y])
-        elif type(size) == list:
-            size = np.array(size)
+        if type(size) == Dimension2D:
+            self.size = size
+        elif type(size) == list or type(size) == np.ndarray:
+            self.size = Dimension2D(size[0], size[1])
         elif size is None:
             size = np.random.randint(2, 20, 2)
-
-        self.size = np.flip(size)
+            self.size = Dimension2D(size[0], size[1])
 
         if colour is None:
             self.colour = np.random.randint(2, len(const.COLOR_MAP))
 
-        self.background_size = np.array([border_size[0] + size[1] + border_size[1],
-                                         border_size[2] + size[0] + border_size[3]])
+        self.background_size = np.array([border_size[0] + self.size.dy + border_size[1],
+                                         border_size[2] + self.size.dx + border_size[3]])
+
+        self.border_size = border_size
+
+    def print_border_size(self):
+        print(f'Border sizes: Up = {self.border_size[0]}, Down = {self.border_size[1]}, Right = {self.border_size[2]}, ' \
+                'Down = {self.border_size[2]}')
+
+    def generate_actual_pixels(self, array):
+        self.actual_pixels = np.ones(self.background_size)
+        self.actual_pixels[self.border_size[1]: self.size.dy + self.border_size[1],
+                           self.border_size[2]: self.size.dx + self.border_size[2]] = array
 
 
 # TODO: Add symmetries
 class Parallelogram(Primitive):
-    def __init__(self, size: np.ndarray | Bbox | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None):
         """
         A solid colour parallelogram inside a black region (border)
@@ -102,38 +112,32 @@ class Parallelogram(Primitive):
 
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
-        actual_pixels = np.ones(self.background_size)
-        actual_pixels[border_size[0]: self.size[0] + border_size[0],
-                      border_size[2]: self.size[1] + border_size[2]] = self.colour
+        self.generate_actual_pixels(self.colour)
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=actual_pixels)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels)
 
 
 # TODO: Add symmetries
 class Cross(Primitive):
-    def __init__(self, size: np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None):
-
-        assert size[0] % 2 == 1 and size[1] % 2 == 1, print('To make a Cross the x and y size must be odd numbers')
 
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
-        actual_pixels = np.ones(self.background_size)
+        assert self.size.dx % 2 == 1 and self.size.dy % 2 == 1, print('To make a Cross the x and y size must be odd numbers')
 
         cross = []
-        for x in range(self.size[0]):
-            temp = np.ones(self.size[1])
-            if x != self.size[0] / 2 - 0.5:
-                temp[int(self.size[1] / 2)] = self.colour
+        for x in range(self.size.dx):
+            temp = np.ones(self.size.dy)
+            if x != self.size.dx / 2 - 0.5:
+                temp[int(self.size.dy / 2)] = self.colour
             else:
                 temp *= self.colour
             cross.append(temp)
-        cross = np.array(cross)
+        cross = np.transpose(cross)
+        self.generate_actual_pixels(cross)
 
-        actual_pixels[border_size[0]: self.size[0] + border_size[0],
-                      border_size[2]: self.size[1] + border_size[2]] = cross
-
-        Object.__init__(self, actual_pixels=actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
 
 
 # TODO: Add symmetry
@@ -143,12 +147,10 @@ class Pi(Primitive):
 
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
-        actual_pixels = np.ones(self.background_size)
-
         pi = []
-        for x in range(self.size[0]):
-            temp = np.ones(self.size[1])
-            if x == 0:
+        for y in range(self.size.dy):
+            temp = np.ones(self.size.dx)
+            if y == self.size.dy - 1:
                 temp[:] = self.colour
             else:
                 temp[0] = self.colour
@@ -156,10 +158,9 @@ class Pi(Primitive):
             pi.append(temp)
         pi = np.array(pi)
 
-        actual_pixels[border_size[0]: self.size[0] + border_size[0],
-                      border_size[2]: self.size[1] + border_size[2]] = pi
+        self.generate_actual_pixels(pi)
 
-        Object.__init__(self, actual_pixels=actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
 
 
 class Angle(Primitive):
@@ -168,22 +169,19 @@ class Angle(Primitive):
 
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
-        actual_pixels = np.ones(self.background_size)
-
         angle = []
-        for x in range(self.size[0]):
-            temp = np.ones(self.size[1])
-            if x != self.size[0] - 1:
+        for y in range(self.size.dy):
+            temp = np.ones(self.size.dx)
+            if y != 0:
                 temp[0] = self.colour
             else:
                 temp[:] = self.colour
             angle.append(temp)
         angle = np.array(angle)
 
-        actual_pixels[border_size[0]: self.size[0] + border_size[0],
-                      border_size[2]: self.size[1] + border_size[2]] = angle
+        self.generate_actual_pixels(angle)
 
-        Object.__init__(self, actual_pixels=actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
 
 
 class Zigzag(Primitive):
@@ -192,42 +190,36 @@ class Zigzag(Primitive):
                  double=False):
 
         x = height+1 if double else height
-        size = np.array([x, height])
+        size = Dimension2D(x, height)
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
-
-        actual_pixels = np.ones(self.background_size)
 
         zigzag = []
         n = 2 if double else 1
-        for x in range(self.size[0]):
-            temp = np.ones(self.size[1])
-            temp[x:x+n] = self.colour
+        for y in range(self.size.dy):
+            temp = np.ones(self.size.dx)
+            temp[y:y+n] = self.colour
             zigzag.append(temp)
-        angle = np.array(zigzag)
+        angle = np.flipud(zigzag)
 
-        actual_pixels[border_size[0]: self.size[0] + border_size[0],
-                      border_size[2]: self.size[1] + border_size[2]] = angle
+        self.generate_actual_pixels(angle)
 
-        Object.__init__(self, actual_pixels=actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
 
 
 class Fish(Primitive):
     def __init__(self, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None):
 
-        size = np.array([3, 3])
+        size = Dimension2D(3, 3)
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
-        actual_pixels = np.ones(self.background_size)
-
-        fish = np.array([[1, self.colour, self.colour],
+        fish = np.array([[1, self.colour, 1],
                          [self.colour, self.colour, self.colour],
-                         [1, self.colour, 1]])
+                         [1, self.colour, self.colour]])
 
-        actual_pixels[border_size[0]: self.size[0] + border_size[0],
-                      border_size[2]: self.size[1] + border_size[2]] = fish
+        self.generate_actual_pixels(fish)
 
-        Object.__init__(self, actual_pixels=actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
 
 
 class InverseCross(Primitive):
@@ -240,7 +232,7 @@ class InverseCross(Primitive):
         if fill_height is not None:
             assert fill_height % 2 == 1, print('To fill an Inverted Cross the fill_height must be an odd number')
 
-        size = np.array([height, height])
+        size = Dimension2D(height, height)
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
         if fill_colour is None:
@@ -248,15 +240,13 @@ class InverseCross(Primitive):
             while fill_colour == self.colour:
                 fill_colour = np.random.randint(2, len(const.COLOR_MAP))
 
-        actual_pixels = np.ones(self.background_size)
-
-        fill = int((self.size[0] - fill_height) / 2)
+        fill = int((self.size.dx - fill_height) / 2)
         cross = []
-        for x in range(self.size[0]):
-            temp = np.ones(self.size[1])
+        for x in range(self.size.dx):
+            temp = np.ones(self.size.dy)
 
             if fill_height is not None:
-                if fill <= x < self.size[0] - fill:
+                if fill <= x < self.size.dx - fill:
                     temp[fill:-fill] = fill_colour
 
             temp[x] = self.colour
@@ -264,8 +254,28 @@ class InverseCross(Primitive):
             cross.append(temp)
         cross = np.array(cross)
 
-        actual_pixels[border_size[0]: self.size[0] + border_size[0],
-                      border_size[2]: self.size[1] + border_size[2]] = cross
+        self.generate_actual_pixels(cross)
 
-        Object.__init__(self, actual_pixels=actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
 
+
+# TODO: Not done at all. The current idea doesn't work. I will have to redo it.
+class Hole(Primitive):
+    def __init__(self, size: Dimension2D | np.ndarray | List, thickness: int = 1,
+                 border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+                 canvas_pos: Point = Point(0, 0), colour: None | int = None):
+
+        Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
+
+        self.generate_actual_pixels(self.colour)
+
+        self.actual_pixels[self.border_size[1] + thickness: self.size.dy + self.border_size[1] - thickness,
+                           self.border_size[2] + thickness: self.size.dx + self.border_size[2] - thickness] = 1
+
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels)
+
+
+
+
+class Random(Primitive):
+    pass

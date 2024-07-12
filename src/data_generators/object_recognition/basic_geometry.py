@@ -47,10 +47,17 @@ class OrientationZ(Enum):
     Towards: int = 1
 
 
-@dataclass
 class Dimension2D:
-    dx: int = 3
-    dy: int = 3
+    def __init__(self, dx: int = 3, dy:  int = 3, array: None | np.ndarray | List = None):
+        if array is None:
+            self.dx = dx
+            self.dy = dy
+        else:
+            self.dx: int = array[0]
+            self.dy: int = array[1]
+
+    def to_numpy(self):
+        return np.array([self.dx, self.dy])
 
 
 class Point:
@@ -112,7 +119,10 @@ class Point:
 
     @staticmethod
     def point_from_numpy(array: np.ndarray):
-        return Point(array[0], array[1], array[2])
+        z = 0
+        if array.shape == 3:
+            z = array[2]
+        return Point(array[0], array[1], z)
 
     def transform(self, affine_matrix: np.ndarray | None = None,
                   rotation: float = 0,
@@ -217,8 +227,8 @@ class Bbox:
         return f'Bbox(Top Left: {self.top_left}, Bottom Right: {self.bottom_right}, Center: {self.center})'
 
     def _calculate_center(self):
-        center = Point(x=(self.bottom_right.x - self.top_left.x) / 2,
-                       y=(self.bottom_right.y - self.top_left.y)/2)
+        center = Point(x=(self.bottom_right.x - self.top_left.x) / 2 + self.top_left.x,
+                       y=(self.bottom_right.y - self.top_left.y)/2 + self.top_left.y)
         return center
 
     def transform(self, affine_matrix: np.ndarray | None = None,
@@ -271,7 +281,4 @@ class Bbox:
         self.center = self._calculate_center()
 
 
-@dataclass
-class Symmetry:
-    axis: Vector = Vector()
 
