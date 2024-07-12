@@ -29,7 +29,7 @@ def plot_data(pixels, extent):
     fig = plt.figure()
     ax = fig.add_subplot()
     pixels_for_visualisation = data_to_colour(pixels)
-    ax.imshow(pixels_for_visualisation, origin='upper', extent=extent)
+    ax.imshow(pixels_for_visualisation, origin='lower', extent=extent, interpolation='None', aspect='equal')
     ax = add_vhlines_to_plot(ax, pixels, extent)
 
     return fig, ax
