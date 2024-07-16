@@ -37,6 +37,10 @@ class Object:
         self.reset_dimensions()
 
     def reset_dimensions(self):
+        """
+        Reset the self.dimensions and the self.bbox top left and bottom right points to fit the updated actual_pixels
+        :return:
+        """
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
@@ -105,6 +109,11 @@ class Object:
         self.dimensions.dy = self.actual_pixels.shape[0]
 
     def shear(self, _shear: np.ndarray | List):
+        """
+        Shears the actual pixels
+        :param _shear: Shear percentage (0 to 1)
+        :return:
+        """
         self.flip(Orientation.Left)
         transform = skimage.transform.AffineTransform(shear=_shear)
 
@@ -117,10 +126,10 @@ class Object:
 
     def mirror(self, axis: Orientation, on_axis=False):
         """
-        Mirrors to object (copy, flip and move) along one of the edges (up, down, left or right). If on_axis is on the
-        pixels along the mirror axis do not get copied
+        Mirrors to object (copy, flip and move) along one of the edges (up, down, left or right). If on_axis is True
+        the pixels along the mirror axis do not get copied
         :param axis: The axis of mirroring (e.g. Orientation.Up means along the top edge of the object)
-        :param on_axis: If it is True
+        :param on_axis: If it is True the pixels along the mirror axis do not get copied
         :return:
         """
         if axis == Orientation.Up or axis == Orientation.Down:
@@ -128,8 +137,8 @@ class Object:
             if on_axis:
                 concat_pixels = concat_pixels[:-1, :] if axis == Orientation.Up else concat_pixels[1:, :]
 
-            self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=0) if axis == Orientation.Down else \
-                np.concatenate((concat_pixels, self.actual_pixels), axis=0)
+            self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=0) \
+                if axis == Orientation.Down else np.concatenate((concat_pixels, self.actual_pixels), axis=0)
 
             new_symmetry_axis_origin = Point(self.canvas_pos.x, self.actual_pixels.shape[0] / 2 + self.canvas_pos.y) \
                 if axis == Orientation.Up else Point(self.canvas_pos.x, self.canvas_pos.y)
@@ -179,8 +188,6 @@ class Object:
         """
         Flips the object along an axis and possibly copies it
         :param axis: The direction to flip towards. The edge of the bbox toward that direction becomes the axis of the flip.
-        :param on_axis: Should the flip happen on axis or over the axis
-        :param copy: Whether to keep the original and add the flipped copy attached to the original or just flip in place
         :return: Nothing
         """
 
@@ -202,6 +209,12 @@ class Object:
         pass
 
     def move_along_z(self, orientation: OrientationZ | None = None, to_z: float | None = None):
+        """
+        Change the z of the canvas_pos and the bbox
+        :param orientation: Change the z by one point in the orientation given
+        :param to_z: Take the z to the to_z number
+        :return:
+        """
         assert orientation is not None or to_z is not None, print('Either Orientation or to_z must ')
 
         if orientation is not None:
@@ -216,9 +229,91 @@ class Object:
             self.bbox.top_left.z = to_z
             self.bbox.bottom_right.z = to_z
             for sym in self.symmetries:
-                sym.origin.z  = to_z
+                sym.origin.z = to_z
+
+    def get_coloured_pixels_positions(self):
+        return np.argwhere(self.actual_pixels > 1)
+
+    def get_background_pixels_positions(self):
+        return np.argwhere(self.actual_pixels == 1)
+
+    def get_colours(self):
+        coloured_pos = self.get_coloured_pixels_positions()
+        return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
+
+    def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: float = 0.1):
+        """
+        Returns the positions (in the self.actual_pixels array) of a random number (ratio percentage) of either
+        coloured or background pixels
+        :param coloured_or_background: Whether the pixels should come from the coloured group or the background group.
+        'coloured' or 'background'
+        :param ratio: The ratio (percentage) of the picked pixels over the number of the pixels in their group
+        :return:
+        """
+        if coloured_or_background == 'coloured':
+            pixels_pos = self.get_coloured_pixels_positions()
+        elif coloured_or_background == 'background':
+            pixels_pos = self.get_background_pixels_positions()
+
+        num_of_new_pixels = int((pixels_pos.size // 2) * ratio)
+        if num_of_new_pixels < 1:
+            num_of_new_pixels = 1
+
+        t = np.random.choice(np.arange(len(pixels_pos)), num_of_new_pixels)
+        new_pixels_pos = pixels_pos[t]
+
+        return new_pixels_pos
+
+    def randomise_colours(self, ratio: float = 0.1, colour: str = 'random'):
+        """
+        Changes the colour of ratio of the coloured pixels (picked randomly) to a new random (not already there) colour
+        :param ratio: The ratio of the coloured pixels to be recoloured
+        :param colour: The colour to change the pixels to. 'random' means a random colour (not already on the object),
+        'x' means use the colour number x
+        :return:
+        """
+        new_pixels_pos = self.pick_random_pixels(coloured_or_background='coloured', ratio=ratio)
+
+        if colour == 'random':
+            colours = self.get_colours()
+            new_colour = np.setdiff1d(np.arange(1, 10), colours)
+        else:
+            new_colour = int(colour)
+
+        self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = np.random.choice(new_colour, size=1)
+
+    def randomise_shape(self, add_or_subtract: str = 'add', ratio: float = 0.1, colour: str = 'common'):
+        """
+        Adds or subtracts coloured pixels to the object
+        :param add_or_subtract: To add or subtract pixels. 'add' or 'subtract'
+        :param ratio: The percentage (ratio) of pixels to be added or subtracted
+        :param colour: Whether the colour used for added pixels should be the most common one used or a random one or
+        a specific one. 'common' or 'random' or 'x' where x is the colour number (from 2 to 10)
+        :return:
+        """
+        coloured_or_background = 'background' if add_or_subtract == 'add' else 'coloured'
+        new_pixels_pos = self.pick_random_pixels(coloured_or_background=coloured_or_background, ratio=ratio)
+
+        if add_or_subtract == 'add':
+            if colour == 'common':
+                colours = self.actual_pixels[np.where(self.actual_pixels > 1)]
+                new_colour = np.argmax(np.bincount(colours))
+            elif colour == 'random':
+                new_colour = np.random.randint(2, 10, 1)
+            else:
+                new_colour = int(colour)
+
+        elif add_or_subtract == 'subtract':
+            new_colour = 1
+
+        self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = new_colour
 
     def show(self, symmetries_on=True):
+        """
+        Show a matplotlib.pyplot.imshow image of the actual_pixels array correctly colour transformed
+        :param symmetries_on: Show the symmetries of the object as line
+        :return:
+        """
         xmin = self.bbox.top_left.x - 0.5
         xmax = self.bbox.bottom_right.x + 0.5
         ymin = self.bbox.bottom_right.y - 0.5

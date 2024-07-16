@@ -93,13 +93,37 @@ class Primitive(Object):
         print(f'Border sizes: Up = {self.border_size[0]}, Down = {self.border_size[1]}, Right = {self.border_size[2]}, ' \
                 'Down = {self.border_size[2]}')
 
-    def generate_actual_pixels(self, array):
+    def generate_actual_pixels(self, array: np.ndarray | int):
         self.actual_pixels = np.ones(self.background_size)
         self.actual_pixels[self.border_size[1]: self.size.dy + self.border_size[1],
                            self.border_size[2]: self.size.dx + self.border_size[2]] = array
 
+    def generate_symmetries(self, dirs: str = 'both'):
+        """
+        Generate symmetries
+        :param dirs: 'both', 'x', 'y'
+        :return:
+        """
+        col_pixels_pos = self.get_coloured_pixels_positions()
+        xmin = np.min(col_pixels_pos[:, 1])
+        xmax = np.max(col_pixels_pos[:, 1])
+        ymin = np.min(col_pixels_pos[:, 0])
+        ymax = np.max(col_pixels_pos[:, 0])
 
-# TODO: Add symmetries
+        if dirs == 'both' or dirs == 'y':
+            y_sym_origin = Point((xmax - xmin) / 2 + self.border_size[2] + self.canvas_pos.x, ymin + self.canvas_pos.y)
+            y_sym_length = xmax - xmin
+            y_sym_or = Orientation.Up
+            y_symmetry = Vector(orientation=y_sym_or, length=y_sym_length, origin=y_sym_origin)
+            self.symmetries.append(y_symmetry)
+        if dirs == 'both' or dirs == 'x':
+            x_sym_origin = Point(xmin + self.canvas_pos.x, (ymax - ymin) / 2 + self.border_size[1] + self.canvas_pos.y)
+            x_sym_length = ymax - ymin
+            x_sym_or = Orientation.Left
+            x_symmetry = Vector(orientation=x_sym_or, length=x_sym_length, origin=x_sym_origin)
+            self.symmetries.append(x_symmetry)
+
+
 class Parallelogram(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None):
@@ -115,6 +139,8 @@ class Parallelogram(Primitive):
         self.generate_actual_pixels(self.colour)
 
         Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels)
+
+        self.generate_symmetries()
 
 
 # TODO: Add symmetries
@@ -139,6 +165,8 @@ class Cross(Primitive):
 
         Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
 
+        self.generate_symmetries()
+
 
 # TODO: Add symmetry
 class Pi(Primitive):
@@ -161,6 +189,8 @@ class Pi(Primitive):
         self.generate_actual_pixels(pi)
 
         Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
+
+        self.generate_symmetries('y')
 
 
 class Angle(Primitive):
@@ -258,8 +288,9 @@ class InverseCross(Primitive):
 
         Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
 
+        self.generate_symmetries()
 
-# TODO: Not done at all. The current idea doesn't work. I will have to redo it.
+
 class Hole(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, thickness: int = 1,
                  border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
@@ -273,8 +304,6 @@ class Hole(Primitive):
                            self.border_size[2] + thickness: self.size.dx + self.border_size[2] - thickness] = 1
 
         Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels)
-
-
 
 
 class Random(Primitive):
