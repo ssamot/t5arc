@@ -76,6 +76,10 @@ class Object:
                     scaled[x, y] = pic[x * factor, y * factor]
 
         self.actual_pixels = scaled
+
+        for sym in self.symmetries:
+            sym.origin += (sym.origin - self.canvas_pos + Point(0.5, 0.5)) * (factor - 1)
+
         self.reset_dimensions()
 
     def rotate(self, times: Union[1, 2, 3], center: np.ndarray | List | Point = (0, 0)):
@@ -124,6 +128,8 @@ class Object:
 
         self.flip(Orientation.Right)
 
+        self.symmetries = []  # Loose any symmetries
+
     def mirror(self, axis: Orientation, on_axis=False):
         """
         Mirrors to object (copy, flip and move) along one of the edges (up, down, left or right). If on_axis is True
@@ -142,7 +148,8 @@ class Object:
 
             new_symmetry_axis_origin = Point(self.canvas_pos.x, self.actual_pixels.shape[0] / 2 + self.canvas_pos.y) \
                 if axis == Orientation.Up else Point(self.canvas_pos.x, self.canvas_pos.y)
-            new_symmetry_axis_origin.y -= 0.5
+
+            #new_symmetry_axis_origin.y -= 0.5
             if on_axis and axis == Orientation.Down:
                 new_symmetry_axis_origin.y -= 0.5
 
@@ -152,7 +159,7 @@ class Object:
                         sym.origin.y -= 1
 
             symmetry_vector = Vector(orientation=Orientation.Right, origin=new_symmetry_axis_origin,
-                                     length=self.actual_pixels.shape[1])
+                                     length=self.actual_pixels.shape[1] - 1)
 
         elif axis == Orientation.Left or axis == Orientation.Right:
             concat_pixels = np.fliplr(self.actual_pixels)
@@ -164,16 +171,18 @@ class Object:
 
             new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self.canvas_pos.x, self.canvas_pos.y)\
                 if axis == Orientation.Right else Point(self.canvas_pos.x, self.canvas_pos.y)
-            new_symmetry_axis_origin.x -= 0.5
+
+            #new_symmetry_axis_origin.x -= 0.5
             if on_axis and axis == Orientation.Left:
                 new_symmetry_axis_origin.x -= 0.5
-            symmetry_vector = Vector(orientation=Orientation.Up, origin=new_symmetry_axis_origin,
-                                     length=self.actual_pixels.shape[0])
 
             if on_axis and axis == Orientation.Left:
                 for sym in self.symmetries:
                     if sym.orientation == Orientation.Up and sym.origin.x > new_symmetry_axis_origin.x:
                         sym.origin.x -= 1
+
+            symmetry_vector = Vector(orientation=Orientation.Down, origin=new_symmetry_axis_origin,
+                                     length=self.actual_pixels.shape[0] - 1)
 
         if axis == Orientation.Left:
             self.canvas_pos.x -= self.dimensions.dx
@@ -325,13 +334,15 @@ class Object:
             for sym in self.symmetries:
                 if sym.orientation == Orientation.Up or sym.orientation == Orientation.Down:
                     line_at = sym.origin.x
-                    line_min = self.bbox.top_left.y + 0.5
-                    line_max = self.bbox.bottom_right.y - 0.5
+                    line_min = sym.origin.y - 0.5 if sym.orientation == Orientation.Down else sym.origin.y + 0.5
+                    line_max = sym.origin.y + sym.length + 0.5 if sym.orientation == Orientation.Down else \
+                        sym.origin.y - sym.length - 0.5
                     plt_lines = ax.vlines
                 else:
                     line_at = sym.origin.y
-                    line_min = self.bbox.top_left.x - 0.5
-                    line_max = self.bbox.bottom_right.x + 0.5
+                    line_min = sym.origin.x - 0.5 if sym.orientation == Orientation.Right else sym.origin.x + 0.5
+                    line_max = sym.origin.x + sym.length + 0.5 if sym.orientation == Orientation.Right else \
+                        sym.origin.x - sym.length - 0.5
                     plt_lines = ax.hlines
 
                 plt_lines(line_at, line_min, line_max, linewidth=2)

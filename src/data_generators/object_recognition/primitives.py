@@ -112,14 +112,14 @@ class Primitive(Object):
 
         if dirs == 'both' or dirs == 'y':
             y_sym_origin = Point((xmax - xmin) / 2 + self.border_size[2] + self.canvas_pos.x, ymin + self.canvas_pos.y)
-            y_sym_length = xmax - xmin
-            y_sym_or = Orientation.Up
+            y_sym_length = ymax - ymin
+            y_sym_or = Orientation.Down
             y_symmetry = Vector(orientation=y_sym_or, length=y_sym_length, origin=y_sym_origin)
             self.symmetries.append(y_symmetry)
         if dirs == 'both' or dirs == 'x':
             x_sym_origin = Point(xmin + self.canvas_pos.x, (ymax - ymin) / 2 + self.border_size[1] + self.canvas_pos.y)
-            x_sym_length = ymax - ymin
-            x_sym_or = Orientation.Left
+            x_sym_length = xmax - xmin
+            x_sym_or = Orientation.Right
             x_symmetry = Vector(orientation=x_sym_or, length=x_sym_length, origin=x_sym_origin)
             self.symmetries.append(x_symmetry)
 
@@ -304,6 +304,8 @@ class Hole(Primitive):
                            self.border_size[2] + thickness: self.size.dx + self.border_size[2] - thickness] = 1
 
         Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels)
+
+        self.generate_symmetries()
 
 
 class Random(Primitive):

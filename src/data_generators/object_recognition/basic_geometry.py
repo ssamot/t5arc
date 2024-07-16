@@ -93,6 +93,9 @@ class Point:
             result = Point(self.x - other, self.y - other, self.z - other)
         return result
 
+    def __mul__(self, other: float | int | bool) -> Point:
+        return Point(self.x * other, self.y * other, self.z * other)
+
     def __repr__(self) -> str:
         return f'Point(X = {self.x}, Y = {self.y}, Z = {self.z})'
 
