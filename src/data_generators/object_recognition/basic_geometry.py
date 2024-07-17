@@ -56,6 +56,9 @@ class Dimension2D:
             self.dx: int = array[0]
             self.dy: int = array[1]
 
+    def __repr__(self) -> str:
+        print(f'Dimension:(dX = {self.dx}, dY = {self.dy}')
+
     def to_numpy(self):
         return np.array([self.dx, self.dy])
 
@@ -123,7 +126,7 @@ class Point:
     @staticmethod
     def point_from_numpy(array: np.ndarray):
         z = 0
-        if array.shape == 3:
+        if len(array) == 3:
             z = array[2]
         return Point(array[0], array[1], z)
 
