@@ -114,8 +114,8 @@ class Point:
     def __len__(self):
         return 3
 
-    def __deepcopy__(self, memo):
-        return self
+    def __deepcopy__(self, memo) -> Point:
+        return Point(self.x, self.y, self.z)
 
     def to_numpy(self) -> np.ndarray:
         return np.array([self.x, self.y, self.z])

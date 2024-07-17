@@ -113,7 +113,7 @@ class Primitive(Object):
         if dirs == 'both' or dirs == 'y':
             y_sym_origin = Point((xmax - xmin) / 2 + self.border_size[2] + self.canvas_pos.x, ymin + self.canvas_pos.y)
             y_sym_length = ymax - ymin
-            y_sym_or = Orientation.Down
+            y_sym_or = Orientation.Up
             y_symmetry = Vector(orientation=y_sym_or, length=y_sym_length, origin=y_sym_origin)
             self.symmetries.append(y_symmetry)
         if dirs == 'both' or dirs == 'x':

@@ -21,8 +21,10 @@ class Object:
 
         self.actual_pixels = actual_pixels
         self.canvas_pos = canvas_pos
+
         if type(canvas_pos) != Point:
             self.canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
+        self.rotation_axis = cp.deepcopy(self.canvas_pos)
 
         if imagined_pixels is None:
             self.imagined_pixels = self.actual_pixels
@@ -99,10 +101,12 @@ class Object:
         if len(center) == 2:
             center = np.array([center[0], center[1], 0])
 
-        center += np.array([self.canvas_pos.x, self.canvas_pos.y, 0])
+        center += np.array([self.rotation_axis.x, self.rotation_axis.y, 0])
         self.bbox.transform(translation=-center)
         self.bbox.transform(rotation=radians)
         self.bbox.transform(translation=center)
+        self.canvas_pos.x = self.bbox.top_left.x
+        self.canvas_pos.y = self.bbox.bottom_right.y
 
         for sym in self.symmetries:
             sym.transform(translation=-center)
@@ -181,7 +185,7 @@ class Object:
                     if sym.orientation == Orientation.Up and sym.origin.x > new_symmetry_axis_origin.x:
                         sym.origin.x -= 1
 
-            symmetry_vector = Vector(orientation=Orientation.Down, origin=new_symmetry_axis_origin,
+            symmetry_vector = Vector(orientation=Orientation.Up, origin=new_symmetry_axis_origin,
                                      length=self.actual_pixels.shape[0] - 1)
 
         if axis == Orientation.Left:
@@ -334,8 +338,8 @@ class Object:
             for sym in self.symmetries:
                 if sym.orientation == Orientation.Up or sym.orientation == Orientation.Down:
                     line_at = sym.origin.x
-                    line_min = sym.origin.y - 0.5 if sym.orientation == Orientation.Down else sym.origin.y + 0.5
-                    line_max = sym.origin.y + sym.length + 0.5 if sym.orientation == Orientation.Down else \
+                    line_min = sym.origin.y - 0.5 if sym.orientation == Orientation.Up else sym.origin.y + 0.5
+                    line_max = sym.origin.y + sym.length + 0.5 if sym.orientation == Orientation.Up else \
                         sym.origin.y - sym.length - 0.5
                     plt_lines = ax.vlines
                 else:
