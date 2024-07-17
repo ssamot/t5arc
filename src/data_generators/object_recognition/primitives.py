@@ -143,7 +143,6 @@ class Parallelogram(Primitive):
         self.generate_symmetries()
 
 
-# TODO: Add symmetries
 class Cross(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None):
@@ -168,7 +167,6 @@ class Cross(Primitive):
         self.generate_symmetries()
 
 
-# TODO: Add symmetry
 class Pi(Primitive):
     def __init__(self, size: np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None):
@@ -292,7 +290,7 @@ class InverseCross(Primitive):
 
 
 class Hole(Primitive):
-    def __init__(self, size: Dimension2D | np.ndarray | List, thickness: int = 1,
+    def __init__(self, size: Dimension2D | np.ndarray | List, thickness: List | np.ndarray = (1, 1, 1, 1),
                  border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None):
 
@@ -300,12 +298,29 @@ class Hole(Primitive):
 
         self.generate_actual_pixels(self.colour)
 
-        self.actual_pixels[self.border_size[1] + thickness: self.size.dy + self.border_size[1] - thickness,
-                           self.border_size[2] + thickness: self.size.dx + self.border_size[2] - thickness] = 1
+        th_up = thickness[0]
+        th_down = thickness[1]
+        th_left = thickness[2]
+        th_right = thickness[3]
+
+        self.actual_pixels[self.border_size[1] + th_down: self.size.dy + self.border_size[1] - th_up,
+                           self.border_size[2] + th_left: self.size.dx + self.border_size[2] - th_right] = 1
+
+        self.hole_bbox = Bbox(top_left=Point(self.border_size[2] + th_left, self.size.dy + self.border_size[1] - th_up - 1),
+                              bottom_right=Point(self.size.dx + self.border_size[2] - th_right - 1, self.border_size[1] + th_down))
 
         Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels)
 
-        self.generate_symmetries()
+        sym = None
+        if th_up == th_down:
+            sym = 'x'
+        if th_left == th_right:
+            sym = 'y'
+        if th_up == th_down and th_left == th_right:
+            sym = 'both'
+
+        if sym is not None:
+            self.generate_symmetries(sym)
 
 
 class Random(Primitive):

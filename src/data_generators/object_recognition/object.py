@@ -24,6 +24,7 @@ class Object:
 
         if type(canvas_pos) != Point:
             self.canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
+
         self.rotation_axis = cp.deepcopy(self.canvas_pos)
 
         if imagined_pixels is None:
@@ -245,12 +246,14 @@ class Object:
                 sym.origin.z = to_z
 
     def get_coloured_pixels_positions(self):
-        return np.argwhere(self.actual_pixels > 1)
+        result = np.argwhere(self.actual_pixels > 1)
+        canv_pos = np.array([self.canvas_pos.to_numpy()[1], self.canvas_pos.to_numpy()[0]])
+        return canv_pos + result
 
     def get_background_pixels_positions(self):
         return np.argwhere(self.actual_pixels == 1)
 
-    def get_colours(self):
+    def get_used_colours(self):
         coloured_pos = self.get_coloured_pixels_positions()
         return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
 
@@ -288,7 +291,7 @@ class Object:
         new_pixels_pos = self.pick_random_pixels(coloured_or_background='coloured', ratio=ratio)
 
         if colour == 'random':
-            colours = self.get_colours()
+            colours = self.get_used_colours()
             new_colour = np.setdiff1d(np.arange(1, 10), colours)
         else:
             new_colour = int(colour)

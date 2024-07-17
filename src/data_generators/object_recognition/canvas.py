@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import numpy as np
+from utils import *
 from visualization import visualize_data as vis
 from data_generators.object_recognition.primitives import *
 from data_generators.object_recognition.basic_geometry import Point, Vector, Bbox, Orientation, Dimension2D, OrientationZ
@@ -31,6 +33,13 @@ class Canvas:
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
         self.embed_objects()
 
+    def get_coloured_pixels_positions(self):
+        result = self.objects[0].get_coloured_pixels_positions()
+        for obj in self.objects[1:]:
+            result = union2d(result, obj.get_coloured_pixels_positions())
+
+        return result
+
     def generate_random_objects(self):
         pass
 
@@ -38,6 +47,9 @@ class Canvas:
         pass
 
     def embed_objects(self):
+        self.actual_pixels[:, :] = 1
+
+        self.objects = sorted(self.objects, key=lambda object: object.canvas_pos.z)
 
         for object in self.objects:
             xmin = object.canvas_pos.y
@@ -48,6 +60,10 @@ class Canvas:
             self.actual_pixels[xmin: xmax, ymin: ymax] = object.actual_pixels
             self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
 
+    def position_object(self, index: int, canvas_pos: Point):
+        self.objects[index].canvas_pos = canvas_pos
+        self.embed_objects()
+
     def show(self, full_canvas=True):
 
         if full_canvas:
@@ -56,11 +72,11 @@ class Canvas:
             ymin = - 0.5
             ymax = self.full_canvas.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
-            fig, ax = vis.plot_data(self.full_canvas, extent=extent)
+            _, _ = vis.plot_data(self.full_canvas, extent=extent)
         else:
             xmin = - 0.5
             xmax = self.actual_pixels.shape[1] - 0.5
             ymin = - 0.5
             ymax = self.actual_pixels.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
-            fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
+            _, _ = vis.plot_data(self.actual_pixels, extent=extent)
