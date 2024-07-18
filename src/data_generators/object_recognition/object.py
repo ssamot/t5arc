@@ -15,10 +15,10 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 class Object:
 
-    def __init__(self, actual_pixels: np.ndarray,
-                 imagined_pixels: None | np.ndarray = None,
+    def __init__(self, actual_pixels: np.ndarray, id: None | int = None,
                  canvas_pos: Union[List | np.ndarray | Point] = (0, 0, 0)):
 
+        self.id = id
         self.actual_pixels = actual_pixels
         self.canvas_pos = canvas_pos
 
@@ -26,11 +26,6 @@ class Object:
             self.canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
 
         self.rotation_axis = cp.deepcopy(self.canvas_pos)
-
-        if imagined_pixels is None:
-            self.imagined_pixels = self.actual_pixels
-        else:
-            self.imagined_pixels = imagined_pixels
 
         self.dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 
@@ -95,7 +90,6 @@ class Object:
         radians = np.pi/2 * times
         degrees = 90 * times
         self.actual_pixels = skimage.transform.rotate(self.actual_pixels, degrees, resize=True, order=0, center=center)
-        self.imagined_pixels = skimage.transform.rotate(self.imagined_pixels, degrees, resize=True, order=0, center=center)
 
         if type(center) == Point:
             center = center.to_numpy()
