@@ -1,7 +1,6 @@
 
 from __future__ import annotations
 
-import matplotlib.pyplot as plt
 import numpy as np
 import numpy.lib.index_tricks as ndi
 import constants as const
@@ -33,7 +32,7 @@ class ObjectType(Enum):
 
 class Dot(Object):
     def __init__(self, size: None | np.ndarray | Dimension2D | List = np.array([1, 1]), canvas_pos: Point = Point(0, 0),
-                 colour: None | int = None, dot_pos: None | np.ndarray | List = np.array([0, 0])):
+                 colour: None | int = None, dot_pos: None | np.ndarray | List = np.array([0, 0]), id: None | int = None):
         """
         A single coloured pixel in a black background
         :param size: The [x, y] dimensions of the black background
@@ -66,12 +65,18 @@ class Dot(Object):
         actual_pixels = np.ones((self.size.dx, self.size.dy))
         actual_pixels[dot_pos] = color
 
-        super().__init__(canvas_pos=canvas_pos, actual_pixels=actual_pixels)
+        super().__init__(canvas_pos=canvas_pos, actual_pixels=actual_pixels, id=id)
 
 
 class Primitive(Object):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  colour: None | int = None):
+        """
+        A basic class for common Primitive data and methods
+        :param size: The x, y size of the Primitive
+        :param border_size: The [Up, Down, Left, Right] black pixels surrounding the Primitive
+        :param colour: The colour of the Primitive
+        """
 
         if type(size) == Dimension2D:
             self.size = size
@@ -90,18 +95,28 @@ class Primitive(Object):
         self.border_size = border_size
 
     def print_border_size(self):
+        """
+        A pretty print of the border size
+        :return:
+        """
         print(f'Border sizes: Up = {self.border_size[0]}, Down = {self.border_size[1]}, Right = {self.border_size[2]}, ' \
                 'Down = {self.border_size[2]}')
 
     def generate_actual_pixels(self, array: np.ndarray | int):
+        """
+        Embeds the array into the objects actual_pixels
+        :param array:
+        :return:
+        """
         self.actual_pixels = np.ones(self.background_size)
         self.actual_pixels[self.border_size[1]: self.size.dy + self.border_size[1],
                            self.border_size[2]: self.size.dx + self.border_size[2]] = array
 
     def generate_symmetries(self, dirs: str = 'both'):
         """
-        Generate symmetries
-        :param dirs: 'both', 'x', 'y'
+        Generate symmetries in the centers of the primitive. This doesn't search to see if the symmetries should be there.
+        It just creates symmetries whether they actually exist or not.
+        :param dirs: 'both', 'x', 'y'. Create only an x only a y or both symmetries
         :return:
         """
         col_pixels_pos = self.get_coloured_pixels_positions()
@@ -111,13 +126,13 @@ class Primitive(Object):
         ymax = np.max(col_pixels_pos[:, 0])
 
         if dirs == 'both' or dirs == 'y':
-            y_sym_origin = Point((xmax - xmin) / 2 + self.border_size[2] + self.canvas_pos.x, ymin + self.canvas_pos.y)
+            y_sym_origin = Point((xmax - xmin) / 2 + xmin, ymin)
             y_sym_length = ymax - ymin
             y_sym_or = Orientation.Up
             y_symmetry = Vector(orientation=y_sym_or, length=y_sym_length, origin=y_sym_origin)
             self.symmetries.append(y_symmetry)
         if dirs == 'both' or dirs == 'x':
-            x_sym_origin = Point(xmin + self.canvas_pos.x, (ymax - ymin) / 2 + self.border_size[1] + self.canvas_pos.y)
+            x_sym_origin = Point(xmin, (ymax - ymin) / 2 + ymin)
             x_sym_length = xmax - xmin
             x_sym_or = Orientation.Right
             x_symmetry = Vector(orientation=x_sym_or, length=x_sym_length, origin=x_sym_origin)
@@ -126,26 +141,36 @@ class Primitive(Object):
 
 class Parallelogram(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
-                 canvas_pos: Point = Point(0, 0), colour: None | int = None):
+                 canvas_pos: Point = Point(0, 0), colour: None | int = None, id: None | int = None):
         """
         A solid colour parallelogram inside a black region (border)
         :param size: The size of the parallelogram
-        :param border_size: [Up, Down, Left, Right]
+        :param border_size: The [Up, Down, Left, Right] black pixels surrounding the parallelogram
         :param canvas_pos: The position in the canvas
+        :param id: The id of the object
         """
 
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
         self.generate_actual_pixels(self.colour)
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, id=id)
 
         self.generate_symmetries()
 
 
 class Cross(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
-                 canvas_pos: Point = Point(0, 0), colour: None | int = None):
+                 canvas_pos: Point = Point(0, 0), colour: None | int = None, id: None | int = None):
+        """
+        A single colour cross surrounded by black border
+        :param size: Dimension2D. The x, y size of the cross. Since the cross has to be symmetric the dx, dy should be
+        odd.
+        :param border_size: The [Up, Down, Left, Right] black pixels surrounding the cross
+        :param canvas_pos: The position on the canvas
+        :param colour: The cross' colour
+        :param id: The id of the object
+        """
 
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
@@ -162,14 +187,22 @@ class Cross(Primitive):
         cross = np.transpose(cross)
         self.generate_actual_pixels(cross)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, id=id)
 
         self.generate_symmetries()
 
 
 class Pi(Primitive):
-    def __init__(self, size: np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
-                 canvas_pos: Point = Point(0, 0), colour: None | int = None):
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+                 canvas_pos: Point = Point(0, 0), colour: None | int = None, id: None | int = None):
+        """
+        A Pi shaped object.
+        :param size: The x, y size of the object
+        :param border_size: The [Up, Down, Left, Right] black pixels surrounding the Pi
+        :param canvas_pos: The position on the canvas
+        :param colour: The Pi's colour
+        :param id: The id of the object
+        """
 
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
@@ -186,15 +219,22 @@ class Pi(Primitive):
 
         self.generate_actual_pixels(pi)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, id=id)
 
         self.generate_symmetries('y')
 
 
 class Angle(Primitive):
     def __init__(self, size: np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
-                 canvas_pos: Point = Point(0, 0), colour: None | int = None):
-
+                 canvas_pos: Point = Point(0, 0), colour: None | int = None, id: None | int = None):
+        """
+        A 90 degrees down left pointing angle
+        :param size: The x, y size of the object
+        :param border_size: The [Up, Down, Left, Right] black pixels surrounding the Angle
+        :param canvas_pos: The position on the canvas
+        :param colour: The Angle's colour
+        :param id: The id of the object
+        """
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
         angle = []
@@ -209,13 +249,22 @@ class Angle(Primitive):
 
         self.generate_actual_pixels(angle)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, id=id)
 
 
 class Zigzag(Primitive):
     def __init__(self, height: int, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
-                 canvas_pos: Point = Point(0, 0), colour: None | int = None,
+                 canvas_pos: Point = Point(0, 0), colour: None | int = None, id: None | int = None,
                  double=False):
+        """
+        A Zigzag line (single pixel step) from top left to bottom right.
+        :param height: The height of the Zigzag (which will determine its width also)
+        :param border_size: The [Up, Down, Left, Right] black pixels surrounding the ZigZag
+        :param canvas_pos: The position on the canvas
+        :param colour: The ZigZag's colour
+        :param id: The id of the object
+        :param double: If True then the line is composed of two pixels, otherwise just of one
+        """
 
         x = height+1 if double else height
         size = Dimension2D(x, height)
@@ -231,13 +280,19 @@ class Zigzag(Primitive):
 
         self.generate_actual_pixels(angle)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, id=id)
 
 
 class Fish(Primitive):
     def __init__(self, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
-                 canvas_pos: Point = Point(0, 0), colour: None | int = None):
-
+                 canvas_pos: Point = Point(0, 0), colour: None | int = None, id: None | int = None):
+        """
+        A Fish like object
+        :param border_size: The [Up, Down, Left, Right] black pixels surrounding the Fish
+        :param canvas_pos: The position on the canvas
+        :param colour: The Fish's colour
+        :param id: The id of the object
+        """
         size = Dimension2D(3, 3)
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
@@ -247,14 +302,25 @@ class Fish(Primitive):
 
         self.generate_actual_pixels(fish)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, id=id)
 
 
 class InverseCross(Primitive):
     def __init__(self, height: int, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 fill_colour: None | int = None, fill_height: None | int = None):
+                 fill_colour: None | int = None, fill_height: None | int = None, id: None | int = None):
+        """
+        A cross made out of a central dot with four arms 45 degrees to the vertical and perpendicular with a second
+        colour (fill_colour) filling up to a point (fill_height) the inbetween pixels
 
+        :param height: The height of the cross (it is fully symmetric so width is same as height)
+        :param border_size: The [Up, Down, Left, Right] black pixels surrounding the cross
+        :param canvas_pos: The position on the canvas
+        :param colour: The cross' colour
+        :param fill_colour: The 2nd colour to fill the black pixels surrounding the center dot
+        :param fill_height: The number of pixels to get the 2nd colour away from the center
+        :param id: The id of the object
+        """
         assert height % 2 == 1, print('To make an Inverted Cross the height must be an odd number')
 
         if fill_height is not None:
@@ -284,15 +350,25 @@ class InverseCross(Primitive):
 
         self.generate_actual_pixels(cross)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, id=id)
 
         self.generate_symmetries()
 
 
 class Hole(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, thickness: List | np.ndarray = (1, 1, 1, 1),
-                 border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
-                 canvas_pos: Point = Point(0, 0), colour: None | int = None):
+                 border_size: np.ndarray | List = np.array([0, 0, 0, 0]), canvas_pos: Point = Point(0, 0),
+                 colour: None | int = None, id: None | int = None):
+        """
+        This is a hole formed by an outside coloured parallelogram and an inside black parallelogram. The object also
+        holds the position of the black hole as a self.hole_bbox Bbox.
+        :param size: The x, y size of the surround
+        :param thickness: The thickness of the coloured surround ([Up, Down, Left, Right[)
+        :param border_size: The [Up, Down, Left, Right] black pixels surrounding the object
+        :param canvas_pos: The position on the canvas
+        :param colour: The surround colour
+        :param id: The id of the object
+        """
 
         Primitive.__init__(self, size=size, border_size=border_size, colour=colour)
 
@@ -309,7 +385,7 @@ class Hole(Primitive):
         self.hole_bbox = Bbox(top_left=Point(self.border_size[2] + th_left, self.size.dy + self.border_size[1] - th_up - 1),
                               bottom_right=Point(self.size.dx + self.border_size[2] - th_right - 1, self.border_size[1] + th_down))
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, id=id)
 
         sym = None
         if th_up == th_down:
