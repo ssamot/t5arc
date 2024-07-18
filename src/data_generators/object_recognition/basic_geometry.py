@@ -57,7 +57,7 @@ class Dimension2D:
             self.dy: int = array[1]
 
     def __repr__(self) -> str:
-        print(f'Dimension:(dX = {self.dx}, dY = {self.dy}')
+        return f'Dimension:(dX = {self.dx}, dY = {self.dy})'
 
     def to_numpy(self):
         return np.array([self.dx, self.dy])
