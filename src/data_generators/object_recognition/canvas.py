@@ -33,7 +33,11 @@ class Canvas:
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
         self.embed_objects()
 
-    def get_coloured_pixels_positions(self):
+    def get_coloured_pixels_positions(self) -> np.ndarray:
+        """
+        Returns the Union of the positions of the coloured pixels of all the objects in the self.object list
+        :return: np.ndarray of the union of all the coloured pixels of all objects
+        """
         result = self.objects[0].get_coloured_pixels_positions()
         for obj in self.objects[1:]:
             result = union2d(result, obj.get_coloured_pixels_positions())
@@ -47,20 +51,40 @@ class Canvas:
         pass
 
     def embed_objects(self):
+        """
+        Embeds all objects in the self.objects list onto the self.actual_pixels of the canvas. It uses the objects
+        canvas_pos.z to define the order (objects with smaller z go first thus end up behind objects with larger z)
+        :return:
+        """
         self.actual_pixels[:, :] = 1
 
-        self.objects = sorted(self.objects, key=lambda object: object.canvas_pos.z)
+        self.objects = sorted(self.objects, key=lambda obj: obj.canvas_pos.z)
 
-        for object in self.objects:
-            xmin = object.canvas_pos.y
-            xmax = object.canvas_pos.y + object.dimensions.dy
-            ymin = object.canvas_pos.x
-            ymax = object.canvas_pos.x + object.dimensions.dx
+        for obj in self.objects:
+            xmin = obj.canvas_pos.x
+            if xmin >= self.actual_pixels.shape[1]:
+                continue
+            xmax = obj.canvas_pos.x + obj.dimensions.dx
+            if xmax >= self.actual_pixels.shape[1]:
+                xmax = self.actual_pixels.shape[1]
+            ymin = obj.canvas_pos.y
+            if ymin >= self.actual_pixels.shape[0]:
+                continue
+            ymax = obj.canvas_pos.y + obj.dimensions.dy
+            if ymax >= self.actual_pixels.shape[0]:
+                ymax = self.actual_pixels.shape[0]
 
-            self.actual_pixels[xmin: xmax, ymin: ymax] = object.actual_pixels
+            self.actual_pixels[ymin: ymax, xmin: xmax] = obj.actual_pixels[: ymax-ymin, : xmax-xmin]
             self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
 
     def position_object(self, index: int, canvas_pos: Point):
+        """
+        Positions the object (with id = index) to the canvas_pos specified (the bottom left pixel of the object is
+        placed to that canvas_pos)
+        :param index: The id of the object
+        :param canvas_pos: The Point specifying the coordinates on the canvas of the bottom left pixel of the object
+        :return:
+        """
         self.objects[index].canvas_pos = canvas_pos
         self.embed_objects()
 
