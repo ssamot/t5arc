@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import matplotlib.pyplot as plt
 import numpy as np
 from utils import *
 from visualization import visualize_data as vis
@@ -31,6 +32,7 @@ class Canvas:
         self.actual_pixels = np.ones((size[1], size[0]))
         self.full_canvas = np.zeros((MAX_PAD_SIZE, MAX_PAD_SIZE))
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
+
         self.embed_objects()
 
     def get_coloured_pixels_positions(self) -> np.ndarray:
@@ -88,7 +90,7 @@ class Canvas:
         self.objects[index].canvas_pos = canvas_pos
         self.embed_objects()
 
-    def show(self, full_canvas=True):
+    def show(self, full_canvas=True) -> tuple[plt.Figure, {plt.vlines, plt.hlines}]:
 
         if full_canvas:
             xmin = - 0.5
@@ -96,11 +98,13 @@ class Canvas:
             ymin = - 0.5
             ymax = self.full_canvas.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
-            _, _ = vis.plot_data(self.full_canvas, extent=extent)
+            fig, ax = vis.plot_data(self.full_canvas, extent=extent)
         else:
             xmin = - 0.5
             xmax = self.actual_pixels.shape[1] - 0.5
             ymin = - 0.5
             ymax = self.actual_pixels.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
-            _, _ = vis.plot_data(self.actual_pixels, extent=extent)
+            fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
+
+        return fig, ax
