@@ -331,6 +331,7 @@ class Object:
         extent = [xmin, xmax, ymin, ymax]
         fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
 
+        # TODO: DEAL WITH DIAGONAL SYMMETRIES!!!!
         if symmetries_on:
             for sym in self.symmetries:
                 if sym.orientation == Orientation.Up or sym.orientation == Orientation.Down:
