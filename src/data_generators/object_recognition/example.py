@@ -46,9 +46,8 @@ class Example:
             return colour
 
     # TODO: Deal with this given the other objects positions
-    def get_random_position(self, min_distance_to_others: Dimension2D) -> Point:
-        for other in self.objects:
-            pass
+    def get_random_position(self, obj: Primitive) -> Point:
+        pass
     
     def do_random_transformations(self, obj: Primitive) -> Primitive:
         pass
@@ -117,7 +116,7 @@ class Example:
                                                       np.random.randint(1, min_distance_to_others.dy - 2))
 
         object.required_distance_to_others = min_distance_to_others
-        object.canvas_pos = self.get_random_position(min_distance_to_others)
+        object.canvas_pos = self.get_random_position()
 
         self.objects.append(object)
 
@@ -132,6 +131,8 @@ class Example:
 
             self.input_canvases.append(Canvas(size=input_size))
             self.output_canvases.append(Canvas(size=output_size))
+        self.test_canvas = Canvas(size=Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
+                                                   np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE)))
 
     def show(self, canvas_index: int | str = 'all'):
         if type(canvas_index) == int:
@@ -139,17 +140,22 @@ class Example:
                 canvas = self.input_canvases[canvas_index // 2]
             else:
                 canvas = self.output_canvases[canvas_index // 2]
-
             canvas.show()
+
+        elif canvas_index == 'test':
+            self.test_canvas.show()
 
         elif canvas_index == 'all':
             fig = plt.figure()
             index = 1
             nrows = self.number_of_io_pairs
-            ncoloums = 2
+            ncoloumns = 3
             for p in range(self.number_of_io_pairs):
-                self.input_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloums, index=index)
-                self.output_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloums, index=index + 1)
-                index += 2
-            fig.tight_layout()
+                self.input_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index)
+                self.output_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1)
+                if p == 0:
+                    self.test_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2)
+                index += 3
+            plt.tight_layout()
+
 

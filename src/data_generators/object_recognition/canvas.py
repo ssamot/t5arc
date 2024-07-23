@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
+from utils import *
 from data.utils import *
 from visualization import visualize_data as vis
 from data_generators.object_recognition.primitives import *
@@ -47,13 +48,16 @@ class Canvas:
 
     def where_object_fits_on_canvas(self, obj: Primitive) -> List[Point]:
         available_canvas_points = []
-        for x in range(-obj.size.dx//2, self.size.dx + obj.size.dx//2):
-            for y in range(-obj.size.dy//2, self.size.dy + obj.size.dy//2):
-                obj.translate(Point(x, y, 0))
+        for x in range(-obj.size.dx//2 + 1, self.size.dx - obj.size.dx//2):
+            for y in range(-obj.size.dy//2 + 1, self.size.dy - obj.size.dy//2):
+                obj.canvas_pos = Point(x, y, 0)
                 overlap = False
                 for obj_b in self.objects:
+                    #print(obj_b.bbox)
                     if do_two_objects_overlap(obj, obj_b):
                         overlap = True
+                    #print(obj_b.bbox)
+                    #print('------')
                 if not overlap:
                     available_canvas_points.append(Point(x, y, 0))
 
@@ -73,19 +77,23 @@ class Canvas:
         """
         self.actual_pixels[:, :] = 1
 
-        self.objects = sorted(self.objects, key=lambda obj: obj.canvas_pos.z)
+        self.objects = sorted(self.objects, key=lambda obj: obj._canvas_pos.z)
 
         for obj in self.objects:
-            xmin = obj.canvas_pos.x
+            xmin = obj._canvas_pos.x
             if xmin >= self.actual_pixels.shape[1]:
                 continue
-            xmax = obj.canvas_pos.x + obj.dimensions.dx
+            if xmin < 0:
+                xmin = 0
+            xmax = obj._canvas_pos.x + obj.dimensions.dx
             if xmax >= self.actual_pixels.shape[1]:
                 xmax = self.actual_pixels.shape[1]
-            ymin = obj.canvas_pos.y
+            ymin = obj._canvas_pos.y
             if ymin >= self.actual_pixels.shape[0]:
                 continue
-            ymax = obj.canvas_pos.y + obj.dimensions.dy
+            if ymin < 0:
+                ymin = 0
+            ymax = obj._canvas_pos.y + obj.dimensions.dy
             if ymax >= self.actual_pixels.shape[0]:
                 ymax = self.actual_pixels.shape[0]
 
@@ -100,7 +108,7 @@ class Canvas:
         :param canvas_pos: The Point specifying the coordinates on the canvas of the bottom left pixel of the object
         :return:
         """
-        self.objects[index].canvas_pos = canvas_pos
+        self.objects[index]._canvas_pos = canvas_pos
         self.embed_objects()
 
     def show(self, full_canvas=True, fig_to_add: None | plt.Figure = None, nrows: int = 0, ncoloumns: int = 0,

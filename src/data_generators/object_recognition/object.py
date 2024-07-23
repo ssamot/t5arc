@@ -20,18 +20,27 @@ class Object:
 
         self.id = id
         self.actual_pixels = actual_pixels
-        self.canvas_pos = canvas_pos
+        self._canvas_pos = canvas_pos
 
         if type(canvas_pos) != Point:
-            self.canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
+            self._canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
 
-        self.rotation_axis = cp.deepcopy(self.canvas_pos)
+        self.rotation_axis = cp.deepcopy(self._canvas_pos)
 
         self.dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 
         self.number_of_coloured_pixels: int = int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
         self.symmetries: List = []
 
+        self.reset_dimensions()
+
+    @property
+    def canvas_pos(self):
+        return self._canvas_pos
+
+    @canvas_pos.setter
+    def canvas_pos(self, new_pos):
+        self._canvas_pos = new_pos
         self.reset_dimensions()
 
     def reset_dimensions(self):
@@ -42,13 +51,13 @@ class Object:
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
-        bb_top_left = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy - 1)
-        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self.canvas_pos.y)
+        bb_top_left = Point(self._canvas_pos.x, self._canvas_pos.y + self.dimensions.dy - 1, self._canvas_pos.z)
+        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self._canvas_pos.y, self._canvas_pos.z)
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
 
     def translate(self, new_canvas_pos: Point):
-        self.canvas_pos = new_canvas_pos
+        self._canvas_pos = new_canvas_pos
         self.reset_dimensions()
 
     def scale(self, factor: int):
@@ -80,7 +89,7 @@ class Object:
         self.actual_pixels = scaled
 
         for sym in self.symmetries:
-            sym.origin += (sym.origin - self.canvas_pos + Point(0.5, 0.5)) * (factor - 1)
+            sym.origin += (sym.origin - self._canvas_pos + Point(0.5, 0.5)) * (factor - 1)
 
         self.reset_dimensions()
 
@@ -104,8 +113,8 @@ class Object:
         self.bbox.transform(translation=-center)
         self.bbox.transform(rotation=radians)
         self.bbox.transform(translation=center)
-        self.canvas_pos.x = self.bbox.top_left.x
-        self.canvas_pos.y = self.bbox.bottom_right.y
+        self._canvas_pos.x = self.bbox.top_left.x
+        self._canvas_pos.y = self.bbox.bottom_right.y
 
         for sym in self.symmetries:
             sym.transform(translation=-center)
@@ -149,8 +158,8 @@ class Object:
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=0) \
                 if axis == Orientation.Down else np.concatenate((concat_pixels, self.actual_pixels), axis=0)
 
-            new_symmetry_axis_origin = Point(self.canvas_pos.x, self.actual_pixels.shape[0] / 2 + self.canvas_pos.y) \
-                if axis == Orientation.Up else Point(self.canvas_pos.x, self.canvas_pos.y)
+            new_symmetry_axis_origin = Point(self._canvas_pos.x, self.actual_pixels.shape[0] / 2 + self._canvas_pos.y) \
+                if axis == Orientation.Up else Point(self._canvas_pos.x, self._canvas_pos.y)
 
             #new_symmetry_axis_origin.y -= 0.5
             if on_axis and axis == Orientation.Down:
@@ -172,8 +181,8 @@ class Object:
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=1) if axis == Orientation.Right else \
                 np.concatenate((concat_pixels, self.actual_pixels), axis=1)
 
-            new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self.canvas_pos.x, self.canvas_pos.y)\
-                if axis == Orientation.Right else Point(self.canvas_pos.x, self.canvas_pos.y)
+            new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self._canvas_pos.x, self._canvas_pos.y)\
+                if axis == Orientation.Right else Point(self._canvas_pos.x, self._canvas_pos.y)
 
             #new_symmetry_axis_origin.x -= 0.5
             if on_axis and axis == Orientation.Left:
@@ -188,9 +197,9 @@ class Object:
                                      length=self.actual_pixels.shape[0] - 1)
 
         if axis == Orientation.Left:
-            self.canvas_pos.x -= self.dimensions.dx
+            self._canvas_pos.x -= self.dimensions.dx
         if axis == Orientation.Down:
-            self.canvas_pos.y -= self.dimensions.dy
+            self._canvas_pos.y -= self.dimensions.dy
 
         self.symmetries.append(symmetry_vector)
 
@@ -230,14 +239,14 @@ class Object:
         assert orientation is not None or to_z is not None, print('Either Orientation or to_z must ')
 
         if orientation is not None:
-            self.canvas_pos.z += -1 if orientation == OrientationZ.Away else 1
+            self._canvas_pos.z += -1 if orientation == OrientationZ.Away else 1
             self.bbox.top_left.z += -1 if orientation == OrientationZ.Away else 1
             self.bbox.bottom_right.z += -1 if orientation == OrientationZ.Away else 1
             for sym in self.symmetries:
                 sym.origin.z += -1 if orientation == OrientationZ.Away else 1
 
         if to_z is not None:
-            self.canvas_pos.z = to_z
+            self._canvas_pos.z = to_z
             self.bbox.top_left.z = to_z
             self.bbox.bottom_right.z = to_z
             for sym in self.symmetries:
@@ -245,7 +254,7 @@ class Object:
 
     def get_coloured_pixels_positions(self):
         result = np.argwhere(self.actual_pixels > 1)
-        canv_pos = np.array([self.canvas_pos.to_numpy()[1], self.canvas_pos.to_numpy()[0]])
+        canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]])
         return canv_pos + result
 
     def get_background_pixels_positions(self):
@@ -335,7 +344,7 @@ class Object:
         extent = [xmin, xmax, ymin, ymax]
         ax = vis.plot_data(self.actual_pixels, extent=extent)
 
-        # TODO: DEAL WITH DIAGONAL SYMMETRIES!!!!
+        #TODO: DEAL WITH DIAGONAL SYMMETRIES!!!!
         if symmetries_on:
             for sym in self.symmetries:
                 if sym.orientation == Orientation.Up or sym.orientation == Orientation.Down:

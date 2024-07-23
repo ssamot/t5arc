@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import json
+import copy
 from data_generators.object_recognition.primitives import *
 
 
@@ -140,17 +141,17 @@ def load_data(json_dir, solver_dir, max_examples = 20):
 
 def do_two_objects_overlap(object_a: Primitive | Object, object_b: Primitive | Object) -> bool:
 
-    top_left_a = object_a.bbox.top_left
+    top_left_a = Point(object_a.bbox.top_left.x, object_a.bbox.top_left.y)
     top_left_a.x -= object_a.required_dist_to_others[2]
     top_left_a.y += object_a.required_dist_to_others[0]
-    bottom_right_a = object_a.bbox.bottom_right
+    bottom_right_a = Point(object_a.bbox.bottom_right.x, object_a.bbox.bottom_right.y)
     bottom_right_a.x += object_a.required_dist_to_others[3]
     bottom_right_a.y -= object_a.required_dist_to_others[1]
 
-    top_left_b = object_b.bbox.top_left
+    top_left_b = Point(object_b.bbox.top_left.x, object_b.bbox.top_left.y)
     top_left_b.x -= object_b.required_dist_to_others[2]
     top_left_b.y += object_b.required_dist_to_others[0]
-    bottom_right_b = object_b.bbox.bottom_right
+    bottom_right_b = Point(object_b.bbox.bottom_right.x, object_b.bbox.bottom_right.y)
     bottom_right_b.x += object_b.required_dist_to_others[3]
     bottom_right_b.y -= object_b.required_dist_to_others[1]
 
