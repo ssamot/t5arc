@@ -1,10 +1,7 @@
 import numpy as np
 import os
 import json
-import keras
-
-
-
+from data_generators.object_recognition.primitives import *
 
 
 def pad_array_with_random_position(small_array, m):
@@ -37,7 +34,7 @@ def pad_array_with_random_position(small_array, m):
     return large_array
 
 
-def load_data_for_generator(json_dir, solver_dir, max_examples = 20):
+def load_data_for_generator(json_dir, solver_dir, max_examples=20):
     json_data_list = []
     solver_list = []
 
@@ -139,4 +136,35 @@ def load_data(json_dir, solver_dir, max_examples = 20):
 
     #print(train.shape)
     return train, test, solver_list
+
+
+def do_two_objects_overlap(object_a: Primitive | Object, object_b: Primitive | Object) -> bool:
+
+    top_left_a = object_a.bbox.top_left
+    top_left_a.x -= object_a.required_dist_to_others[2]
+    top_left_a.y += object_a.required_dist_to_others[0]
+    bottom_right_a = object_a.bbox.bottom_right
+    bottom_right_a.x += object_a.required_dist_to_others[3]
+    bottom_right_a.y -= object_a.required_dist_to_others[1]
+
+    top_left_b = object_b.bbox.top_left
+    top_left_b.x -= object_b.required_dist_to_others[2]
+    top_left_b.y += object_b.required_dist_to_others[0]
+    bottom_right_b = object_b.bbox.bottom_right
+    bottom_right_b.x += object_b.required_dist_to_others[3]
+    bottom_right_b.y -= object_b.required_dist_to_others[1]
+
+    # if rectangle has area 0, no overlap
+    if top_left_a.x == bottom_right_a.x or top_left_a.y == bottom_right_a.y or bottom_right_b.x == top_left_b.x or top_left_b.y == bottom_right_b.y:
+        return False
+
+    # If one rectangle is on left side of other
+    if top_left_a.x > bottom_right_b.x or top_left_b.x > bottom_right_a.x:
+        return False
+
+    # If one rectangle is above other
+    if bottom_right_a.y > top_left_b.y or bottom_right_b.y > top_left_a.y:
+        return False
+
+    return True
 
