@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
-import numpy as np
-from utils import *
+from data.utils import *
 from visualization import visualize_data as vis
 from data_generators.object_recognition.primitives import *
 from data_generators.object_recognition.basic_geometry import Point, Vector, Bbox, Orientation, Dimension2D, OrientationZ
@@ -15,7 +14,7 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
 class Canvas:
-    def __init__(self, size: Dimension2D | np.ndarray | List, objects: List[Object] | None, num_of_objects:int = 0):
+    def __init__(self, size: Dimension2D | np.ndarray | List, objects: List[Object] | None = None, num_of_objects:int = 0):
 
         if type(size) != Dimension2D:
             self.size = Dimension2D(array=size)
@@ -29,7 +28,7 @@ class Canvas:
             self.objects = objects
             self.num_of_objects = len(objects)
 
-        self.actual_pixels = np.ones((size[1], size[0]))
+        self.actual_pixels = np.ones((size.dy, size.dx))
         self.full_canvas = np.zeros((MAX_PAD_SIZE, MAX_PAD_SIZE))
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
 
@@ -45,6 +44,20 @@ class Canvas:
             result = union2d(result, obj.get_coloured_pixels_positions())
 
         return result
+
+    def where_object_fits_on_canvas(self, obj: Primitive) -> List[Point]:
+        available_canvas_points = []
+        for x in range(-obj.size.dx//2, self.size.dx + obj.size.dx//2):
+            for y in range(-obj.size.dy//2, self.size.dy + obj.size.dy//2):
+                obj.translate(Point(x, y, 0))
+                overlap = False
+                for obj_b in self.objects:
+                    if do_two_objects_overlap(obj, obj_b):
+                        overlap = True
+                if not overlap:
+                    available_canvas_points.append(Point(x, y, 0))
+
+        return available_canvas_points
 
     def generate_random_objects(self):
         pass
@@ -90,7 +103,8 @@ class Canvas:
         self.objects[index].canvas_pos = canvas_pos
         self.embed_objects()
 
-    def show(self, full_canvas=True) -> tuple[plt.Figure, {plt.vlines, plt.hlines}]:
+    def show(self, full_canvas=True, fig_to_add: None | plt.Figure = None, nrows: int = 0, ncoloumns: int = 0,
+             index: int = 1) -> tuple[plt.Figure, {plt.vlines, plt.hlines}]:
 
         if full_canvas:
             xmin = - 0.5
@@ -98,13 +112,21 @@ class Canvas:
             ymin = - 0.5
             ymax = self.full_canvas.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
-            fig, ax = vis.plot_data(self.full_canvas, extent=extent)
+            if fig_to_add is None:
+                vis.plot_data(self.full_canvas, extent=extent)
+            else:
+                ax = fig_to_add.add_subplot(nrows, ncoloumns, index)
+                _ = vis.plot_data(self.full_canvas, extent=extent, axis=ax)
         else:
             xmin = - 0.5
             xmax = self.actual_pixels.shape[1] - 0.5
             ymin = - 0.5
             ymax = self.actual_pixels.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
-            fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
+            if fig_to_add is None:
+                fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
+            else:
+                ax = fig_to_add.add_subplot(nrows, ncoloumns, index)
+                _ = vis.plot_data(self.actual_pixels, extent=extent, axis=ax)
+            #fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
 
-        return fig, ax

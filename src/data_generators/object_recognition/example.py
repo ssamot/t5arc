@@ -10,6 +10,8 @@ MAX_EXAMPLE_PAIRS = const.MAX_EXAMPLE_PAIRS
 MIN_PAD_SIZE = const.MIN_PAD_SIZE
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
+OVERLAP_PROB = 0.8
+FAR_AWAY_PROB = 0.1
 
 class Example:
     def __init__(self):
@@ -28,7 +30,8 @@ class Example:
         self.ids = []
         self.objects = []
 
-        #self.generate_canvasses()
+        self.generate_canvasses()
+
 
     @staticmethod
     def get_random_colour(other_colour: int | None = None):
@@ -42,20 +45,27 @@ class Example:
                 colour = np.random.randint(1, len(const.COLOR_MAP))
             return colour
 
+    # TODO: Deal with this given the other objects positions
+    def get_random_position(self, min_distance_to_others: Dimension2D) -> Point:
+        for other in self.objects:
+            pass
+    
+    def do_random_transformations(self, obj: Primitive) -> Primitive:
+        pass
+
     def create_random_object(self) -> Primitive:
         obj_type = ObjectType.random()
 
         id = self.ids[-1] + 1 if len(self.ids) > 0 else 0
         args = {'colour': self.get_random_colour(),
                 'border_size': [0, 0, 0, 0],  # For now and then we will see
-                'id': id,
-                'canvas_pos': Point()}  # TODO: Deal with this given the other objects positions
+                'canvas_pos': Point(0, 0, 0),
+                'id': id}
+        self.ids.append(id)
 
-        self.ids.append((id))
-
-        if obj_type.name == 'InverseCross' or obj_type.name == 'Steps' or obj_type.name == 'Pyramid':
+        if obj_type.name == 'InverseCross' or obj_type.name == 'Steps' or obj_type.name == 'Pyramid':  # These objects have height not size
             args['height'] = np.random.randint(2, 10)
-            if obj_type.name == 'InverseCross' and args['height'] % 2 == 0:
+            if obj_type.name == 'InverseCross' and args['height'] % 2 == 0:  # Inverted Crosses need odd height
                 args['height'] += 1
 
         if obj_type.name == 'InverseCross':
@@ -63,33 +73,83 @@ class Example:
             args['fill_colour'] = fill_colour
             args['fill_height'] = np.random.randint(0, args['height'])
 
-        if obj_type.name == 'Diagonal':
+        if obj_type.name == 'Diagonal':  # Diagonal has length, not size
             args['length'] = np.random.randint((2, 10))
 
-        if not np.any(np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie']) == obj_type.name):
+        if not np.any(np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie'])
+                      == obj_type.name):
             size = Dimension2D(np.random.randint(2, 10), np.random.randint(2, 10))
-            if np.any(np.array(['Cross', '']) == obj_type.name):
+            if np.any(np.array(['Cross', '']) == obj_type.name):   # Crosses need odd size
                 if size.dx % 2 == 0:
                     size.dx += 1
                 if size.dy % 2 == 0:
                     size.dy += 1
             args['size'] = size
 
-        if obj_type.name == 'Hole':
+        if obj_type.name == 'Hole':  # Hole has also thickness
             up = np.random.randint(1, args['size'].dy - 2)
             down = np.random.randint(1, args['size'].dy - up)
             left = np.random.randint(1, args['size'].dx - 2)
             right = np.random.randint(1, args['size'].dx - left)
             args['thickness'] = [up, down, left, right]
 
-        self.objects.append(globals()[obj_type.name](**args))
+        object = globals()[obj_type.name](**args)
+        object = self.do_random_transformations(object)
+
+        # Deal with the allowed minimum distance to other objects
+        if 'length' in args:
+            min_distance_to_others = Dimension2D(args['length'], args['length'])
+        elif 'height' in args:
+            min_distance_to_others = Dimension2D(args['height'], args['height'])
+        else:
+            min_distance_to_others = args['size']
+
+        min_distance_to_others += Dimension2D(args['border_size'][3], args['border_size'][0])
+
+        allow_overlap = np.random.random() > OVERLAP_PROB
+        if allow_overlap:
+            min_distance_to_others -= Dimension2D(np.random.randint(1, min_distance_to_others.dx - 2),
+                                                  np.random.randint(1, min_distance_to_others.dy - 2))
+        else:
+            far_away = np.random.random() > FAR_AWAY_PROB
+            if far_away:
+                min_distance_to_others -= Dimension2D(np.random.randint(1, min_distance_to_others.dx - 2),
+                                                      np.random.randint(1, min_distance_to_others.dy - 2))
+
+        object.required_distance_to_others = min_distance_to_others
+        object.canvas_pos = self.get_random_position(min_distance_to_others)
+
+        self.objects.append(object)
 
         return self.objects[-1]
 
     def generate_canvasses(self):
         for c in range(self.number_of_io_pairs):
-            self.input_canvases.append(Canvas(size=self.input_size))
-            self.output_canvases.append(Canvas(size=self.output_size))
+            input_size = Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
+                                     np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
+            output_size = Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
+                                      np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
 
-    def show(self):
-        pass
+            self.input_canvases.append(Canvas(size=input_size))
+            self.output_canvases.append(Canvas(size=output_size))
+
+    def show(self, canvas_index: int | str = 'all'):
+        if type(canvas_index) == int:
+            if canvas_index % 2 == 0:
+                canvas = self.input_canvases[canvas_index // 2]
+            else:
+                canvas = self.output_canvases[canvas_index // 2]
+
+            canvas.show()
+
+        elif canvas_index == 'all':
+            fig = plt.figure()
+            index = 1
+            nrows = self.number_of_io_pairs
+            ncoloums = 2
+            for p in range(self.number_of_io_pairs):
+                self.input_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloums, index=index)
+                self.output_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloums, index=index + 1)
+                index += 2
+            fig.tight_layout()
+

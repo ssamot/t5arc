@@ -16,7 +16,7 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 class Object:
 
     def __init__(self, actual_pixels: np.ndarray, id: None | int = None,
-                 canvas_pos: Union[List | np.ndarray | Point] = (0, 0, 0)):
+                 canvas_pos: List | np.ndarray | Point = (0, 0, 0)):
 
         self.id = id
         self.actual_pixels = actual_pixels
@@ -46,6 +46,10 @@ class Object:
         bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self.canvas_pos.y)
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
+
+    def translate(self, new_canvas_pos: Point):
+        self.canvas_pos = new_canvas_pos
+        self.reset_dimensions()
 
     def scale(self, factor: int):
         """
@@ -329,7 +333,7 @@ class Object:
         ymin = self.bbox.bottom_right.y - 0.5
         ymax = self.bbox.top_left.y + 0.5
         extent = [xmin, xmax, ymin, ymax]
-        fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
+        ax = vis.plot_data(self.actual_pixels, extent=extent)
 
         # TODO: DEAL WITH DIAGONAL SYMMETRIES!!!!
         if symmetries_on:

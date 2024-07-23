@@ -25,15 +25,17 @@ def add_vhlines_to_plot(axis, data, extent):
     return axis
 
 
-def plot_data(pixels, extent):
-    fig = plt.figure()
-    ax = fig.add_subplot()
+def plot_data(pixels, extent, axis: plt.Axes | None = None):
+    if axis is None:
+        fig = plt.figure()
+        ax = fig.add_subplot()
+    else:
+        ax = axis
     pixels_for_visualisation = data_to_colour(pixels)
     ax.imshow(pixels_for_visualisation, origin='lower', extent=extent, interpolation='None', aspect='equal')
     ax = add_vhlines_to_plot(ax, pixels, extent)
 
-    return fig, ax
-
+    return ax
 
 def plot_task(task):
     n = len(task["train"]) + len(task["test"])
