@@ -59,6 +59,44 @@ class Dimension2D:
     def __repr__(self) -> str:
         return f'Dimension:(dX = {self.dx}, dY = {self.dy})'
 
+    def __add__(self, other) -> Dimension2D:
+        if type(other) == Dimension2D:
+            result = Dimension2D(self.dx + other.dx, self.dy + other.dy)
+        if type(other) == Point:
+            result = Dimension2D(self.dx + other.x, self.dy + other.y)
+        if type(other) == list:
+            result = Dimension2D(self.dx + other[0], self.dy + other[1])
+        if type(other) == np.ndarray:
+            result = Dimension2D(self.dx + other[0], self.dy + other[1])
+        if type(other) == int or type(other) == float:
+            result = Dimension2D(self.dx + other, self.dy + other)
+        return result
+
+    def __sub__(self, other) -> Dimension2D:
+        if type(other) == Dimension2D:
+            result = Dimension2D(self.dx - other.dx, self.dy - other.dy)
+        if type(other) == Point:
+            result = Dimension2D(self.dx - other.x, self.dy - other.y)
+        if type(other) == list:
+            result = Dimension2D(self.dx - other[0], self.dy - other[1])
+        if type(other) == np.ndarray:
+            result = Dimension2D(self.dx - other[0], self.dy - other[1])
+        if type(other) == int or type(other) == float:
+            result = Dimension2D(self.dx - other, self.dy - other)
+        return result
+
+    def __isub__(self, other) -> Dimension2D:
+        return self.__sub__(other)
+
+    def __iadd__(self, other) -> Dimension2D:
+        return self.__add__(other)
+
+    def __mul__(self, other: float | int | bool) -> Dimension2D:
+        return Dimension2D(self.x * other, self.y * other)
+
+    def __truediv__(self, other) -> Dimension2D:
+        return Dimension2D(self.x / other, self.y / other)
+
     def to_numpy(self):
         return np.array([self.dx, self.dy])
 
@@ -98,6 +136,9 @@ class Point:
 
     def __mul__(self, other: float | int | bool) -> Point:
         return Point(self.x * other, self.y * other, self.z * other)
+
+    def __truediv__(self, other) -> Point:
+        return Point(self.x / other, self.y / other, self.z / other)
 
     def __repr__(self) -> str:
         return f'Point(X = {self.x}, Y = {self.y}, Z = {self.z})'
