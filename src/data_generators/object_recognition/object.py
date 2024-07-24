@@ -43,19 +43,7 @@ class Object:
         self._canvas_pos = new_pos
         self.reset_dimensions()
 
-    def reset_dimensions(self):
-        """
-        Reset the self.dimensions and the self.bbox top left and bottom right points to fit the updated actual_pixels
-        :return:
-        """
-        self.dimensions.dx = self.actual_pixels.shape[1]
-        self.dimensions.dy = self.actual_pixels.shape[0]
-
-        bb_top_left = Point(self._canvas_pos.x, self._canvas_pos.y + self.dimensions.dy - 1, self._canvas_pos.z)
-        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self._canvas_pos.y, self._canvas_pos.z)
-
-        self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
-
+    # Transformation methods
     def scale(self, factor: int):
         """
         Scales the object. A positive factor adds pixels and a negative factor removes pixels.
@@ -224,8 +212,70 @@ class Object:
         elif axis == Orientation.Left or axis == Orientation.Right:
             self.actual_pixels = np.fliplr(self.actual_pixels)
 
+    def randomise_colour(self, ratio: float = 0.1, colour: str = 'random'):
+        """
+        Changes the colour of ratio of the coloured pixels (picked randomly) to a new random (not already there) colour
+        :param ratio: The ratio of the coloured pixels to be recoloured
+        :param colour: The colour to change the pixels to. 'random' means a random colour (not already on the object),
+        'x' means use the colour number x
+        :return:
+        """
+        new_pixels_pos = self.pick_random_pixels(coloured_or_background='coloured', ratio=ratio)
+
+        if new_pixels_pos is not None:
+            if colour == 'random':
+                colours = self.get_used_colours()
+                new_colour = np.setdiff1d(np.arange(2, 11), colours)
+            else:
+                new_colour = int(colour)
+
+            self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = np.random.choice(new_colour, size=1)
+
+    def randomise_shape(self, add_or_subtract: str = 'add', ratio: float = 0.1, colour: str = 'common'):
+        """
+        Adds or subtracts coloured pixels to the object
+        :param add_or_subtract: To add or subtract pixels. 'add' or 'subtract'
+        :param ratio: The percentage (ratio) of pixels to be added or subtracted
+        :param colour: Whether the colour used for added pixels should be the most common one used or a random one or
+        a specific one. 'common' or 'random' or 'x' where x is the colour number (from 2 to 10)
+        :return:
+        """
+        coloured_or_background = 'background' if add_or_subtract == 'add' else 'coloured'
+        new_pixels_pos = self.pick_random_pixels(coloured_or_background=coloured_or_background, ratio=ratio)
+
+        if new_pixels_pos is not None:
+            if add_or_subtract == 'add':
+                if colour == 'common':
+                    colours = self.actual_pixels[np.where(self.actual_pixels > 1)].astype(int)
+                    new_colour = int(np.argmax(np.bincount(colours)))
+                elif colour == 'random':
+                    new_colour = np.random.randint(2, 10, 1)
+                else:
+                    new_colour = int(colour)
+
+            elif add_or_subtract == 'subtract':
+                new_colour = 1
+
+            self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = new_colour
+
+    # Utility methods
+    def reset_dimensions(self):
+        """
+        Reset the self.dimensions and the self.bbox top left and bottom right points to fit the updated actual_pixels
+        :return:
+        """
+        self.dimensions.dx = self.actual_pixels.shape[1]
+        self.dimensions.dy = self.actual_pixels.shape[0]
+
+        bb_top_left = Point(self._canvas_pos.x, self._canvas_pos.y + self.dimensions.dy - 1, self._canvas_pos.z)
+        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self._canvas_pos.y, self._canvas_pos.z)
+
+        self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
+
     def copy(self):
-        return cp.deepcopy(self)
+        new_obj = Object(actual_pixels=self.actual_pixels, _id=self.id, border_size=self.border_size,
+                         canvas_pos=self.canvas_pos)
+        return new_obj
 
     def __add__(self, other: Object):
         pass
@@ -270,6 +320,8 @@ class Object:
 
     def get_used_colours(self):
         coloured_pos = self.get_coloured_pixels_positions()
+        canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]])
+        coloured_pos -= canv_pos
         return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
 
     def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: float = 0.1):
@@ -283,6 +335,8 @@ class Object:
         """
         if coloured_or_background == 'coloured':
             pixels_pos = self.get_coloured_pixels_positions()
+            canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]])
+            pixels_pos -= canv_pos
         elif coloured_or_background == 'background':
             pixels_pos = self.get_background_pixels_positions()
 
@@ -290,54 +344,11 @@ class Object:
         if num_of_new_pixels < 1:
             num_of_new_pixels = 1
 
-        t = np.random.choice(np.arange(len(pixels_pos)), num_of_new_pixels)
-        new_pixels_pos = pixels_pos[t]
-
-        return new_pixels_pos
-
-    def randomise_colours(self, ratio: float = 0.1, colour: str = 'random'):
-        """
-        Changes the colour of ratio of the coloured pixels (picked randomly) to a new random (not already there) colour
-        :param ratio: The ratio of the coloured pixels to be recoloured
-        :param colour: The colour to change the pixels to. 'random' means a random colour (not already on the object),
-        'x' means use the colour number x
-        :return:
-        """
-        new_pixels_pos = self.pick_random_pixels(coloured_or_background='coloured', ratio=ratio)
-
-        if colour == 'random':
-            colours = self.get_used_colours()
-            new_colour = np.setdiff1d(np.arange(1, 10), colours)
+        if len(pixels_pos) > 0:
+            t = np.random.choice(np.arange(len(pixels_pos)), num_of_new_pixels)
+            return pixels_pos[t]
         else:
-            new_colour = int(colour)
-
-        self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = np.random.choice(new_colour, size=1)
-
-    def randomise_shape(self, add_or_subtract: str = 'add', ratio: float = 0.1, colour: str = 'common'):
-        """
-        Adds or subtracts coloured pixels to the object
-        :param add_or_subtract: To add or subtract pixels. 'add' or 'subtract'
-        :param ratio: The percentage (ratio) of pixels to be added or subtracted
-        :param colour: Whether the colour used for added pixels should be the most common one used or a random one or
-        a specific one. 'common' or 'random' or 'x' where x is the colour number (from 2 to 10)
-        :return:
-        """
-        coloured_or_background = 'background' if add_or_subtract == 'add' else 'coloured'
-        new_pixels_pos = self.pick_random_pixels(coloured_or_background=coloured_or_background, ratio=ratio)
-
-        if add_or_subtract == 'add':
-            if colour == 'common':
-                colours = self.actual_pixels[np.where(self.actual_pixels > 1)]
-                new_colour = np.argmax(np.bincount(colours))
-            elif colour == 'random':
-                new_colour = np.random.randint(2, 10, 1)
-            else:
-                new_colour = int(colour)
-
-        elif add_or_subtract == 'subtract':
-            new_colour = 1
-
-        self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = new_colour
+            return None
 
     def show(self, symmetries_on=True):
         """

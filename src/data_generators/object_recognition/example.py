@@ -13,6 +13,7 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 OVERLAP_PROB = 0.8
 FAR_AWAY_PROB = 0.1
 
+
 class Example:
     def __init__(self):
         self.number_of_io_pairs = np.random.randint(2, const.MAX_EXAMPLE_PAIRS)
@@ -39,6 +40,7 @@ class Example:
                 colour = np.random.randint(1, len(const.COLOR_MAP))
             return colour
 
+    @staticmethod
     def get_random_position(self, obj: Primitive, canvas: Canvas) -> Point:
         available_positions = canvas.where_object_fits_on_canvas(obj=obj)
         return np.random.choice(available_positions)
@@ -127,6 +129,19 @@ class Example:
             self.output_canvases.append(Canvas(size=output_size))
         self.test_canvas = Canvas(size=Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
                                                    np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE)))
+
+    def place_new_object_on_canvases(self):
+        """
+        Create a new object and put it on different canvases. The process is as follows.
+        1) Randomly create a Primitive.
+        2) Randomly pick a number of transformations
+        3) Do the transformations randomly picking their parameters
+        4) Randomly pick the canvasses to place the object in (of the possible ones given the other objects)
+        5) Randomly place the object in some of them (in allowed positions)
+        6) Repeat steps 2 to 5 one more time so the same object appears on different canvases after some transformations
+        :return:
+        """
+        obj = self.create_random_object()
 
     def populate_canvases(self):
         pass
