@@ -7,7 +7,7 @@ import constants as const
 from typing import List
 from enum import Enum
 from data_generators.object_recognition.object import Object
-from data_generators.object_recognition.basic_geometry import Point, Bbox, Dimension2D, Orientation, OrientationZ, Vector
+from data_generators.object_recognition.basic_geometry import Point, Bbox, Dimension2D, Orientation, Surround, Vector
 
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -37,8 +37,9 @@ class ObjectType(Enum):
 
 
 class Primitive(Object):
-    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
-                 required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), colour: None | int = None):
+    def __init__(self, size: Dimension2D | np.ndarray | List, colour: None | int = None,
+                 border_size: Surround = (0, 0, 0, ),
+                 required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0])):
         """
         A basic class for common Primitive data and methods
         :param size: The x, y size of the Primitive
@@ -56,15 +57,13 @@ class Primitive(Object):
             size = np.random.randint(2, 20, 2)
             self.size = Dimension2D(size[0], size[1])
 
+        self.border_size = border_size
+
         if colour is None:
             self.colour = np.random.randint(2, len(const.COLOR_MAP))
         else:
             self.colour = colour
 
-        self.background_size = np.array([border_size[0] + self.size.dy + border_size[1],
-                                         border_size[2] + self.size.dx + border_size[3]])
-
-        self.border_size = border_size
         self.required_dist_to_others = required_dist_to_others
 
     def print_border_size(self):
@@ -72,7 +71,7 @@ class Primitive(Object):
         A pretty print of the border size
         :return:
         """
-        print(f'Border sizes: Up = {self.border_size[0]}, Down = {self.border_size[1]}, Right = {self.border_size[2]}, ' \
+        print(f'Border sizes: Up = {self.border_size:.Up}, Down = {self.border_size:.Down}, Right = {self.border_size[2]}, ' \
                 'Down = {self.border_size[2]}')
 
     def generate_actual_pixels(self, array: np.ndarray | int):
@@ -81,9 +80,11 @@ class Primitive(Object):
         :param array:
         :return:
         """
-        self.actual_pixels = np.ones(self.background_size)
-        self.actual_pixels[self.border_size[1]: self.size.dy + self.border_size[1],
-                           self.border_size[2]: self.size.dx + self.border_size[2]] = array
+        background_size = np.array([self.border_size.Up + self.size.dy + self.border_size.Down,
+                                    self.border_size.Left + self.size.dx + self.border_size.Right])
+        self.actual_pixels = np.ones(background_size)
+        self.actual_pixels[self.border_size.Down: self.size.dy + self.border_size.Down,
+                           self.border_size.Left: self.size.dx + self.border_size.Left] = array
 
     def generate_symmetries(self, dirs: str = 'both'):
         """
@@ -113,7 +114,7 @@ class Primitive(Object):
 
 
 class Random(Primitive):
-    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None, occupancy_prob: float = 0.5,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]),
                  _id: None | int = None):
@@ -129,11 +130,11 @@ class Random(Primitive):
 
         self.generate_actual_pixels(array=array)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, border_size=border_size, canvas_pos=canvas_pos, _id=_id)
 
 
 class Parallelogram(Primitive):
-    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -149,13 +150,13 @@ class Parallelogram(Primitive):
 
         self.generate_actual_pixels(array=self.colour)
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, _id=_id)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size, _id=_id)
 
         self.generate_symmetries()
 
 
 class Cross(Primitive):
-    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -184,14 +185,14 @@ class Cross(Primitive):
         cross = np.transpose(cross)
         self.generate_actual_pixels(array=cross)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos,  border_size=border_size, _id=_id)
 
         self.generate_symmetries()
 
 
 class Hole(Primitive):
-    def __init__(self, size: Dimension2D | np.ndarray | List, thickness: List | np.ndarray = (1, 1, 1, 1),
-                 border_size: np.ndarray | List = np.array([0, 0, 0, 0]), canvas_pos: Point = Point(0, 0),
+    def __init__(self, size: Dimension2D | np.ndarray | List, thickness: Surround = Surround(1, 1, 1, 1),
+                 border_size: Surround = Surround(0, 0, 0, 0), canvas_pos: Point = Point(0, 0),
                  colour: None | int = None, required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]),
                  _id: None | int = None):
         """
@@ -210,18 +211,18 @@ class Hole(Primitive):
 
         self.generate_actual_pixels(array=self.colour)
 
-        th_up = thickness[0]
-        th_down = thickness[1]
-        th_left = thickness[2]
-        th_right = thickness[3]
+        th_up = thickness.Up
+        th_down = thickness.Down
+        th_left = thickness.Left
+        th_right = thickness.Right
 
-        self.actual_pixels[self.border_size[1] + th_down: self.size.dy + self.border_size[1] - th_up,
-                           self.border_size[2] + th_left: self.size.dx + self.border_size[2] - th_right] = 1
+        self.actual_pixels[border_size.Down + th_down: self.size.dy + border_size.Down - th_up,
+                           border_size.Left + th_left: self.size.dx + border_size.Left - th_right] = 1
 
-        self.hole_bbox = Bbox(top_left=Point(self.border_size[2] + th_left, self.size.dy + self.border_size[1] - th_up - 1),
-                              bottom_right=Point(self.size.dx + self.border_size[2] - th_right - 1, self.border_size[1] + th_down))
+        self.hole_bbox = Bbox(top_left=Point(self.border_size.Left + th_left, self.size.dy + self.border_size.Down - th_up - 1),
+                              bottom_right=Point(self.size.dx + self.border_size.Left - th_right - 1, self.border_size.Down + th_down))
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, _id=_id)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels,  border_size=border_size, _id=_id)
 
         sym = None
         if th_up == th_down:
@@ -236,7 +237,7 @@ class Hole(Primitive):
 
 
 class Pi(Primitive):
-    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -264,13 +265,13 @@ class Pi(Primitive):
 
         self.generate_actual_pixels(array=pi)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,  _id=_id)
 
         self.generate_symmetries('y')
 
 
 class InverseCross(Primitive):
-    def __init__(self, height: int, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, height: int, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]),
                  fill_colour: None | int = None, fill_height: None | int = None, _id: None | int = None):
@@ -316,7 +317,7 @@ class InverseCross(Primitive):
 
         self.generate_actual_pixels(array=cross)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
         self.generate_symmetries()
 
@@ -337,11 +338,11 @@ class Dot(Primitive):
 
         self.generate_actual_pixels(array=self.colour)
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, _id=_id)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size, _id=_id)
 
 
 class Angle(Primitive):
-    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -367,11 +368,11 @@ class Angle(Primitive):
 
         self.generate_actual_pixels(array=angle)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
 
 class Diagonal(Primitive):
-    def __init__(self, length: int, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, length: int, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -398,17 +399,17 @@ class Diagonal(Primitive):
 
         self.generate_actual_pixels(array=diagonal)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
         # TODO: Add diagonal symmetries
         '''
-        sym_origin = Point(canvas_pos.x + border_size[2] + length, canvas_pos.y + border_size[1])
+        sym_origin = Point(canvas_pos.x + border_size[2] + length, canvas_pos.y + border_size:.Down)
         self.symmetries.append(Vector(orientation=Orientation.Up_Left, length=length, origin=sym_origin))
         '''
 
 
 class Steps(Primitive):
-    def __init__(self, height: int, depth: int, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, height: int, depth: int, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -435,11 +436,11 @@ class Steps(Primitive):
 
         self.generate_actual_pixels(array=zigzag)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
 
 class Fish(Primitive):
-    def __init__(self, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -460,11 +461,11 @@ class Fish(Primitive):
 
         self.generate_actual_pixels(array=fish)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
 
 class Bolt(Primitive):
-    def __init__(self, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -486,11 +487,11 @@ class Bolt(Primitive):
 
         self.generate_actual_pixels(array=bolt)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
 
 class Tie(Primitive):
-    def __init__(self, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -510,11 +511,11 @@ class Tie(Primitive):
 
         self.generate_actual_pixels(array=tie)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
 
 class Spiral(Primitive):
-    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None, gap: int = 1,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -565,11 +566,11 @@ class Spiral(Primitive):
 
         self.generate_actual_pixels(array=spiral)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
 
 class Pyramid(Primitive):
-    def __init__(self, height: int = 3, border_size: np.ndarray | List = np.array([0, 0, 0, 0]),
+    def __init__(self, height: int = 3, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None, full: bool = True,
                  required_dist_to_others: np.ndarray | List = np.array([0, 0, 0, 0]), _id: None | int = None):
         """
@@ -604,7 +605,7 @@ class Pyramid(Primitive):
 
         self.generate_actual_pixels(array=pi)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
         self.generate_symmetries('y')
 

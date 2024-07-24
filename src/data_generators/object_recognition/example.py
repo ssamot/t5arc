@@ -51,7 +51,7 @@ class Example:
 
         id = self.ids[-1] + 1 if len(self.ids) > 0 else 0
         args = {'colour': self.get_random_colour(),
-                'border_size': [0, 0, 0, 0],  # For now and then we will see
+                'border_size': Surround(0, 0, 0, 0),  # For now and then we will see
                 'canvas_pos': Point(0, 0, 0),
                 'id': id}
         self.ids.append(id)
@@ -97,7 +97,7 @@ class Example:
         else:
             min_distance_to_others = args['size']
 
-        min_distance_to_others += Dimension2D(args['border_size'][3], args['border_size'][0])
+        min_distance_to_others += Dimension2D(args['border_size'].Right, args['border_size'].Up)
 
         allow_overlap = np.random.random() > OVERLAP_PROB
         if allow_overlap:

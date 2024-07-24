@@ -1,13 +1,10 @@
 
 from __future__ import annotations
 
-import numpy as np
-import constants as const
 import copy as cp
-from typing import Union, List
 import skimage
 from visualization import visualize_data as vis
-from data_generators.object_recognition.basic_geometry import Point, Vector, Bbox, Orientation, Dimension2D, OrientationZ
+from data_generators.object_recognition.basic_geometry import *
 
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -16,11 +13,13 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 class Object:
 
     def __init__(self, actual_pixels: np.ndarray, _id: None | int = None,
+                 border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: List | np.ndarray | Point = (0, 0, 0)):
 
         self.id = _id
         self.actual_pixels = actual_pixels
         self._canvas_pos = canvas_pos
+        self.border_size = border_size
 
         if type(canvas_pos) != Point:
             self._canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
@@ -30,6 +29,7 @@ class Object:
         self.dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 
         self.number_of_coloured_pixels: int = int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
+
         self.symmetries: List = []
 
         self.reset_dimensions()
@@ -129,13 +129,24 @@ class Object:
         self.flip(Orientation.Left)
         transform = skimage.transform.AffineTransform(shear=_shear)
 
-        self.actual_pixels = skimage.transform.warp(self.actual_pixels, inverse_map=transform.inverse, order=0)
+        temp_pixels = self.actual_pixels[self.border_size.Down: self.dimensions.dy - self.border_size.Up,
+                                         self.border_size.Right: self.dimensions.dx - self.border_size.Left]
 
-        white_pixels = np.argwhere(self.actual_pixels == 0)
-        self.actual_pixels[np.array([i[0] for i in white_pixels]), np.array([i[1] for i in white_pixels])] = 1
+        large_pixels = np.ones((300, 300))
+        large_pixels[30: 30 + temp_pixels.shape[0], 170: 170 + temp_pixels.shape[1]] = temp_pixels
+        large_pixels_sheared = skimage.transform.warp(large_pixels, inverse_map=transform.inverse, order=0)
+        coloured_pos = np.argwhere(large_pixels_sheared > 1)
+
+        top_left = coloured_pos.min(0)
+        bottom_right = coloured_pos.max(0)
+        new_pixels = large_pixels_sheared[top_left[0]:bottom_right[0] + 1, top_left[1]: bottom_right[1] + 1]
+        self.actual_pixels = np.ones((new_pixels.shape[0] + self.border_size.Up + self.border_size.Down,
+                                       new_pixels.shape[1] + self.border_size.Left + self.border_size.Right))
+        self.actual_pixels[self.border_size.Down: new_pixels.shape[0] + self.border_size.Down,
+                           self.border_size.Right: new_pixels.shape[1] + self.border_size.Right] = new_pixels
 
         self.flip(Orientation.Right)
-
+        self.reset_dimensions()
         self.symmetries = []  # Loose any symmetries
 
     def mirror(self, axis: Orientation, on_axis=False):
