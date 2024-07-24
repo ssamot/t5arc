@@ -6,6 +6,7 @@ import constants as const
 from typing import Union, List
 from dataclasses import dataclass
 from enum import Enum
+from dataclasses import dataclass
 
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -45,6 +46,14 @@ class Orientation(Enum):
 class OrientationZ(Enum):
     Away: int = -1
     Towards: int = 1
+
+
+@dataclass
+class Surround:
+    Up: int = 0
+    Down: int = 0
+    Left: int = 0
+    Right: int = 0
 
 
 class Dimension2D:
