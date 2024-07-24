@@ -63,12 +63,6 @@ class Canvas:
 
         return available_canvas_points
 
-    def generate_random_objects(self):
-        pass
-
-    def randomise_empty_regions(self):
-        pass
-
     def embed_objects(self):
         """
         Embeds all objects in the self.objects list onto the self.actual_pixels of the canvas. It uses the objects
@@ -112,7 +106,7 @@ class Canvas:
         self.embed_objects()
 
     def show(self, full_canvas=True, fig_to_add: None | plt.Figure = None, nrows: int = 0, ncoloumns: int = 0,
-             index: int = 1) -> tuple[plt.Figure, {plt.vlines, plt.hlines}]:
+             index: int = 1):
 
         if full_canvas:
             xmin = - 0.5
@@ -136,5 +130,4 @@ class Canvas:
             else:
                 ax = fig_to_add.add_subplot(nrows, ncoloumns, index)
                 _ = vis.plot_data(self.actual_pixels, extent=extent, axis=ax)
-            #fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
 
