@@ -18,11 +18,6 @@ class Example:
         self.number_of_io_pairs = np.random.randint(2, const.MAX_EXAMPLE_PAIRS)
         self.number_of_canvasses = self.number_of_io_pairs * 2 + 1
 
-        self.input_size = Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
-                                      np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
-        self.output_size = Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
-                                       np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
-
         self.input_canvases = []
         self.output_canvases = []
         self.test_canvas = None
@@ -31,7 +26,6 @@ class Example:
         self.objects = []
 
         self.generate_canvasses()
-
 
     @staticmethod
     def get_random_colour(other_colour: int | None = None):
@@ -45,9 +39,9 @@ class Example:
                 colour = np.random.randint(1, len(const.COLOR_MAP))
             return colour
 
-    # TODO: Deal with this given the other objects positions
-    def get_random_position(self, obj: Primitive) -> Point:
-        pass
+    def get_random_position(self, obj: Primitive, canvas: Canvas) -> Point:
+        available_positions = canvas.where_object_fits_on_canvas(obj=obj)
+        return np.random.choice(available_positions)
     
     def do_random_transformations(self, obj: Primitive) -> Primitive:
         pass
@@ -134,6 +128,8 @@ class Example:
         self.test_canvas = Canvas(size=Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
                                                    np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE)))
 
+    def populate_canvases(self):
+        pass
     def show(self, canvas_index: int | str = 'all'):
         if type(canvas_index) == int:
             if canvas_index % 2 == 0:

@@ -15,10 +15,10 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 class Object:
 
-    def __init__(self, actual_pixels: np.ndarray, id: None | int = None,
+    def __init__(self, actual_pixels: np.ndarray, _id: None | int = None,
                  canvas_pos: List | np.ndarray | Point = (0, 0, 0)):
 
-        self.id = id
+        self.id = _id
         self.actual_pixels = actual_pixels
         self._canvas_pos = canvas_pos
 
@@ -55,10 +55,6 @@ class Object:
         bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self._canvas_pos.y, self._canvas_pos.z)
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
-
-    def translate(self, new_canvas_pos: Point):
-        self._canvas_pos = new_canvas_pos
-        self.reset_dimensions()
 
     def scale(self, factor: int):
         """
@@ -229,6 +225,7 @@ class Object:
     def superimpose(self, other: Object, z_order: int = 1):
         pass
 
+    #TODO: This can now be achieved with the setter of canvas_pos. Do I still need this function?
     def move_along_z(self, orientation: OrientationZ | None = None, to_z: float | None = None):
         """
         Change the z of the canvas_pos and the bbox
