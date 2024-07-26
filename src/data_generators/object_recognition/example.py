@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
+import numpy as np
+
 from data_generators.object_recognition.canvas import *
 from data_generators.object_recognition.basic_geometry import Point, Vector, Bbox, Orientation, Dimension2D, OrientationZ
 
@@ -12,6 +16,36 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 OVERLAP_PROB = 0.8
 FAR_AWAY_PROB = 0.1
+
+
+class Transformations(Enum):
+    scale: int = 0
+    rotate: int = 1
+    shear: int = 2
+    mirror: int = 3
+    flip: int = 4
+    randomise_colour: int = 5
+    randomise_shape: int = 6
+
+    def get_random_parameters(self):
+        args = {}
+        if self.name == 'scale':
+            args['factor'] = np.random.choice([-4, -3, -2, 2, 3, 4], p=[0.05, 0.15, 0.3, 0.3, 0.15, 0.05])
+        if self.name == 'rotate':
+            args['times'] = np.random.randint(1, 4)
+        if self.name == 'shear':
+            args['_shear'] = np.random.gamma(shape=1, scale=0.2) + 0.1  # Mainly between 0.1 and 0.75
+        if self.name == 'mirror' or self.name == 'flip':
+            args['axis'] = np.random.choice([Orientation.Up, Orientation.Down, Orientation.Left, Orientation.Right])
+        if self.name == 'randomise_colour':
+            args['ratio'] = np.random.gamma(shape=1, scale=0.1) + 0.1  # Mainly between 0.1 and 0.4
+            args['ratio'] = 0.4 if args['ratio'] > 0.4 else args['ratio']
+        if self.name == 'randomise_shape':
+            args['add_or_subtract'] = 'add' if np.random.random() > 0.5 else 'subtract'
+            args['ratio'] = np.random.gamma(shape=1, scale=0.07) + 0.1  # Mainly between 0.1 and 0.3
+            args['ratio'] = 0.3 if args['ratio'] > 0.3 else args['ratio']
+
+        return args
 
 
 class Example:
@@ -41,12 +75,38 @@ class Example:
             return colour
 
     @staticmethod
-    def get_random_position(self, obj: Primitive, canvas: Canvas) -> Point:
+    def get_random_position(obj: Primitive, canvas: Canvas) -> Point:
         available_positions = canvas.where_object_fits_on_canvas(obj=obj)
         return np.random.choice(available_positions)
-    
-    def do_random_transformations(self, obj: Primitive) -> Primitive:
-        pass
+
+    @staticmethod
+    def do_random_transformations(obj: Primitive) -> Primitive:
+        print(type(obj))
+        number_of_transforms = np.random.choice([0, 1, 2, 3, 4], p=[0.05, 0.5, 0.3, 0.1, 0.05])
+        print(f'number of transforms = {number_of_transforms}')
+        possible_transform_indices = [0, 1, 2, 4, 5, 6]
+        for i in range(number_of_transforms):
+            random_transform_index = np.random.choice(possible_transform_indices)
+            possible_transform_indices.remove(random_transform_index)
+            transform_name = Transformations(random_transform_index)
+            print(f'Transform = {transform_name.name}')
+            args = transform_name.get_random_parameters()
+            print(f'Arguments = {args}')
+            transform_method = getattr(obj, transform_name.name)
+            transform_method(**args)
+        return obj
+
+    @staticmethod
+    def do_multiple_mirroring(obj: Primitive) -> Primitive:
+        number_of_mirrors = np.random.randint(1, 5)
+        transform_index = 3
+        for i in range(number_of_mirrors):
+            mirror_name = Transformations(transform_index)
+            args = mirror_name.get_random_parameters()
+            mirror_method = getattr(obj, mirror_name.name)
+            mirror_method(**args)
+
+        return obj
 
     def create_random_object(self) -> Primitive:
         obj_type = ObjectType.random()
@@ -55,7 +115,7 @@ class Example:
         args = {'colour': self.get_random_colour(),
                 'border_size': Surround(0, 0, 0, 0),  # For now and then we will see
                 'canvas_pos': Point(0, 0, 0),
-                'id': id}
+                '_id': id}
         self.ids.append(id)
 
         if obj_type.name == 'InverseCross' or obj_type.name == 'Steps' or obj_type.name == 'Pyramid':  # These objects have height not size
@@ -69,7 +129,7 @@ class Example:
             args['fill_height'] = np.random.randint(0, args['height'])
 
         if obj_type.name == 'Diagonal':  # Diagonal has length, not size
-            args['length'] = np.random.randint((2, 10))
+            args['length'] = np.random.randint(2, 10)
 
         if not np.any(np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie'])
                       == obj_type.name):
@@ -86,7 +146,7 @@ class Example:
             down = np.random.randint(1, args['size'].dy - up)
             left = np.random.randint(1, args['size'].dx - 2)
             right = np.random.randint(1, args['size'].dx - left)
-            args['thickness'] = [up, down, left, right]
+            args['thickness'] = Surround(up, down, left, right)
 
         object = globals()[obj_type.name](**args)
         object = self.do_random_transformations(object)
@@ -112,7 +172,7 @@ class Example:
                                                       np.random.randint(1, min_distance_to_others.dy - 2))
 
         object.required_distance_to_others = min_distance_to_others
-        object.canvas_pos = self.get_random_position()
+        #object.canvas_pos = self.get_random_position(object)
 
         self.objects.append(object)
 
@@ -145,6 +205,7 @@ class Example:
 
     def populate_canvases(self):
         pass
+
     def show(self, canvas_index: int | str = 'all'):
         if type(canvas_index) == int:
             if canvas_index % 2 == 0:
