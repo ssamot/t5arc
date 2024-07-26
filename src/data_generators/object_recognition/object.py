@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import copy as cp
+
+import numpy as np
 import skimage
 from visualization import visualize_data as vis
 from data_generators.object_recognition.basic_geometry import *
@@ -50,30 +52,43 @@ class Object:
         :param factor: Integer
         :return: Nothing
         """
-        assert factor != 0, print('factor cannot be 0')
+
+        if factor == 0:  # Factor cannot be 0 so in this case nothing happens
+            return
 
         pic = self.actual_pixels
 
-        if factor < 0:
-            assert np.abs(factor) * np.min(pic.shape) < 3, print(
-                f'Downsizing by {np.abs(factor)} will result in too small an image')
-
         if factor > 0:
+            # If factor is > 0 it cannot blow up the object to more than MAX_PAD_SIZE
+            if np.max(pic.shape) * factor > const.MAX_PAD_SIZE - 2:
+                return
             scaled = np.ones(np.array(pic.shape) * factor)
             for x in range(pic.shape[0]):
                 for y in range(pic.shape[1]):
                     scaled[x * factor:(x + 1) * factor, y * factor:(y + 1) * factor] = pic[x, y]
         else:
-            factor = np.abs(factor)
-            scaled = np.ones(np.ceil(np.array(pic.shape) / factor).astype(np.int32))
+            # If factor is <0 it cannot shrink the object to something smaller than 2x2
+            if np.abs(1/factor) * np.min(pic.shape) < 2:
+                return
+            scaled = np.ones(np.ceil(np.array(pic.shape) / np.abs(factor)).astype(np.int32))
             for x in range(scaled.shape[0]):
                 for y in range(scaled.shape[1]):
-                    scaled[x, y] = pic[x * factor, y * factor]
+                    scaled[x, y] = pic[x * np.abs(factor), y * np.abs(factor)]
 
         self.actual_pixels = scaled
 
         for sym in self.symmetries:
-            sym.origin += (sym.origin - self._canvas_pos + Point(0.5, 0.5)) * (factor - 1)
+            if factor > 0:
+                edges = Point(0.5, 0.5)
+                if sym.origin.x == 0:
+                    edges.x = 0
+                if sym.origin.y == 0:
+                    edges.y = 0
+                sym.origin = (sym.origin + edges - self._canvas_pos) * factor + self._canvas_pos
+            else:
+                factor = 1/np.abs(factor)
+                sym.origin = (sym.origin - self._canvas_pos) * factor + self._canvas_pos
+            sym.length *= factor
 
         self.reset_dimensions()
 
@@ -231,6 +246,8 @@ class Object:
 
             self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = np.random.choice(new_colour, size=1)
 
+            self.symmetries = []
+
     def randomise_shape(self, add_or_subtract: str = 'add', ratio: float = 0.1, colour: str = 'common'):
         """
         Adds or subtracts coloured pixels to the object
@@ -257,6 +274,8 @@ class Object:
                 new_colour = 1
 
             self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = new_colour
+
+            self.symmetries = []
 
     # Utility methods
     def reset_dimensions(self):
@@ -310,21 +329,21 @@ class Object:
             for sym in self.symmetries:
                 sym.origin.z = to_z
 
-    def get_coloured_pixels_positions(self):
-        result = np.argwhere(self.actual_pixels > 1)
-        canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]])
+    def get_coloured_pixels_positions(self) -> np.ndarray:
+        result = np.argwhere(self.actual_pixels > 1).astype(int)
+        canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
         return canv_pos + result
 
     def get_background_pixels_positions(self):
         return np.argwhere(self.actual_pixels == 1)
 
-    def get_used_colours(self):
-        coloured_pos = self.get_coloured_pixels_positions()
-        canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]])
+    def get_used_colours(self) -> np.ndarray:
+        coloured_pos = self.get_coloured_pixels_positions().astype(int)
+        canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
         coloured_pos -= canv_pos
         return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
 
-    def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: float = 0.1):
+    def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: float = 0.1) -> None | np.ndarray:
         """
         Returns the positions (in the self.actual_pixels array) of a random number (ratio percentage) of either
         coloured or background pixels
@@ -335,7 +354,7 @@ class Object:
         """
         if coloured_or_background == 'coloured':
             pixels_pos = self.get_coloured_pixels_positions()
-            canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]])
+            canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
             pixels_pos -= canv_pos
         elif coloured_or_background == 'background':
             pixels_pos = self.get_background_pixels_positions()
