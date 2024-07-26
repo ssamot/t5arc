@@ -32,6 +32,7 @@ class Canvas:
         self.actual_pixels = np.ones((size.dy, size.dx))
         self.full_canvas = np.zeros((MAX_PAD_SIZE, MAX_PAD_SIZE))
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
+        self.background_pixels = self.actual_pixels.copy()
 
         self.embed_objects()
 
@@ -47,17 +48,20 @@ class Canvas:
         return result
 
     def where_object_fits_on_canvas(self, obj: Primitive) -> List[Point]:
+        """
+        Finds all the points on the Canvas that an Object can be placed (Object.canvas_pos) so that it is at least
+        2/3 within the Canvas and that it is over and under other Objects on the Canvas by their required_dist_to_others
+        :param obj: The Object to check
+        :return:
+        """
         available_canvas_points = []
-        for x in range(-obj.size.dx//2 + 1, self.size.dx - obj.size.dx//2):
-            for y in range(-obj.size.dy//2 + 1, self.size.dy - obj.size.dy//2):
+        for x in range(-obj.size.dx//3 + 1, self.size.dx - obj.size.dx//3):
+            for y in range(-obj.size.dy//3 + 1, self.size.dy - obj.size.dy//3):
                 obj.canvas_pos = Point(x, y, 0)
                 overlap = False
                 for obj_b in self.objects:
-                    #print(obj_b.bbox)
                     if do_two_objects_overlap(obj, obj_b):
                         overlap = True
-                    #print(obj_b.bbox)
-                    #print('------')
                 if not overlap:
                     available_canvas_points.append(Point(x, y, 0))
 
@@ -69,30 +73,59 @@ class Canvas:
         canvas_pos.z to define the order (objects with smaller z go first thus end up behind objects with larger z)
         :return:
         """
-        self.actual_pixels[:, :] = 1
+        self.actual_pixels = self.background_pixels.copy()
 
         self.objects = sorted(self.objects, key=lambda obj: obj._canvas_pos.z)
 
         for obj in self.objects:
-            xmin = obj._canvas_pos.x
+            xmin = obj.canvas_pos.x
             if xmin >= self.actual_pixels.shape[1]:
                 continue
             if xmin < 0:
                 xmin = 0
-            xmax = obj._canvas_pos.x + obj.dimensions.dx
+            xmax = obj.canvas_pos.x + obj.dimensions.dx
             if xmax >= self.actual_pixels.shape[1]:
                 xmax = self.actual_pixels.shape[1]
-            ymin = obj._canvas_pos.y
+            ymin = obj.canvas_pos.y
             if ymin >= self.actual_pixels.shape[0]:
                 continue
             if ymin < 0:
                 ymin = 0
-            ymax = obj._canvas_pos.y + obj.dimensions.dy
+            ymax = obj.canvas_pos.y + obj.dimensions.dy
             if ymax >= self.actual_pixels.shape[0]:
                 ymax = self.actual_pixels.shape[0]
 
             self.actual_pixels[ymin: ymax, xmin: xmax] = obj.actual_pixels[: ymax-ymin, : xmax-xmin]
-            self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
+        self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
+
+    def add_new_object(self, obj: Object):
+        self.objects.append(obj)
+        self.embed_objects()
+
+    def remove_object(self, obj: Object):
+        self.objects.remove(obj)
+        self.embed_objects()
+
+    def create_background_from_object(self, obj: Object):
+        xmin = obj.canvas_pos.x
+        if xmin >= self.actual_pixels.shape[1]:
+            return
+        if xmin < 0:
+            xmin = 0
+        xmax = obj.canvas_pos.x + obj.dimensions.dx
+        if xmax >= self.actual_pixels.shape[1]:
+            xmax = self.actual_pixels.shape[1]
+        ymin = obj.canvas_pos.y
+        if ymin >= self.actual_pixels.shape[0]:
+            return
+        if ymin < 0:
+            ymin = 0
+        ymax = obj.canvas_pos.y + obj.dimensions.dy
+        if ymax >= self.actual_pixels.shape[0]:
+            ymax = self.actual_pixels.shape[0]
+
+        self.background_pixels[ymin: ymax, xmin: xmax] = obj.actual_pixels[: ymax - ymin, : xmax - xmin]
+        self.embed_objects()
 
     def position_object(self, index: int, canvas_pos: Point):
         """

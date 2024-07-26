@@ -334,7 +334,7 @@ class Object:
         canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
         return canv_pos + result
 
-    def get_background_pixels_positions(self):
+    def get_background_pixels_positions(self) -> np.ndarray:
         return np.argwhere(self.actual_pixels == 1)
 
     def get_used_colours(self) -> np.ndarray:

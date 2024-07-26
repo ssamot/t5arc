@@ -16,6 +16,7 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 OVERLAP_PROB = 0.8
 FAR_AWAY_PROB = 0.1
+MIRROR_PROB = 0.05
 
 
 class Transformations(Enum):
@@ -64,7 +65,6 @@ class Example:
 
     @staticmethod
     def get_random_colour(other_colour: int | None = None):
-
         colour = np.random.randint(1, len(const.COLOR_MAP))
         if other_colour is None:
             return colour
@@ -80,18 +80,25 @@ class Example:
         return np.random.choice(available_positions)
 
     @staticmethod
-    def do_random_transformations(obj: Primitive) -> Primitive:
-        print(type(obj))
+    def do_random_transformations(obj: Primitive, debug: bool = False) -> Primitive:
+        """
+        Transform the obj Object random n times (0 to 3) with randomly selected Transformations (except mirror). The
+        arguments of each Transformation are also chosen randomly
+        :param obj: The Object to transform
+        :param debug: If True print the transformations and their arguments
+        :return:
+        """
+        if debug: print(type(obj))
         number_of_transforms = np.random.choice([0, 1, 2, 3, 4], p=[0.05, 0.5, 0.3, 0.1, 0.05])
-        print(f'number of transforms = {number_of_transforms}')
+        if debug: print(f'number of transforms = {number_of_transforms}')
         possible_transform_indices = [0, 1, 2, 4, 5, 6]
         for i in range(number_of_transforms):
             random_transform_index = np.random.choice(possible_transform_indices)
             possible_transform_indices.remove(random_transform_index)
             transform_name = Transformations(random_transform_index)
-            print(f'Transform = {transform_name.name}')
+            if debug: print(f'Transform = {transform_name.name}')
             args = transform_name.get_random_parameters()
-            print(f'Arguments = {args}')
+            if debug: print(f'Arguments = {args}')
             transform_method = getattr(obj, transform_name.name)
             transform_method(**args)
         return obj
@@ -109,6 +116,10 @@ class Example:
         return obj
 
     def create_random_object(self) -> Primitive:
+        """
+        Create a random Primitive
+        :return: The Object generated
+        """
         obj_type = ObjectType.random()
 
         id = self.ids[-1] + 1 if len(self.ids) > 0 else 0
@@ -161,47 +172,67 @@ class Example:
 
         min_distance_to_others += Dimension2D(args['border_size'].Right, args['border_size'].Up)
 
-        allow_overlap = np.random.random() > OVERLAP_PROB
+        allow_overlap = np.random.random() < OVERLAP_PROB
         if allow_overlap:
             min_distance_to_others -= Dimension2D(np.random.randint(1, min_distance_to_others.dx - 2),
                                                   np.random.randint(1, min_distance_to_others.dy - 2))
         else:
-            far_away = np.random.random() > FAR_AWAY_PROB
+            far_away = np.random.random() < FAR_AWAY_PROB
             if far_away:
                 min_distance_to_others -= Dimension2D(np.random.randint(1, min_distance_to_others.dx - 2),
                                                       np.random.randint(1, min_distance_to_others.dy - 2))
 
         object.required_distance_to_others = min_distance_to_others
-        #object.canvas_pos = self.get_random_position(object)
-
         self.objects.append(object)
 
         return self.objects[-1]
 
     def generate_canvasses(self):
+        """
+        Generate random size canvases and add background (single colour) pixels to 10% of them is they are bigger than
+        10x10
+        :return:
+        """
         for c in range(self.number_of_io_pairs):
             input_size = Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
                                      np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
             output_size = Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
                                       np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
 
-            self.input_canvases.append(Canvas(size=input_size))
-            self.output_canvases.append(Canvas(size=output_size))
-        self.test_canvas = Canvas(size=Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
-                                                   np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE)))
+            input_canvas = Canvas(size=input_size)
+            if np.all([input_size.dx > 10, input_size.dy > 10]) and np.random.random() < 0.1:
+                background_object = Random(size=input_size, occupancy_prob=np.random.gamma(1, 0.05)+0.1)
+                input_canvas.create_background_from_object(background_object)
+            self.input_canvases.append(input_canvas)
+
+            output_canvas = Canvas(size=output_size)
+            if np.all([output_size.dx > 10, output_size.dy > 10]) and np.random.random() < 0.1:
+                background_object = Random(size=output_size, occupancy_prob=np.random.gamma(1, 0.05)+0.1)
+                output_canvas.create_background_from_object(background_object)
+            self.output_canvases.append(output_canvas)
+
+        test_canvas_size =Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
+                                                   np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
+        self.test_canvas = Canvas(size=test_canvas_size)
+        if np.all([test_canvas_size.dx > 10, test_canvas_size.dy > 10]) and np.random.random() < 0.1:
+            background_object = Random(size=test_canvas_size, occupancy_prob=np.random.gamma(1, 0.05) + 0.1)
+            self.test_canvas.create_background_from_object(background_object)
 
     def place_new_object_on_canvases(self):
         """
         Create a new object and put it on different canvases. The process is as follows.
-        1) Randomly create a Primitive.
-        2) Randomly pick a number of transformations
-        3) Do the transformations randomly picking their parameters
+        1) Randomly create a Primitive (and Transform it a few times).
+        2) Randomly decide if it is going to become a symmetry object (with multiple mirrors) or not
+        3) If it is a symmetry object do the mirrors and go to 6, otherwise go to 4.
         4) Randomly pick the canvasses to place the object in (of the possible ones given the other objects)
         5) Randomly place the object in some of them (in allowed positions)
-        6) Repeat steps 2 to 5 one more time so the same object appears on different canvases after some transformations
+        6) If it is not a symmetry object repeat steps 2 to 5 one more time so the same object appears on different
+        canvases after some transformations.
         :return:
         """
+
         obj = self.create_random_object()
+
 
     def populate_canvases(self):
         pass
