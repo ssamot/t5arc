@@ -55,6 +55,26 @@ class Surround:
     Left: int = 0
     Right: int = 0
 
+    def __add__(self, other: Surround | int) -> Surround:
+        if type(other) == Surround:
+            return Surround(other.Up + self.Up, other.Down + self.Down, other.Left+self.Left, other.Right+self.Right)
+        else:
+            return Surround(other + self.Up, other + self.Down, other + self.Left, other + self.Right)
+
+    def __sub__(self, other: Surround | int) -> Surround:
+        if type(other) == Surround:
+            return Surround(self.Up - other.Up, self.Down - other.Down, self.Left - other.Left, self.Right - other.Right)
+        else:
+            return Surround(self.Up - other, self.Down - other, self.Left - other, self.Right - other)
+
+    def __iadd__(self, other: Surround | int) -> Surround:
+        return self + other
+
+    def __isub__(self, other: Surround | int) -> Surround:
+        return self - other
+
+    def to_numpy(self):
+        return np.array([self.Up, self.Down, self.Left, self.Right])
 
 class Dimension2D:
     def __init__(self, dx: int = 3, dy:  int = 3, array: None | np.ndarray | List = None):
@@ -235,6 +255,8 @@ class Point:
             self.y = scale_x * x * (np.sin(rotation) - np.tan(shear_y) * np.cos(rotation)) - \
                      scale_y * y * (np.tan(shear_x) * np.sin(rotation) - np.cos(rotation)) + translation_y
 
+    def copy(self) -> Point:
+        return Point(self.x, self.y, self.z)
 
 class Vector:
     def __init__(self, orientation:Orientation = Orientation.Up,
@@ -264,6 +286,9 @@ class Vector:
             self.orientation = self.orientation.rotate(affine_matrix=affine_matrix)
 
         self.origin.transform(affine_matrix, rotation, shear, translation, scale)
+
+    def copy(self) -> Vector:
+        return Vector(orientation=self.orientation, origin=self.origin.copy(), length=self.length)
 
 
 class Bbox:
