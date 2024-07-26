@@ -58,6 +58,9 @@ class Example:
         self.output_canvases = []
         self.test_canvas = None
 
+        # TODO: Develop the Grd Primitive to be able to also create the Grid Experiment type
+        self.experiment_type = np.random.choice(['Object', 'Symmetry', 'Grid'], p=[0.9, 0.1, 0])
+
         self.ids = []
         self.objects = []
 
@@ -75,33 +78,44 @@ class Example:
             return colour
 
     @staticmethod
-    def get_random_position(obj: Primitive, canvas: Canvas) -> Point:
+    def get_random_position(obj: Primitive, canvas: Canvas) -> Point | None:
         available_positions = canvas.where_object_fits_on_canvas(obj=obj)
-        return np.random.choice(available_positions)
+        if len(available_positions) > 0:
+            return np.random.choice(available_positions)
+        else:
+            return None
 
     @staticmethod
-    def do_random_transformations(obj: Primitive, debug: bool = False) -> Primitive:
+    def do_random_transformations(obj: Primitive, debug: bool = False, num_of_transformations: int = 0,
+                                  probs_of_transformations: List = (0.1, 0.2, 0.1, 0.1, 0.25, 0.25)):
         """
         Transform the obj Object random n times (0 to 3) with randomly selected Transformations (except mirror). The
         arguments of each Transformation are also chosen randomly
         :param obj: The Object to transform
         :param debug: If True print the transformations and their arguments
+        :param probs_of_transformations: The probabilities of the 6 possible transformations (except mirror) in the
+        order of the Transformations enumeration
         :return:
         """
         if debug: print(type(obj))
-        number_of_transforms = np.random.choice([0, 1, 2, 3, 4], p=[0.05, 0.5, 0.3, 0.1, 0.05])
-        if debug: print(f'number of transforms = {number_of_transforms}')
+
+        if debug: print(f'number of transforms = {num_of_transformations}')
+
         possible_transform_indices = [0, 1, 2, 4, 5, 6]
-        for i in range(number_of_transforms):
-            random_transform_index = np.random.choice(possible_transform_indices)
-            possible_transform_indices.remove(random_transform_index)
+
+        for i in range(num_of_transformations):
+            random_transform_index = np.random.choice(possible_transform_indices, p=probs_of_transformations)
+            #transform_index_index = np.where(possible_transform_indices == random_transform_index)[0][0]
+            #possible_transform_indices.remove(random_transform_index)
+            #del probs_of_transformations[transform_index_index]
             transform_name = Transformations(random_transform_index)
             if debug: print(f'Transform = {transform_name.name}')
+
             args = transform_name.get_random_parameters()
             if debug: print(f'Arguments = {args}')
+
             transform_method = getattr(obj, transform_name.name)
             transform_method(**args)
-        return obj
 
     @staticmethod
     def do_multiple_mirroring(obj: Primitive) -> Primitive:
@@ -142,6 +156,9 @@ class Example:
         if obj_type.name == 'Diagonal':  # Diagonal has length, not size
             args['length'] = np.random.randint(2, 10)
 
+        if obj_type.name == 'Steps':  # Steps also has depth
+            args['depth'] = np.random.randint(1, args['height'])
+
         if not np.any(np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie'])
                       == obj_type.name):
             size = Dimension2D(np.random.randint(2, 10), np.random.randint(2, 10))
@@ -160,29 +177,32 @@ class Example:
             args['thickness'] = Surround(up, down, left, right)
 
         object = globals()[obj_type.name](**args)
-        object = self.do_random_transformations(object)
 
         # Deal with the allowed minimum distance to other objects
         if 'length' in args:
-            min_distance_to_others = Dimension2D(args['length'], args['length'])
+            min_distance_to_others = Surround(Up=args['length'], Down=0, Left=0, Right=args['length'])
         elif 'height' in args:
-            min_distance_to_others = Dimension2D(args['height'], args['height'])
+            min_distance_to_others = Surround(Up=args['height'], Down=0, Left=0, Right=args['height'])
         else:
-            min_distance_to_others = args['size']
+            min_distance_to_others = Surround(Up=args['size'].dy, Down=0, Left=0, Right=args['size'].dx)
 
-        min_distance_to_others += Dimension2D(args['border_size'].Right, args['border_size'].Up)
+        min_distance_to_others += args['border_size']
 
         allow_overlap = np.random.random() < OVERLAP_PROB
-        if allow_overlap:
-            min_distance_to_others -= Dimension2D(np.random.randint(1, min_distance_to_others.dx - 2),
-                                                  np.random.randint(1, min_distance_to_others.dy - 2))
+        if allow_overlap and np.all((min_distance_to_others - 2).to_numpy() > 1):
+            min_distance_to_others -= Surround(Up=np.random.randint(1, min_distance_to_others.Up - 2),
+                                               Down=np.random.randint(1, min_distance_to_others.Down - 2),
+                                               Left=np.random.randint(1, min_distance_to_others.Left - 2),
+                                               Right=np.random.randint(1, min_distance_to_others.Right - 2))
         else:
             far_away = np.random.random() < FAR_AWAY_PROB
-            if far_away:
-                min_distance_to_others -= Dimension2D(np.random.randint(1, min_distance_to_others.dx - 2),
-                                                      np.random.randint(1, min_distance_to_others.dy - 2))
+            if far_away and np.all((min_distance_to_others - 2).to_numpy() > 1):
+                min_distance_to_others += Surround(Up=np.random.randint(1, min_distance_to_others.Up - 2),
+                                                   Down=np.random.randint(1, min_distance_to_others.Down - 2),
+                                                   Left=np.random.randint(1, min_distance_to_others.Left - 2),
+                                                   Right=np.random.randint(1, min_distance_to_others.Right - 2))
 
-        object.required_distance_to_others = min_distance_to_others
+        object.required_dist_to_others = min_distance_to_others
         self.objects.append(object)
 
         return self.objects[-1]
@@ -221,18 +241,30 @@ class Example:
     def place_new_object_on_canvases(self):
         """
         Create a new object and put it on different canvases. The process is as follows.
-        1) Randomly create a Primitive (and Transform it a few times).
-        2) Randomly decide if it is going to become a symmetry object (with multiple mirrors) or not
-        3) If it is a symmetry object do the mirrors and go to 6, otherwise go to 4.
-        4) Randomly pick the canvasses to place the object in (of the possible ones given the other objects)
-        5) Randomly place the object in some of them (in allowed positions)
-        6) If it is not a symmetry object repeat steps 2 to 5 one more time so the same object appears on different
-        canvases after some transformations.
+        If the Example is of type 'Object:
+        1) Randomly create a Primitive.
+        2) Copy that Primitive random n number of times (all of these will have the same id)
+        3) Randomly do a number of Transformations to every one of the cobjects.
+        4) Randomly pick the canvasses to place each of the object in (of the possible ones given the other objects)
         :return:
         """
+        if self.experiment_type == 'Object':
+            objects = [self.create_random_object()]
+            num_of_copies = np.random.randint(1, 5) if np.all(objects[-1].size.to_numpy() < 6) else \
+                np.random.randint(4, 21)
+            for _ in range(num_of_copies):
+                objects.append(objects[-1].copy())
 
-        obj = self.create_random_object()
-
+            num_of_transformations = np.random.choice([0, 1, 2, 3, 4], p=[0.05, 0.5, 0.3, 0.1, 0.05])
+            probs_of_transformations = [0.1, 0.2, 0.05, 0.05, 0.3, 0.3]
+            for obj in objects:
+                self.do_random_transformations(obj, num_of_transformations=num_of_transformations,
+                                               probs_of_transformations=probs_of_transformations)
+                for input_canvas in self.input_canvases:
+                    canvas_pos = self.get_random_position(obj, input_canvas)
+                    if canvas_pos is not None:
+                        obj.canvas_pos = canvas_pos
+                        input_canvas.add_new_object(obj)
 
     def populate_canvases(self):
         pass
