@@ -42,7 +42,10 @@ class Object:
 
     @canvas_pos.setter
     def canvas_pos(self, new_pos):
+        move = new_pos - self._canvas_pos
         self._canvas_pos = new_pos
+        for sym in self.symmetries:
+            sym.origin += move
         self.reset_dimensions()
 
     # Transformation methods
@@ -291,9 +294,13 @@ class Object:
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
 
+
+
     def copy(self):
         new_obj = Object(actual_pixels=self.actual_pixels, _id=self.id, border_size=self.border_size,
                          canvas_pos=self.canvas_pos)
+        for sym in self.symmetries:
+            new_obj.symmetries.append(sym.copy())
         return new_obj
 
     def __add__(self, other: Object):
