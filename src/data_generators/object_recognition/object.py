@@ -111,7 +111,7 @@ class Object:
         if len(center) == 2:
             center = np.array([center[0], center[1], 0])
 
-        center += np.array([self.rotation_axis.x, self.rotation_axis.y, 0])
+        center += np.array([self.rotation_axis.x, self.rotation_axis.y, 0]).astype(int)
         self.bbox.transform(translation=-center)
         self.bbox.transform(rotation=radians)
         self.bbox.transform(translation=center)
@@ -293,8 +293,6 @@ class Object:
         bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self._canvas_pos.y, self._canvas_pos.z)
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
-
-
 
     def copy(self):
         new_obj = Object(actual_pixels=self.actual_pixels, _id=self.id, border_size=self.border_size,

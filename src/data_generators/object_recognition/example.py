@@ -28,23 +28,35 @@ class Transformations(Enum):
     randomise_colour: int = 5
     randomise_shape: int = 6
 
-    def get_random_parameters(self):
+    def get_random_parameters(self, random_obj_or_not: str = 'Random'):
         args = {}
         if self.name == 'scale':
             args['factor'] = np.random.choice([-4, -3, -2, 2, 3, 4], p=[0.05, 0.15, 0.3, 0.3, 0.15, 0.05])
         if self.name == 'rotate':
             args['times'] = np.random.randint(1, 4)
         if self.name == 'shear':
-            args['_shear'] = np.random.gamma(shape=1, scale=0.2) + 0.1  # Mainly between 0.1 and 0.75
+            if random_obj_or_not == 'Random':
+                args['_shear'] = np.random.gamma(shape=1, scale=0.2) + 0.1  # Mainly between 0.1 and 0.75
+            else:
+                args['_shear'] = np.random.gamma(shape=1, scale=0.1) + 0.05  # Mainly between 0.05 and 0.4
+                args['_shear'] = 0.4 if args['_shear'] > 0.4 else args['_shear']
         if self.name == 'mirror' or self.name == 'flip':
             args['axis'] = np.random.choice([Orientation.Up, Orientation.Down, Orientation.Left, Orientation.Right])
         if self.name == 'randomise_colour':
-            args['ratio'] = np.random.gamma(shape=1, scale=0.1) + 0.1  # Mainly between 0.1 and 0.4
-            args['ratio'] = 0.4 if args['ratio'] > 0.4 else args['ratio']
+            if random_obj_or_not == 'Random':
+                args['ratio'] = np.random.gamma(shape=1, scale=0.1) + 0.1  # Mainly between 0.1 and 0.4
+                args['ratio'] = 0.4 if args['ratio'] > 0.4 else args['ratio']
+            else:
+                args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.4
+                args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
         if self.name == 'randomise_shape':
             args['add_or_subtract'] = 'add' if np.random.random() > 0.5 else 'subtract'
-            args['ratio'] = np.random.gamma(shape=1, scale=0.07) + 0.1  # Mainly between 0.1 and 0.3
-            args['ratio'] = 0.3 if args['ratio'] > 0.3 else args['ratio']
+            if random_obj_or_not == 'Random':
+                args['ratio'] = np.random.gamma(shape=1, scale=0.07) + 0.1  # Mainly between 0.1 and 0.3
+                args['ratio'] = 0.3 if args['ratio'] > 0.3 else args['ratio']
+            else:
+                args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.3
+                args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
 
         return args
 
@@ -105,13 +117,12 @@ class Example:
 
         for i in range(num_of_transformations):
             random_transform_index = np.random.choice(possible_transform_indices, p=probs_of_transformations)
-            #transform_index_index = np.where(possible_transform_indices == random_transform_index)[0][0]
-            #possible_transform_indices.remove(random_transform_index)
-            #del probs_of_transformations[transform_index_index]
+
             transform_name = Transformations(random_transform_index)
             if debug: print(f'Transform = {transform_name.name}')
 
-            args = transform_name.get_random_parameters()
+            obj_type = 'Random' if 'Random' in str(type(obj)) else 'Non-Random'
+            args = transform_name.get_random_parameters(obj_type)
             if debug: print(f'Arguments = {args}')
 
             transform_method = getattr(obj, transform_name.name)
@@ -152,6 +163,8 @@ class Example:
             fill_colour = self.get_random_colour(other_colour=args['colour'])
             args['fill_colour'] = fill_colour
             args['fill_height'] = np.random.randint(0, args['height'])
+            if args['fill_height'] % 2 == 0:  # Inverted Crosses need odd fill_height
+                args['fill_height'] += 1
 
         if obj_type.name == 'Diagonal':  # Diagonal has length, not size
             args['length'] = np.random.randint(2, 10)
@@ -183,8 +196,10 @@ class Example:
             min_distance_to_others = Surround(Up=args['length'], Down=0, Left=0, Right=args['length'])
         elif 'height' in args:
             min_distance_to_others = Surround(Up=args['height'], Down=0, Left=0, Right=args['height'])
-        else:
+        elif 'size' in args:
             min_distance_to_others = Surround(Up=args['size'].dy, Down=0, Left=0, Right=args['size'].dx)
+        else:
+            min_distance_to_others = Surround(Up=1, Down=1, Left=1, Right=1)
 
         min_distance_to_others += args['border_size']
 
@@ -249,22 +264,38 @@ class Example:
         :return:
         """
         if self.experiment_type == 'Object':
-            objects = [self.create_random_object()]
-            num_of_copies = np.random.randint(1, 5) if np.all(objects[-1].size.to_numpy() < 6) else \
-                np.random.randint(4, 21)
-            for _ in range(num_of_copies):
-                objects.append(objects[-1].copy())
+            self.temp_objects = [self.create_random_object()]
 
-            num_of_transformations = np.random.choice([0, 1, 2, 3, 4], p=[0.05, 0.5, 0.3, 0.1, 0.05])
+            num_of_copies = np.random.randint(1, 5) if np.all(self.temp_objects[-1].size.to_numpy() < 6) else \
+                np.random.randint(4, 10)
+
+            for _ in range(num_of_copies):
+                self.temp_objects.append(self.temp_objects[-1].copy())
+
+            num_of_transformations = 1  # np.random.choice([0, 1, 2], p=[0.1, 0.5, 0.4])
             probs_of_transformations = [0.1, 0.2, 0.05, 0.05, 0.3, 0.3]
-            for obj in objects:
-                self.do_random_transformations(obj, num_of_transformations=num_of_transformations,
+            for obj in self.temp_objects:
+                self.do_random_transformations(obj, num_of_transformations=num_of_transformations, debug=True,
                                                probs_of_transformations=probs_of_transformations)
-                for input_canvas in self.input_canvases:
-                    canvas_pos = self.get_random_position(obj, input_canvas)
+
+                for input_canvas, output_canvas in zip(self.input_canvases, self.output_canvases):
+                    in_canvas_pos = self.get_random_position(obj, input_canvas)
+                    out_canvas_pos = self.get_random_position(obj, output_canvas)
+                    canvas_pos = None
+                    c = None
+                    if in_canvas_pos is not None and out_canvas_pos is not None:
+                        canvas_pos, c = (in_canvas_pos, input_canvas) if np.random.random() > 0.5\
+                            else (out_canvas_pos, output_canvas)
+                    elif in_canvas_pos is None:
+                        canvas_pos = out_canvas_pos
+                        c = output_canvas
+                    elif out_canvas_pos is None:
+                        canvas_pos = in_canvas_pos
+                        c = input_canvas
                     if canvas_pos is not None:
-                        obj.canvas_pos = canvas_pos
-                        input_canvas.add_new_object(obj)
+                        o = obj.copy()
+                        o.canvas_pos = canvas_pos
+                        c.add_new_object(o)
 
     def populate_canvases(self):
         pass

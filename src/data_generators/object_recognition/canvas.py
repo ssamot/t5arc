@@ -55,8 +55,10 @@ class Canvas:
         :return:
         """
         available_canvas_points = []
-        for x in range(-obj.size.dx//3 + 1, self.size.dx - obj.size.dx//3):
-            for y in range(-obj.size.dy//3 + 1, self.size.dy - obj.size.dy//3):
+        if np.any((self.size - obj.dimensions).to_numpy() < [0, 0]):
+            return available_canvas_points
+        for x in range(-obj.dimensions.dx//4, self.size.dx - 3 * obj.dimensions.dx//4 - 1):
+            for y in range(-obj.dimensions.dy//4, self.size.dy - 3 * obj.dimensions.dy//4 - 1):
                 obj.canvas_pos = Point(x, y, 0)
                 overlap = False
                 for obj_b in self.objects:
@@ -77,7 +79,7 @@ class Canvas:
 
         self.objects = sorted(self.objects, key=lambda obj: obj._canvas_pos.z)
 
-        for obj in self.objects:
+        for i, obj in enumerate(self.objects):
             xmin = obj.canvas_pos.x
             if xmin >= self.actual_pixels.shape[1]:
                 continue
@@ -95,6 +97,17 @@ class Canvas:
             if ymax >= self.actual_pixels.shape[0]:
                 ymax = self.actual_pixels.shape[0]
 
+            xmin = int(xmin)
+            xmax = int(xmax)
+            ymin = int(ymin)
+            ymax = int(ymax)
+
+            print('------')
+
+            print(f'In Canvas with dimensions {self.size} embedding object __{i}__ with cv {obj.canvas_pos}')
+            print(xmin, xmax, ymin, ymax)
+            print('---------')
+
             self.actual_pixels[ymin: ymax, xmin: xmax] = obj.actual_pixels[: ymax-ymin, : xmax-xmin]
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
 
@@ -107,20 +120,20 @@ class Canvas:
         self.embed_objects()
 
     def create_background_from_object(self, obj: Object):
-        xmin = obj.canvas_pos.x
+        xmin = int(obj.canvas_pos.x)
         if xmin >= self.actual_pixels.shape[1]:
             return
         if xmin < 0:
             xmin = 0
-        xmax = obj.canvas_pos.x + obj.dimensions.dx
+        xmax = int(obj.canvas_pos.x + obj.dimensions.dx)
         if xmax >= self.actual_pixels.shape[1]:
             xmax = self.actual_pixels.shape[1]
-        ymin = obj.canvas_pos.y
+        ymin = int(obj.canvas_pos.y)
         if ymin >= self.actual_pixels.shape[0]:
             return
         if ymin < 0:
             ymin = 0
-        ymax = obj.canvas_pos.y + obj.dimensions.dy
+        ymax = int(obj.canvas_pos.y + obj.dimensions.dy)
         if ymax >= self.actual_pixels.shape[0]:
             ymax = self.actual_pixels.shape[0]
 
