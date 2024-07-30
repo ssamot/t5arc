@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import numpy as np
-import numpy.lib.index_tricks as ndi
 import constants as const
 from typing import List
 from enum import Enum
@@ -38,8 +37,8 @@ class ObjectType(Enum):
 
 class Primitive(Object):
     def __init__(self, size: Dimension2D | np.ndarray | List, colour: None | int = None,
-                 border_size: Surround = (0, 0, 0, ),
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0)):
+                 border_size: Surround = (0, 0, 0, 0),
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), *args):
         """
         A basic class for common Primitive data and methods
         :param size: The x, y size of the Primitive
@@ -118,7 +117,17 @@ class Primitive(Object):
                     'number_of_coloured_pixels', 'symmetries', 'bbox']:
             args.pop(arg, None)
         args['_id'] = self.id
-        return type(self)(**args)
+        type_name = str(type(self)).split('.')[-1].split("'")[0]
+        if type_name in np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie']):
+            args.pop('size', None)
+        if type_name == 'Hole':
+            args.pop('hole_bbox', None)
+        if type_name == 'Dot':
+            args['border_size'] = self.border_size
+
+        object = type(self)(**args)
+        object.actual_pixels[:, :] = self.actual_pixels[:, :]
+        return object
 
 
 class Random(Primitive):
@@ -224,6 +233,8 @@ class Hole(Primitive):
         th_left = thickness.Left
         th_right = thickness.Right
 
+        self.thickness = thickness
+
         self.actual_pixels[border_size.Down + th_down: self.size.dy + border_size.Down - th_up,
                            border_size.Left + th_left: self.size.dx + border_size.Left - th_right] = 1
 
@@ -300,6 +311,7 @@ class InverseCross(Primitive):
         if fill_height is not None:
             assert fill_height % 2 == 1, print('To fill an Inverted Cross the fill_height must be an odd number')
 
+        self.height = height
         size = Dimension2D(height, height)
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
@@ -309,12 +321,12 @@ class InverseCross(Primitive):
             while fill_colour == self.colour:
                 fill_colour = np.random.randint(2, len(const.COLOR_MAP))
 
-        fill = int((self.size.dx - fill_height) / 2)
         cross = []
         for x in range(self.size.dx):
             temp = np.ones(self.size.dy)
 
             if fill_height is not None:
+                fill = int((self.size.dx - fill_height) / 2)
                 if fill <= x < self.size.dx - fill:
                     temp[fill:-fill] = fill_colour
 
@@ -331,7 +343,7 @@ class InverseCross(Primitive):
 
 
 class Dot(Primitive):
-    def __init__(self, border_size: np.ndarray | List = np.array([1, 1, 1, 1]),
+    def __init__(self, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
         """
@@ -392,6 +404,7 @@ class Diagonal(Primitive):
         :param _id: The id of the object
         """
 
+        self.length = length
         size = Dimension2D(length, length)
 
         Primitive.__init__(self, size=size, border_size=border_size,
@@ -429,6 +442,9 @@ class Steps(Primitive):
         :param colour: The Steps' colour
         :param _id: The id of the object
         """
+
+        self.height = height
+        self.depth = depth
 
         size = Dimension2D(height, height)
         Primitive.__init__(self, size=size, border_size=border_size,
@@ -591,6 +607,7 @@ class Pyramid(Primitive):
         :param _id: The id of the object
         """
 
+        self.height = height
         size = Dimension2D(height * 2 - 1, height)
 
         Primitive.__init__(self, size=size, border_size=border_size,
