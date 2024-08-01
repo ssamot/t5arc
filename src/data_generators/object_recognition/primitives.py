@@ -200,11 +200,12 @@ class Cross(Primitive):
         :param colour: The cross' colour
         :param _id: The id of the object
         """
-
+    
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
-        assert self.size.dx % 2 == 1 and self.size.dy % 2 == 1, print('To make a Cross the x and y size must be odd numbers')
+        assert self.size.dx % 2 == 1 and self.size.dy % 2 == 1, \
+            print(f'To make a Cross the x and y size must be odd numbers. Current size is {self.size}')
 
         cross = []
         for x in range(self.size.dx):

@@ -80,13 +80,13 @@ class Example:
 
     @staticmethod
     def get_random_colour(other_colour: int | None = None):
-        colour = np.random.randint(1, len(const.COLOR_MAP))
+        colour = np.random.randint(2, len(const.COLOR_MAP))
         if other_colour is None:
             return colour
 
         else:
             while colour == other_colour:
-                colour = np.random.randint(1, len(const.COLOR_MAP))
+                colour = np.random.randint(2, len(const.COLOR_MAP))
             return colour
 
     @staticmethod
@@ -126,6 +126,12 @@ class Example:
             if debug: print(f'Arguments = {args}')
 
             transform_method = getattr(obj, transform_name.name)
+
+            # Do not allow Cross or InvertedCross to scale by an even factor
+            if np.any(np.array(['Cross', 'InvertedCross']) == str(type(obj)).split('.')[-1].split("'")[0]) and \
+                transform_name == Transformations.scale and args['factor'] % 2 == 0:
+                continue
+
             transform_method(**args)
 
     @staticmethod
@@ -140,12 +146,14 @@ class Example:
 
         return obj
 
-    def create_random_object(self) -> Primitive:
+    def create_random_object(self, debug: bool=False) -> Primitive:
         """
         Create a random Primitive
         :return: The Object generated
         """
         obj_type = ObjectType.random()
+
+        if debug: print(obj_type)
 
         id = self.ids[-1] + 1 if len(self.ids) > 0 else 0
         args = {'colour': self.get_random_colour(),
@@ -175,7 +183,7 @@ class Example:
         if not np.any(np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie'])
                       == obj_type.name):
             size = Dimension2D(np.random.randint(2, 10), np.random.randint(2, 10))
-            if np.any(np.array(['Cross', '']) == obj_type.name):   # Crosses need odd size
+            if np.any(np.array(['Cross', 'InvertedCross']) == obj_type.name):   # Crosses need odd size
                 if size.dx % 2 == 0:
                     size.dx += 1
                 if size.dy % 2 == 0:
@@ -183,11 +191,17 @@ class Example:
             args['size'] = size
 
         if obj_type.name == 'Hole':  # Hole has also thickness
+            if args['size'].dx < 4:
+                args['size'].dx = 4
+            if args['size'].dy < 4:
+                args['size'].dy = 4
             up = np.random.randint(1, args['size'].dy - 2)
             down = np.random.randint(1, args['size'].dy - up)
             left = np.random.randint(1, args['size'].dx - 2)
             right = np.random.randint(1, args['size'].dx - left)
             args['thickness'] = Surround(up, down, left, right)
+
+        if debug: print(args)
 
         object = globals()[obj_type.name](**args)
 
@@ -264,7 +278,7 @@ class Example:
         :return:
         """
         if self.experiment_type == 'Object':
-            self.temp_objects = [self.create_random_object()]
+            self.temp_objects = [self.create_random_object(debug=False)]
 
             num_of_copies = np.random.randint(1, 5) if np.all(self.temp_objects[-1].size.to_numpy() < 6) else \
                 np.random.randint(4, 10)
