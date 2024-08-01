@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 
+from copy import copy
+
 import numpy as np
 import constants as const
 from typing import List
@@ -111,7 +113,11 @@ class Primitive(Object):
             x_symmetry = Vector(orientation=x_sym_or, length=x_sym_length, origin=x_sym_origin)
             self.symmetries.append(x_symmetry)
 
-    def copy(self):
+    def reset_dimensions(self):
+        Object.reset_dimensions(self)
+        self.size = self.dimensions
+
+    def __copy__(self):
         args = self.__dict__.copy()
         for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'rotation_axis', 'dimensions',
                     'number_of_coloured_pixels', 'symmetries', 'bbox']:
@@ -126,7 +132,16 @@ class Primitive(Object):
             args['border_size'] = self.border_size
 
         object = type(self)(**args)
-        object.actual_pixels[:, :] = self.actual_pixels[:, :]
+        object.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y, self.canvas_pos.z)
+        object.dimensions = Dimension2D(self.dimensions.dx, self.dimensions.dy)
+        object.actual_pixels = np.ndarray.copy(self.actual_pixels)
+        object.symmetries = []
+        for sym in self.symmetries:
+            object.symmetries.append(copy(sym))
+        object.border_size = Surround(Up=self.border_size.Up, Down=self.border_size.Down, Left=self.border_size.Left,
+                                      Right=self.border_size.Right)
+        object.rotation_axis = Point(self.rotation_axis.x, self.rotation_axis.y, self.rotation_axis.z)
+        object.reset_dimensions()
         return object
 
 
@@ -263,7 +278,7 @@ class Pi(Primitive):
         A Pi shaped object.
         :param size: The x, y size of the object
         :param border_size: The [Up, Down, Left, Right] black pixels surrounding the Pi
-        :param canvas_pos: The position on the canvas
+        :param _canvas_pos: The position on the canvas
         :param colour: The Pi's colour
         :param _id: The id of the object
         """
@@ -283,8 +298,7 @@ class Pi(Primitive):
         pi = np.array(pi)
 
         self.generate_actual_pixels(array=pi)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,  _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
 
         self.generate_symmetries('y')
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import constants as const
 from typing import Union, List
-from dataclasses import dataclass
+from copy import copy
 from enum import Enum
 from dataclasses import dataclass
 
@@ -42,6 +42,8 @@ class Orientation(Enum):
 
         return Orientation(value=value)
 
+    def __copy__(self):
+        return Orientation(self.value)
 
 class OrientationZ(Enum):
     Away: int = -1
@@ -73,8 +75,12 @@ class Surround:
     def __isub__(self, other: Surround | int) -> Surround:
         return self - other
 
+    def __copy__(self):
+        return Surround(Up=self.Up, Down=self.Down, Left=self.Left, Right=self.Right)
+
     def to_numpy(self):
         return np.array([self.Up, self.Down, self.Left, self.Right])
+
 
 class Dimension2D:
     def __init__(self, dx: int = 3, dy:  int = 3, array: None | np.ndarray | List = None):
@@ -125,6 +131,9 @@ class Dimension2D:
 
     def __truediv__(self, other) -> Dimension2D:
         return Dimension2D(self.x / other, self.y / other)
+
+    def __copy__(self):
+        return Dimension2D(dx=self.dx, dy=self.dy)
 
     def to_numpy(self):
         return np.array([self.dx, self.dy])
@@ -187,8 +196,11 @@ class Point:
     def __len__(self):
         return 3
 
-    def __deepcopy__(self, memo) -> Point:
+    def __copy__(self) -> Point:
         return Point(self.x, self.y, self.z)
+
+    def __abs__(self):
+        return Point(np.abs(self.x), np.abs(self.y), np.abs(self.z))
 
     def to_numpy(self) -> np.ndarray:
         return np.array([self.x, self.y, self.z])
@@ -258,6 +270,7 @@ class Point:
     def copy(self) -> Point:
         return Point(self.x, self.y, self.z)
 
+
 class Vector:
     def __init__(self, orientation:Orientation = Orientation.Up,
                  length: None | int = 0,
@@ -269,8 +282,8 @@ class Vector:
     def __repr__(self):
         return f'Vector(Orientation: {self.orientation}, Length: {self.length}, Origin Point: {self.origin})'
 
-    def __deepcopy__(self, memo):
-        return self
+    def __copy__(self):
+        return Vector(orientation=copy(self.orientation), length=self.length, origin=copy(self.origin))
 
     # TODO: Need to deal with transformations other than rotation
     def transform(self, affine_matrix: np.ndarray | None = None,
@@ -287,9 +300,6 @@ class Vector:
 
         self.origin.transform(affine_matrix, rotation, shear, translation, scale)
 
-    def copy(self) -> Vector:
-        return Vector(orientation=self.orientation, origin=self.origin.copy(), length=self.length)
-
 
 class Bbox:
     def __init__(self, top_left: Point = Point(0, 0), bottom_right: Point = Point(0, 0)):
@@ -301,8 +311,8 @@ class Bbox:
         self.center = self._calculate_center()
         return self.center
 
-    def __deepcopy__(self, memo):
-        return self
+    def __copy__(self):
+        return Bbox(top_left=self.top_left, bottom_right=self.bottom_right)
 
     def __repr__(self):
         return f'Bbox(Top Left: {self.top_left}, Bottom Right: {self.bottom_right}, Center: {self.center})'
@@ -334,22 +344,22 @@ class Bbox:
             rot = 3
 
         if rot == 1:
-            p1 = self.top_left
+            p1 = copy(self.top_left)
             p1.transform(affine_matrix, rotation, shear, translation, scale)
-            p2 = self.bottom_right
+            p2 = copy(self.bottom_right)
             p2.transform(affine_matrix, rotation, shear, translation, scale)
             self.top_left = Point.point_from_numpy(np.array([p1.x, p2.y, 0]))
             self.bottom_right = Point.point_from_numpy(np.array([p2.x, p1.y, 0]))
 
         elif rot == 2:
-            p = self.top_left
+            p = copy(self.top_left)
             self.top_left = Point(self.bottom_right.x - 2*(self.bottom_right.x - self.top_left.x), self.top_left.x)
             self.bottom_right = Point(p.x, p.y - 2 * (p.y - self.bottom_right.y))
 
         elif rot == 3:
-            p1 = self.top_left
+            p1 = copy(self.top_left)
             p1.transform(affine_matrix, rotation, shear, translation, scale)
-            p2 = self.bottom_right
+            p2 = copy(self.bottom_right)
             p2.transform(affine_matrix, rotation, shear, translation, scale)
 
             self.top_left = Point.point_from_numpy(np.array([p2.x, p1.y, 0]))

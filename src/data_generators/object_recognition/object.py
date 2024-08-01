@@ -56,6 +56,9 @@ class Object:
         :return: Nothing
         """
 
+        def length_multiplier(factor):
+            return factor + factor - 2
+
         if factor == 0:  # Factor cannot be 0 so in this case nothing happens
             return
 
@@ -80,20 +83,25 @@ class Object:
 
         self.actual_pixels = scaled
 
+        self.reset_dimensions()
+
         for sym in self.symmetries:
             if factor > 0:
-                edges = Point(0.5, 0.5)
-                if sym.origin.x == 0:
-                    edges.x = 0
-                if sym.origin.y == 0:
-                    edges.y = 0
-                sym.origin = (sym.origin + edges - self._canvas_pos) * factor + self._canvas_pos
+                sym.length *= 2 * factor - 0.5 * (factor + 1)
+
+                d = np.abs(sym.origin - self.canvas_pos)
+                multiplier = Point(factor, factor) if sym.orientation == Orientation.Up else Point(factor + 1, factor)
+                sym.origin.x = d.x * multiplier.x + self.canvas_pos.x if d.x > 0 else sym.origin.x
+                sym.origin.y = d.y * multiplier.y  + self.canvas_pos.y if d.y > 0 else sym.origin.y
+
+                sym.origin.x += 0.5 * (factor -1) if sym.orientation == Orientation.Up\
+                    else -(factor -1) + (factor - 2) *2
+                sym.origin.y += (factor - 1) * 0.5 if sym.orientation == Orientation.Left\
+                    else (factor - 1) * 0.5 - (factor - 2) * 0.5 - 0.5
             else:
+                sym.length /= np.abs(factor)
                 factor = 1/np.abs(factor)
                 sym.origin = (sym.origin - self._canvas_pos) * factor + self._canvas_pos
-            sym.length *= factor
-
-        self.reset_dimensions()
 
     def rotate(self, times: Union[1, 2, 3], center: np.ndarray | List | Point = (0, 0)):
         """
@@ -103,7 +111,7 @@ class Object:
         :return:
         """
         radians = np.pi/2 * times
-        degrees = 90 * times
+        degrees = -(90 * times)
         self.actual_pixels = skimage.transform.rotate(self.actual_pixels, degrees, resize=True, order=0, center=center)
 
         if type(center) == Point:
@@ -294,11 +302,15 @@ class Object:
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
 
-    def copy(self):
+    def __copy__(self):
         new_obj = Object(actual_pixels=self.actual_pixels, _id=self.id, border_size=self.border_size,
                          canvas_pos=self.canvas_pos)
+        new_obj.dimensions = copy(self.dimensions)
+        new_obj.border_size = copy(self.border_size)
+        new_obj.bbox = copy(self.bbox)
+        new_obj.rotation_axis = copy(self.rotation_axis)
         for sym in self.symmetries:
-            new_obj.symmetries.append(sym.copy())
+            new_obj.symmetries.append(copy(sym))
         return new_obj
 
     def __add__(self, other: Object):
