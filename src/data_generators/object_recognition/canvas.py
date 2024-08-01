@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
+import numpy as np
+
 from utils import *
 from data.utils import *
 from visualization import visualize_data as vis
@@ -32,7 +34,7 @@ class Canvas:
         self.actual_pixels = np.ones((size.dy, size.dx))
         self.full_canvas = np.zeros((MAX_PAD_SIZE, MAX_PAD_SIZE))
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
-        self.background_pixels = self.actual_pixels.copy()
+        self.background_pixels = np.ndarray.copy(self.actual_pixels)
 
         self.embed_objects()
 
@@ -75,40 +77,46 @@ class Canvas:
         canvas_pos.z to define the order (objects with smaller z go first thus end up behind objects with larger z)
         :return:
         """
-        self.actual_pixels = self.background_pixels.copy()
+        self.actual_pixels = np.ndarray.copy(self.background_pixels)
 
         self.objects = sorted(self.objects, key=lambda obj: obj._canvas_pos.z)
 
         for i, obj in enumerate(self.objects):
-            xmin = obj.canvas_pos.x
-            if xmin >= self.actual_pixels.shape[1]:
+            xmin = 0
+            xmin_canv = obj.canvas_pos.x
+            if xmin_canv >= self.actual_pixels.shape[1]:
                 continue
-            if xmin < 0:
-                xmin = 0
-            xmax = obj.canvas_pos.x + obj.dimensions.dx
-            if xmax >= self.actual_pixels.shape[1]:
-                xmax = self.actual_pixels.shape[1]
-            ymin = obj.canvas_pos.y
-            if ymin >= self.actual_pixels.shape[0]:
+            if xmin_canv < 0:
+                xmin = np.abs(xmin_canv)
+                xmin_canv = 0
+
+            xmax = obj.dimensions.dx
+            xmax_canv = obj.canvas_pos.x + obj.dimensions.dx
+            if xmax_canv >= self.actual_pixels.shape[1]:
+                xmax -= xmax_canv - self.actual_pixels.shape[1]
+                xmax_canv = self.actual_pixels.shape[1]
+
+            ymin = 0
+            ymin_canv = obj.canvas_pos.y
+            if ymin_canv >= self.actual_pixels.shape[0]:
                 continue
-            if ymin < 0:
-                ymin = 0
-            ymax = obj.canvas_pos.y + obj.dimensions.dy
-            if ymax >= self.actual_pixels.shape[0]:
-                ymax = self.actual_pixels.shape[0]
+            if ymin_canv < 0:
+                ymin = np.abs(ymin_canv)
+                ymin_canv = 0
+
+            ymax = obj.dimensions.dy
+            ymax_canv = obj.canvas_pos.y + obj.dimensions.dy
+            if ymax_canv >= self.actual_pixels.shape[0]:
+                ymax -= ymax_canv - self.actual_pixels.shape[0]
+                ymax_canv = self.actual_pixels.shape[0]
 
             xmin = int(xmin)
             xmax = int(xmax)
             ymin = int(ymin)
             ymax = int(ymax)
 
-            print('------')
-
-            print(f'In Canvas with dimensions {self.size} embedding object __{i}__ with cv {obj.canvas_pos}')
-            print(xmin, xmax, ymin, ymax)
-            print('---------')
-
-            self.actual_pixels[ymin: ymax, xmin: xmax] = obj.actual_pixels[: ymax-ymin, : xmax-xmin]
+            self.actual_pixels[ymin_canv: ymax_canv, xmin_canv: xmax_canv] = \
+                obj.actual_pixels[ymin:ymax, xmin:xmax]
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
 
     def add_new_object(self, obj: Object):
