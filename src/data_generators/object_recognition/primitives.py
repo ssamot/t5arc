@@ -120,7 +120,7 @@ class Primitive(Object):
     def __copy__(self):
         args = self.__dict__.copy()
         for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'rotation_axis', 'dimensions',
-                    'number_of_coloured_pixels', 'symmetries', 'bbox']:
+                    'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox']:
             args.pop(arg, None)
         args['_id'] = self.id
         type_name = str(type(self)).split('.')[-1].split("'")[0]
@@ -135,6 +135,7 @@ class Primitive(Object):
         object.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y, self.canvas_pos.z)
         object.dimensions = Dimension2D(self.dimensions.dx, self.dimensions.dy)
         object.actual_pixels = np.ndarray.copy(self.actual_pixels)
+        object.transformations = copy(self.transformations)
         object.symmetries = []
         for sym in self.symmetries:
             object.symmetries.append(copy(sym))
@@ -204,9 +205,6 @@ class Cross(Primitive):
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
-        assert self.size.dx % 2 == 1 and self.size.dy % 2 == 1, \
-            print(f'To make a Cross the x and y size must be odd numbers. Current size is {self.size}')
-
         cross = []
         for x in range(self.size.dx):
             temp = np.ones(self.size.dy)
@@ -219,6 +217,18 @@ class Cross(Primitive):
         self.generate_actual_pixels(array=cross)
 
         Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos,  border_size=border_size, _id=_id)
+
+        '''
+        mirrored = False
+        print(self.transformations)
+        for tr in self.transformations:
+            if tr[0].name == str(type(self).split('.')[-1].split("'")[0]):
+                mirrored = True
+        print(mirrored)
+        if not mirrored:
+            assert self.size.dx % 2 == 1 and self.size.dy % 2 == 1, \
+                print(f'To make a Cross the x and y size must be odd numbers. Current size is {self.size}')
+        '''
 
         self.generate_symmetries()
 
@@ -321,10 +331,12 @@ class InverseCross(Primitive):
         :param fill_height: The number of pixels to get the 2nd colour away from the center
         :param _id: The id of the object
         """
+        '''
         assert height % 2 == 1, print('To make an Inverted Cross the height must be an odd number')
-
+    
         if fill_height is not None:
             assert fill_height % 2 == 1, print('To fill an Inverted Cross the fill_height must be an odd number')
+        '''
 
         self.height = height
         size = Dimension2D(height, height)
