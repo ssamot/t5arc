@@ -9,7 +9,7 @@ from utils import *
 from data.utils import *
 from visualization import visualize_data as vis
 from data_generators.object_recognition.primitives import *
-from data_generators.object_recognition.basic_geometry import Point, Vector, Bbox, Orientation, Dimension2D, OrientationZ
+from data_generators.object_recognition.basic_geometry import Point, Dimension2D
 
 
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)

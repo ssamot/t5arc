@@ -6,6 +6,7 @@ from enum import Enum
 
 import numpy as np
 
+from data_generators.object_recognition.object import Transformations
 from data_generators.object_recognition.canvas import *
 from data_generators.object_recognition.basic_geometry import Point, Vector, Bbox, Orientation, Dimension2D, OrientationZ
 
@@ -17,48 +18,6 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 OVERLAP_PROB = 0.8
 FAR_AWAY_PROB = 0.1
 MIRROR_PROB = 0.05
-
-
-class Transformations(Enum):
-    scale: int = 0
-    rotate: int = 1
-    shear: int = 2
-    mirror: int = 3
-    flip: int = 4
-    randomise_colour: int = 5
-    randomise_shape: int = 6
-
-    def get_random_parameters(self, random_obj_or_not: str = 'Random'):
-        args = {}
-        if self.name == 'scale':
-            args['factor'] = np.random.choice([-4, -3, -2, 2, 3, 4], p=[0.05, 0.15, 0.3, 0.3, 0.15, 0.05])
-        if self.name == 'rotate':
-            args['times'] = np.random.randint(1, 4)
-        if self.name == 'shear':
-            if random_obj_or_not == 'Random':
-                args['_shear'] = np.random.gamma(shape=1, scale=0.2) + 0.1  # Mainly between 0.1 and 0.75
-            else:
-                args['_shear'] = np.random.gamma(shape=1, scale=0.1) + 0.05  # Mainly between 0.05 and 0.4
-                args['_shear'] = 0.4 if args['_shear'] > 0.4 else args['_shear']
-        if self.name == 'mirror' or self.name == 'flip':
-            args['axis'] = np.random.choice([Orientation.Up, Orientation.Down, Orientation.Left, Orientation.Right])
-        if self.name == 'randomise_colour':
-            if random_obj_or_not == 'Random':
-                args['ratio'] = np.random.gamma(shape=1, scale=0.1) + 0.1  # Mainly between 0.1 and 0.4
-                args['ratio'] = 0.4 if args['ratio'] > 0.4 else args['ratio']
-            else:
-                args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.4
-                args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
-        if self.name == 'randomise_shape':
-            args['add_or_subtract'] = 'add' if np.random.random() > 0.5 else 'subtract'
-            if random_obj_or_not == 'Random':
-                args['ratio'] = np.random.gamma(shape=1, scale=0.07) + 0.1  # Mainly between 0.1 and 0.3
-                args['ratio'] = 0.3 if args['ratio'] > 0.3 else args['ratio']
-            else:
-                args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.3
-                args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
-
-        return args
 
 
 class Example:
@@ -75,6 +34,7 @@ class Example:
 
         self.ids = []
         self.objects = []
+        self.temp_objects = []
 
         self.generate_canvasses()
 
@@ -136,14 +96,13 @@ class Example:
 
     @staticmethod
     def do_multiple_mirroring(obj: Primitive) -> Primitive:
-        number_of_mirrors = np.random.randint(1, 5)
+        number_of_mirrors = np.random.randint(2, 8)
         transform_index = 3
         for i in range(number_of_mirrors):
             mirror_name = Transformations(transform_index)
             args = mirror_name.get_random_parameters()
             mirror_method = getattr(obj, mirror_name.name)
             mirror_method(**args)
-
         return obj
 
     def create_random_object(self, debug: bool=False) -> Primitive:
@@ -238,15 +197,16 @@ class Example:
 
     def generate_canvasses(self):
         """
-        Generate random size canvases and add background (single colour) pixels to 10% of them is they are bigger than
+        Generate random size canvases and add background (single colour) pixels to 10% of them if they are bigger than
         10x10
         :return:
         """
+        min_pad_size = MIN_PAD_SIZE if self.experiment_type == 'Object' else MIN_PAD_SIZE + 10
         for c in range(self.number_of_io_pairs):
-            input_size = Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
-                                     np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
-            output_size = Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
-                                      np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
+            input_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
+                                     np.random.randint(min_pad_size, MAX_PAD_SIZE))
+            output_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
+                                      np.random.randint(min_pad_size, MAX_PAD_SIZE))
 
             input_canvas = Canvas(size=input_size)
             if np.all([input_size.dx > 10, input_size.dy > 10]) and np.random.random() < 0.1:
@@ -260,12 +220,39 @@ class Example:
                 output_canvas.create_background_from_object(background_object)
             self.output_canvases.append(output_canvas)
 
-        test_canvas_size =Dimension2D(np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE),
-                                                   np.random.randint(MIN_PAD_SIZE, MAX_PAD_SIZE))
+        test_canvas_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
+                                       np.random.randint(min_pad_size, MAX_PAD_SIZE))
         self.test_canvas = Canvas(size=test_canvas_size)
         if np.all([test_canvas_size.dx > 10, test_canvas_size.dy > 10]) and np.random.random() < 0.1:
             background_object = Random(size=test_canvas_size, occupancy_prob=np.random.gamma(1, 0.05) + 0.1)
             self.test_canvas.create_background_from_object(background_object)
+
+    def randomly_position_object_in_all_canvases(self, obj: Primitive):
+
+        for input_canvas, output_canvas in zip(self.input_canvases, self.output_canvases):
+            in_canvas_pos = self.get_random_position(obj, input_canvas)
+            out_canvas_pos = self.get_random_position(obj, output_canvas)
+            canvas_pos = None
+            c = None
+            if in_canvas_pos is not None and out_canvas_pos is not None:
+                canvas_pos, c = (in_canvas_pos, input_canvas) if np.random.random() > 0.5 \
+                    else (out_canvas_pos, output_canvas)
+            elif in_canvas_pos is None:
+                canvas_pos = out_canvas_pos
+                c = output_canvas
+            elif out_canvas_pos is None:
+                canvas_pos = in_canvas_pos
+                c = input_canvas
+            if canvas_pos is not None:
+                o = copy(obj)
+                o.canvas_pos = canvas_pos
+                c.add_new_object(o)
+
+        test_canvas_pos = self.get_random_position(obj, self.test_canvas)
+        if test_canvas_pos is not None:
+            o = copy(obj)
+            o.canvas_pos = test_canvas_pos
+            self.test_canvas.add_new_object(o)
 
     def place_new_object_on_canvases(self):
         """
@@ -275,45 +262,45 @@ class Example:
         2) Copy that Primitive random n number of times (all of these will have the same id)
         3) Randomly do a number of Transformations to every one of the cobjects.
         4) Randomly pick the canvasses to place each of the object in (of the possible ones given the other objects)
+        If the Example is of type 'Symmetry':
+        1) Randomly create a Primitive
+        2) Mirror it random times (with random Orientations)
+        3) Randomly pick the canvasses to place it
         :return:
         """
         if self.experiment_type == 'Object':
+
             self.temp_objects = [self.create_random_object(debug=False)]
 
-            num_of_copies = np.random.randint(1, 5) if np.all(self.temp_objects[-1].size.to_numpy() < 6) else \
+            num_of_transformed_copies = np.random.randint(1, 5) if np.all(self.temp_objects[-1].size.to_numpy() < 6) else \
                 np.random.randint(4, 10)
 
-            for _ in range(num_of_copies):
+            for _ in range(num_of_transformed_copies):
                 self.temp_objects.append(copy(self.temp_objects[-1]))
 
             num_of_transformations = 1  # np.random.choice([0, 1, 2], p=[0.1, 0.5, 0.4])
             probs_of_transformations = [0.1, 0.2, 0.05, 0.05, 0.3, 0.3]
             for k, obj in enumerate(self.temp_objects):
 
-                self.do_random_transformations(obj, num_of_transformations=num_of_transformations, debug=False,
-                                               probs_of_transformations=probs_of_transformations)
+                if k > 0:  # Leave one object copy untransformed
+                    self.do_random_transformations(obj, num_of_transformations=num_of_transformations, debug=False,
+                                                   probs_of_transformations=probs_of_transformations)
 
-                for input_canvas, output_canvas in zip(self.input_canvases, self.output_canvases):
-                    in_canvas_pos = self.get_random_position(obj, input_canvas)
-                    out_canvas_pos = self.get_random_position(obj, output_canvas)
-                    canvas_pos = None
-                    c = None
-                    if in_canvas_pos is not None and out_canvas_pos is not None:
-                        canvas_pos, c = (in_canvas_pos, input_canvas) if np.random.random() > 0.5\
-                            else (out_canvas_pos, output_canvas)
-                    elif in_canvas_pos is None:
-                        canvas_pos = out_canvas_pos
-                        c = output_canvas
-                    elif out_canvas_pos is None:
-                        canvas_pos = in_canvas_pos
-                        c = input_canvas
-                    if canvas_pos is not None:
-                        o = copy(obj)
-                        o.canvas_pos = canvas_pos
-                        c.add_new_object(o)
+                self.randomly_position_object_in_all_canvases(obj)
+
+        elif self.experiment_type == 'Symmetry':
+            print('Symmetry')
+            base_object = self.create_random_object(debug=False)
+            obj = self.do_multiple_mirroring(base_object)
+            self.randomly_position_object_in_all_canvases(obj)
 
     def populate_canvases(self):
-        pass
+        num_of_objects = 1
+        if self.experiment_type == 'Object':
+            num_of_objects = np.random.randint(1, 8)
+
+        for _ in range(num_of_objects):
+            self.place_new_object_on_canvases()
 
     def show(self, canvas_index: int | str = 'all'):
         if type(canvas_index) == int:

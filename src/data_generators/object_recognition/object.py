@@ -12,6 +12,49 @@ np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
+
+class Transformations(Enum):
+    scale: int = 0
+    rotate: int = 1
+    shear: int = 2
+    mirror: int = 3
+    flip: int = 4
+    randomise_colour: int = 5
+    randomise_shape: int = 6
+
+    def get_random_parameters(self, random_obj_or_not: str = 'Random'):
+        args = {}
+        if self.name == 'scale':
+            args['factor'] = np.random.choice([-4, -3, -2, 2, 3, 4], p=[0.05, 0.15, 0.3, 0.3, 0.15, 0.05])
+        if self.name == 'rotate':
+            args['times'] = np.random.randint(1, 4)
+        if self.name == 'shear':
+            if random_obj_or_not == 'Random':
+                args['_shear'] = np.random.gamma(shape=1, scale=0.2) + 0.1  # Mainly between 0.1 and 0.75
+            else:
+                args['_shear'] = np.random.gamma(shape=1, scale=0.1) + 0.05  # Mainly between 0.05 and 0.4
+                args['_shear'] = 0.4 if args['_shear'] > 0.4 else args['_shear']
+        if self.name == 'mirror' or self.name == 'flip':
+            args['axis'] = np.random.choice([Orientation.Up, Orientation.Down, Orientation.Left, Orientation.Right])
+        if self.name == 'randomise_colour':
+            if random_obj_or_not == 'Random':
+                args['ratio'] = np.random.gamma(shape=1, scale=0.1) + 0.1  # Mainly between 0.1 and 0.4
+                args['ratio'] = 0.4 if args['ratio'] > 0.4 else args['ratio']
+            else:
+                args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.4
+                args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
+        if self.name == 'randomise_shape':
+            args['add_or_subtract'] = 'add' if np.random.random() > 0.5 else 'subtract'
+            if random_obj_or_not == 'Random':
+                args['ratio'] = np.random.gamma(shape=1, scale=0.07) + 0.1  # Mainly between 0.1 and 0.3
+                args['ratio'] = 0.3 if args['ratio'] > 0.3 else args['ratio']
+            else:
+                args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.3
+                args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
+
+        return args
+
+
 class Object:
 
     def __init__(self, actual_pixels: np.ndarray, _id: None | int = None,
@@ -33,6 +76,8 @@ class Object:
         self.number_of_coloured_pixels: int = int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
 
         self.symmetries: List = []
+
+        self.transformations: List = []
 
         self.reset_dimensions()
 
@@ -103,6 +148,8 @@ class Object:
                 factor = 1/np.abs(factor)
                 sym.origin = (sym.origin - self._canvas_pos) * factor + self._canvas_pos
 
+        self.transformations.append([Transformations.scale, {'factor': factor}])
+
     def rotate(self, times: Union[1, 2, 3], center: np.ndarray | List | Point = (0, 0)):
         """
         Rotate the object counter-clockwise by times multiple of 90 degrees
@@ -134,6 +181,8 @@ class Object:
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
+        self.transformations.append([Transformations.rotate, {'times': times}])
+
     def shear(self, _shear: np.ndarray | List):
         """
         Shears the actual pixels
@@ -162,6 +211,8 @@ class Object:
         self.flip(Orientation.Right)
         self.reset_dimensions()
         self.symmetries = []  # Loose any symmetries
+
+        self.transformations.append([Transformations.shear, {'_shear': _shear}])
 
     def mirror(self, axis: Orientation, on_axis=False):
         """
@@ -226,6 +277,8 @@ class Object:
 
         self.reset_dimensions()
 
+        self.transformations.append([Transformations.mirror, {'axis': axis}])
+
     def flip(self, axis: Orientation):
         """
         Flips the object along an axis and possibly copies it
@@ -237,6 +290,8 @@ class Object:
             self.actual_pixels = np.flipud(self.actual_pixels)
         elif axis == Orientation.Left or axis == Orientation.Right:
             self.actual_pixels = np.fliplr(self.actual_pixels)
+
+        self.transformations.append([Transformations.flip, {'axis': axis}])
 
     def randomise_colour(self, ratio: float = 0.1, colour: str = 'random'):
         """
@@ -258,6 +313,8 @@ class Object:
             self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = np.random.choice(new_colour, size=1)
 
             self.symmetries = []
+
+            self.transformations.append([Transformations.randomise_colour, {'ratio': ratio}])
 
     def randomise_shape(self, add_or_subtract: str = 'add', ratio: float = 0.1, colour: str = 'common'):
         """
@@ -287,6 +344,8 @@ class Object:
             self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = new_colour
 
             self.symmetries = []
+
+            self.transformations.append([Transformations.randomise_shape, {'ratio': ratio}])
 
     # Utility methods
     def reset_dimensions(self):
