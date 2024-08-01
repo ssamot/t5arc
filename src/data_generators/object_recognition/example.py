@@ -270,12 +270,13 @@ class Example:
                 np.random.randint(4, 10)
 
             for _ in range(num_of_copies):
-                self.temp_objects.append(self.temp_objects[-1].copy())
+                self.temp_objects.append(copy(self.temp_objects[-1]))
 
             num_of_transformations = 1  # np.random.choice([0, 1, 2], p=[0.1, 0.5, 0.4])
             probs_of_transformations = [0.1, 0.2, 0.05, 0.05, 0.3, 0.3]
-            for obj in self.temp_objects:
-                self.do_random_transformations(obj, num_of_transformations=num_of_transformations, debug=True,
+            for k, obj in enumerate(self.temp_objects):
+
+                self.do_random_transformations(obj, num_of_transformations=num_of_transformations, debug=False,
                                                probs_of_transformations=probs_of_transformations)
 
                 for input_canvas, output_canvas in zip(self.input_canvases, self.output_canvases):
@@ -293,7 +294,7 @@ class Example:
                         canvas_pos = in_canvas_pos
                         c = input_canvas
                     if canvas_pos is not None:
-                        o = obj.copy()
+                        o = copy(obj)
                         o.canvas_pos = canvas_pos
                         c.add_new_object(o)
 
