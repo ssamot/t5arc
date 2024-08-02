@@ -233,7 +233,7 @@ class Object:
             new_symmetry_axis_origin = Point(self._canvas_pos.x, self.actual_pixels.shape[0] / 2 + self._canvas_pos.y) \
                 if axis == Orientation.Up else Point(self._canvas_pos.x, self._canvas_pos.y)
 
-            #new_symmetry_axis_origin.y -= 0.5
+            new_symmetry_axis_origin.y -= 0.5
             if on_axis and axis == Orientation.Down:
                 new_symmetry_axis_origin.y -= 0.5
 
@@ -256,7 +256,7 @@ class Object:
             new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self._canvas_pos.x, self._canvas_pos.y)\
                 if axis == Orientation.Right else Point(self._canvas_pos.x, self._canvas_pos.y)
 
-            #new_symmetry_axis_origin.x -= 0.5
+            new_symmetry_axis_origin.x -= 0.5
             if on_axis and axis == Orientation.Left:
                 new_symmetry_axis_origin.x -= 0.5
 
