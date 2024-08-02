@@ -30,7 +30,7 @@ class Example:
         self.test_canvas = None
 
         # TODO: Develop the Grd Primitive to be able to also create the Grid Experiment type
-        self.experiment_type = np.random.choice(['Object', 'Symmetry', 'Grid'], p=[0.9, 0.1, 0])
+        self.experiment_type = np.random.choice(['Object', 'Symmetry', 'Grid'], p=[0.8, 0.2, 0])
 
         self.ids = []
         self.objects = []
@@ -65,6 +65,7 @@ class Example:
         arguments of each Transformation are also chosen randomly
         :param obj: The Object to transform
         :param debug: If True print the transformations and their arguments
+        :param num_of_transformations: How many transformations to do
         :param probs_of_transformations: The probabilities of the 6 possible transformations (except mirror) in the
         order of the Transformations enumeration
         :return:
@@ -88,24 +89,30 @@ class Example:
             transform_method = getattr(obj, transform_name.name)
 
             # Do not allow Cross or InvertedCross to scale by an even factor
-            if np.any(np.array(['Cross', 'InvertedCross']) == str(type(obj)).split('.')[-1].split("'")[0]) and \
+            if np.any(np.array(['Cross', 'InvertedCross']) == obj.get_str_type()) and \
                 transform_name == Transformations.scale and args['factor'] % 2 == 0:
                 continue
 
             transform_method(**args)
 
-    @staticmethod
-    def do_multiple_mirroring(obj: Primitive) -> Primitive:
-        number_of_mirrors = np.random.randint(2, 8)
+    def do_multiple_mirroring(self, obj: Primitive) -> Primitive:
+        number_of_mirrors = np.random.randint(2, 6)
         transform_index = 3
+
+        obj_to_mirror = copy(obj)
+
         for i in range(number_of_mirrors):
             mirror_name = Transformations(transform_index)
             args = mirror_name.get_random_parameters()
-            mirror_method = getattr(obj, mirror_name.name)
+            mirror_method = getattr(obj_to_mirror, mirror_name.name)
             mirror_method(**args)
-        return obj
 
-    def create_random_object(self, debug: bool=False) -> Primitive:
+        if np.any(obj_to_mirror.dimensions.to_numpy() > MAX_PAD_SIZE):
+            obj_to_mirror = self.do_multiple_mirroring(obj)
+
+        return obj_to_mirror
+
+    def create_random_object(self, debug: bool = False) -> Primitive:
         """
         Create a random Primitive
         :return: The Object generated
@@ -129,7 +136,7 @@ class Example:
         if obj_type.name == 'InverseCross':
             fill_colour = self.get_random_colour(other_colour=args['colour'])
             args['fill_colour'] = fill_colour
-            args['fill_height'] = np.random.randint(0, args['height'])
+            args['fill_height'] = np.random.randint(1, args['height'] + 1)
             if args['fill_height'] % 2 == 0:  # Inverted Crosses need odd fill_height
                 args['fill_height'] += 1
 
@@ -202,6 +209,7 @@ class Example:
         :return:
         """
         min_pad_size = MIN_PAD_SIZE if self.experiment_type == 'Object' else MIN_PAD_SIZE + 10
+
         for c in range(self.number_of_io_pairs):
             input_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
                                      np.random.randint(min_pad_size, MAX_PAD_SIZE))
@@ -222,6 +230,7 @@ class Example:
 
         test_canvas_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
                                        np.random.randint(min_pad_size, MAX_PAD_SIZE))
+
         self.test_canvas = Canvas(size=test_canvas_size)
         if np.all([test_canvas_size.dx > 10, test_canvas_size.dy > 10]) and np.random.random() < 0.1:
             background_object = Random(size=test_canvas_size, occupancy_prob=np.random.gamma(1, 0.05) + 0.1)
@@ -289,8 +298,11 @@ class Example:
                 self.randomly_position_object_in_all_canvases(obj)
 
         elif self.experiment_type == 'Symmetry':
-            print('Symmetry')
-            base_object = self.create_random_object(debug=False)
+            base_object = Parallelogram(size=[2, 2])
+
+            while base_object.get_str_type() == 'Parallelogram':
+                base_object = self.create_random_object(debug=False)
+
             obj = self.do_multiple_mirroring(base_object)
             self.randomly_position_object_in_all_canvases(obj)
 
