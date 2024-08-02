@@ -67,6 +67,9 @@ class Primitive(Object):
 
         self.required_dist_to_others = required_dist_to_others
 
+    def get_str_type(self):
+        return str(type(self)).split('.')[-1].split("'")[0]
+
     def print_border_size(self):
         """
         A pretty print of the border size
@@ -123,7 +126,7 @@ class Primitive(Object):
                     'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox']:
             args.pop(arg, None)
         args['_id'] = self.id
-        type_name = str(type(self)).split('.')[-1].split("'")[0]
+        type_name = self.get_str_type()
         if type_name in np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie']):
             args.pop('size', None)
         if type_name == 'Hole':
@@ -353,6 +356,7 @@ class InverseCross(Primitive):
             temp = np.ones(self.size.dy)
 
             if fill_height is not None:
+                self.fill_height = fill_height
                 fill = int((self.size.dx - fill_height) / 2)
                 if fill <= x < self.size.dx - fill:
                     temp[fill:-fill] = fill_colour
