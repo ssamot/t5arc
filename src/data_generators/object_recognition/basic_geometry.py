@@ -45,6 +45,9 @@ class Orientation(Enum):
     def __copy__(self):
         return Orientation(self.value)
 
+    def __repr__(self) -> str:
+        return f'Orientation(name={self.name}, value={self.value})'
+
 class OrientationZ(Enum):
     Away: int = -1
     Towards: int = 1

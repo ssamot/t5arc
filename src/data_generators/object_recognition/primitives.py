@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from copy import copy
+import json
+from json import JSONEncoder
 
 import numpy as np
 import constants as const
@@ -12,6 +14,17 @@ from data_generators.object_recognition.basic_geometry import Point, Bbox, Dimen
 
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
+
+
+class PrimitivesJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.int32):
+            return int(obj)
+        if isinstance(obj, Orientation):
+            return obj.__repr__()
+        return obj.__dict__
 
 
 class ObjectType(Enum):
@@ -66,6 +79,9 @@ class Primitive(Object):
             self.colour = colour
 
         self.required_dist_to_others = required_dist_to_others
+
+    def __repr__(self):
+        return json.dumps(self, cls=PrimitivesJSONEncoder, sort_keys=True, indent=4)
 
     def get_str_type(self):
         return str(type(self)).split('.')[-1].split("'")[0]

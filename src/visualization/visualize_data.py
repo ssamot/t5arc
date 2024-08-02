@@ -51,14 +51,14 @@ def plot_task(task):
         axs[0][fig_num].set_yticks(list(range(t_in.shape[0])))
         axs[0][fig_num].set_xticks(list(range(t_in.shape[1])))
         t_in = np.array(t_in)
-        add_vhlines_to_plot(axs[0][fig_num], t_in)
+        #add_vhlines_to_plot(axs[0][fig_num], t_in)
 
         axs[1][fig_num].imshow(t_out)
         axs[1][fig_num].set_title(f'Train-{i} out')
         axs[1][fig_num].set_yticks(list(range(t_out.shape[0])))
         axs[1][fig_num].set_xticks(list(range(t_out.shape[1])))
         t_out = np.array(t_out)
-        add_vhlines_to_plot(axs[1][fig_num], t_out)
+        #add_vhlines_to_plot(axs[1][fig_num], t_out)
 
         fig_num += 1
     for i, t in enumerate(task["test"]):
@@ -69,7 +69,7 @@ def plot_task(task):
         axs[0][fig_num].set_yticks(list(range(t_in.shape[0])))
         axs[0][fig_num].set_xticks(list(range(t_in.shape[1])))
         t_in = np.array(t_in)
-        add_vhlines_to_plot(axs[0][fig_num], t_in)
+        #add_vhlines_to_plot(axs[0][fig_num], t_in)
 
         fig_num += 1
 
