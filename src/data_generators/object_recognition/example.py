@@ -51,6 +51,13 @@ class Example:
 
     @staticmethod
     def get_random_position(obj: Primitive, canvas: Canvas) -> Point | None:
+        """
+        Finds all the positions an object would fit on the canvas (given where the other objects are) and
+        gives back a random one of these.
+        :param obj: The object to position
+        :param canvas: The Canvas to position the object in
+        :return:
+        """
         available_positions = canvas.where_object_fits_on_canvas(obj=obj)
         if len(available_positions) > 0:
             return np.random.choice(available_positions)
@@ -96,6 +103,12 @@ class Example:
             transform_method(**args)
 
     def do_multiple_mirroring(self, obj: Primitive) -> Primitive:
+        """
+        Mirror an object multiple times over random directions. Make sure the final size is not larger than the
+        maximum canvas sise.
+        :param obj: The object to mirror
+        :return:
+        """
         number_of_mirrors = np.random.randint(2, 6)
         transform_index = 3
 
@@ -237,7 +250,11 @@ class Example:
             self.test_canvas.create_background_from_object(background_object)
 
     def randomly_position_object_in_all_canvases(self, obj: Primitive):
-
+        """
+        It takes an object and places it in random (but allowed) positions in all the Canvases of the Example
+        :param obj: The object to position
+        :return:
+        """
         for input_canvas, output_canvas in zip(self.input_canvases, self.output_canvases):
             in_canvas_pos = self.get_random_position(obj, input_canvas)
             out_canvas_pos = self.get_random_position(obj, output_canvas)
@@ -307,6 +324,11 @@ class Example:
             self.randomly_position_object_in_all_canvases(obj)
 
     def populate_canvases(self):
+        """
+        Generates a random number of objects (if experiment_type is 'Object') or just one object (if type is 'Symmetry')
+        and then places their transformations on all the canvases (in allowed positions)
+        :return:
+        """
         num_of_objects = 1
         if self.experiment_type == 'Object':
             num_of_objects = np.random.randint(1, 8)
@@ -314,7 +336,25 @@ class Example:
         for _ in range(num_of_objects):
             self.place_new_object_on_canvases()
 
+    def create_canvas_arrays_input(self) -> dict:
+        result = {'test': [{'input': np.flipud(self.test_canvas.full_canvas).tolist()}],
+                  'train': []}
+
+        for input_canvas, output_canvas in zip(self.input_canvases, self.output_canvases):
+            result['train'].append({'input': np.flipud(input_canvas.full_canvas).tolist(),
+                                    'output': np.flipud(output_canvas.full_canvas).tolist()})
+
+        return result
+
+    def create_json_output(self):
+        pass
+
     def show(self, canvas_index: int | str = 'all'):
+        """
+        Shows some (canvas_index is int or 'test') or all (canvas_index = 'all') the Canvases of the Experiment
+        :param canvas_index: Which Canvases to show (int, 'test' or 'all')
+        :return:
+        """
         if type(canvas_index) == int:
             if canvas_index % 2 == 0:
                 canvas = self.input_canvases[canvas_index // 2]
