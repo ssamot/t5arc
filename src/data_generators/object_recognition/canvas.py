@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
-import numpy as np
+import json
 
 from utils import *
 from data.utils import *
@@ -11,9 +11,20 @@ from visualization import visualize_data as vis
 from data_generators.object_recognition.primitives import *
 from data_generators.object_recognition.basic_geometry import Point, Dimension2D
 
-
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
+
+
+class CanvasJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        #print(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.int32):
+            return int(obj)
+        if isinstance(obj, list):
+            return [ob.__repr__ for ob in obj]
+        return obj.__dict__
 
 
 class Canvas:
@@ -37,6 +48,10 @@ class Canvas:
         self.background_pixels = np.ndarray.copy(self.actual_pixels)
 
         self.embed_objects()
+
+    def __repr__(self):
+        print(self.__dict__)
+        return json.dumps(self, cls=CanvasJSONEncoder, sort_keys=True, indent=4)
 
     def get_coloured_pixels_positions(self) -> np.ndarray:
         """

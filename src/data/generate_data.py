@@ -25,7 +25,6 @@ class CanvasDataGenerator(keras.utils.PyDataset):
         indices = [i for i, sublist in enumerate(self.target_data) if len(sublist) < max_token_length]
         self.train_data = [self.train_data[i] for i in indices]
 
-
         self.num_decoder_tokens = len(self.chars) + 10
 
         print("num_decoder_tokens", self.num_decoder_tokens)
