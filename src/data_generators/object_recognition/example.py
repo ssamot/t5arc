@@ -24,6 +24,7 @@ MAX_NUM_OF_LARGE_OBJECTS = 3
 MIN_NUM_OF_SMALL_OBJECTS = 2
 MAX_NUM_OF_SMALL_OBJECTS = 6
 NUMBER_OF_TRANSFORMATIONS = 1
+MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS = 2
 
 MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ = 10
 PROB_OF_BACKGROUND_OBJ = 0.1
@@ -168,7 +169,7 @@ class Example:
         if obj_type.name == 'InverseCross':
             fill_colour = self.get_random_colour(other_colour=args['colour'])
             args['fill_colour'] = fill_colour
-            args['fill_height'] = np.random.randint(1, args['height'] + 1)
+            args['fill_height'] = np.random.randint(1, args['height'] - 2)
             if args['fill_height'] % 2 == 0:  # Inverted Crosses need odd fill_height
                 args['fill_height'] += 1
 
@@ -341,7 +342,8 @@ class Example:
                     self.do_random_transformations(obj, num_of_transformations=num_of_transformations, debug=False,
                                                    probs_of_transformations=probs_of_transformations)
 
-                self.randomly_position_object_in_all_canvases(obj)
+                for _ in range(MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS):
+                    self.randomly_position_object_in_all_canvases(obj)
 
         elif self.experiment_type == 'Symmetry':
 

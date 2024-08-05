@@ -83,7 +83,7 @@ class Primitive(Object):
     def json_output(self):
         args = self.__dict__.copy()
         for arg in ['border_size', '_canvas_pos', 'rotation_axis', 'number_of_coloured_pixels', 'actual_pixels',
-                    'required_dist_to_others']:
+                    'required_dist_to_others', 'canvas_id']:
             args.pop(arg, None)
         if 'size' in args:
             args.pop('size', None)
@@ -98,6 +98,15 @@ class Primitive(Object):
         args['transformations'] = [[t[0].name, t[1]] for t in self.transformations]
         args['bbox'] = [[self.bbox.top_left.x, self.bbox.top_left.y],
                         [self.bbox.bottom_right.x, self.bbox.bottom_right.y]]
+
+        if type_name == 'Hole':
+            args['thickness'] = [self.thickness.Up, self.thickness.Down, self.thickness.Left, self.thickness.Right]
+            args['hole_bbox'] = [[self.hole_bbox.top_left.x, self.hole_bbox.top_left.y],
+                                 [self.hole_bbox.bottom_right.x, self.hole_bbox.bottom_right.y]]
+
+        if type_name == 'Dot':
+            args['border_size'] = [self.border_size.Up, self.border_size.Down,
+                                   self.border_size.Left, self.border_size.Right]
 
         return args
 
@@ -264,18 +273,6 @@ class Cross(Primitive):
         Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos,  border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
-        '''
-        mirrored = False
-        print(self.transformations)
-        for tr in self.transformations:
-            if tr[0].name == str(type(self).split('.')[-1].split("'")[0]):
-                mirrored = True
-        print(mirrored)
-        if not mirrored:
-            assert self.size.dx % 2 == 1 and self.size.dy % 2 == 1, \
-                print(f'To make a Cross the x and y size must be odd numbers. Current size is {self.size}')
-        '''
-
         self.generate_symmetries()
 
 
@@ -397,6 +394,7 @@ class InverseCross(Primitive):
             fill_colour = self.colour
             while fill_colour == self.colour:
                 fill_colour = np.random.randint(2, len(const.COLOR_MAP))
+        self.fill_colour = fill_colour
 
         cross = []
         for x in range(self.size.dx):
