@@ -18,6 +18,19 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 OVERLAP_PROB = 0.8
 FAR_AWAY_PROB = 0.1
 MIRROR_PROB = 0.05
+MAX_NUM_OF_DIFFERENT_PRIMITIVES = 5
+LARGE_OBJECT_THRESHOLD = 10
+MAX_NUM_OF_LARGE_OBJECTS = 3
+MIN_NUM_OF_SMALL_OBJECTS = 2
+MAX_NUM_OF_SMALL_OBJECTS = 6
+NUMBER_OF_TRANSFORMATIONS = 1
+
+MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ = 10
+PROB_OF_BACKGROUND_OBJ = 0.1
+
+MAX_SIZE_OF_OBJECT = 15
+
+MAX_NUMBER_OF_MIRRORS = 10
 
 
 class Example:
@@ -33,6 +46,7 @@ class Example:
         self.experiment_type = np.random.choice(['Object', 'Symmetry', 'Grid'], p=[0.8, 0.2, 0])
 
         self.ids = []
+        self.actual_pixel_ids = []
         self.objects = []
         self.temp_objects = []
 
@@ -64,8 +78,7 @@ class Example:
         else:
             return None
 
-    @staticmethod
-    def do_random_transformations(obj: Primitive, debug: bool = False, num_of_transformations: int = 0,
+    def do_random_transformations(self, obj: Primitive, debug: bool = False, num_of_transformations: int = 0,
                                   probs_of_transformations: List = (0.1, 0.2, 0.1, 0.1, 0.25, 0.25)):
         """
         Transform the obj Object random n times (0 to 3) with randomly selected Transformations (except mirror). The
@@ -89,7 +102,7 @@ class Example:
             transform_name = Transformations(random_transform_index)
             if debug: print(f'Transform = {transform_name.name}')
 
-            obj_type = 'Random' if 'Random' in str(type(obj)) else 'Non-Random'
+            obj_type = 'Random' if obj.get_str_type() == 'Random' else 'Non-Random'
             args = transform_name.get_random_parameters(obj_type)
             if debug: print(f'Arguments = {args}')
 
@@ -102,6 +115,9 @@ class Example:
 
             transform_method(**args)
 
+            obj.actual_pixels_id = self.actual_pixel_ids[-1] + 1
+            self.actual_pixel_ids.append(obj.actual_pixels_id)
+
     def do_multiple_mirroring(self, obj: Primitive) -> Primitive:
         """
         Mirror an object multiple times over random directions. Make sure the final size is not larger than the
@@ -109,7 +125,7 @@ class Example:
         :param obj: The object to mirror
         :return:
         """
-        number_of_mirrors = np.random.randint(2, 6)
+        number_of_mirrors = np.random.randint(2, MAX_NUMBER_OF_MIRRORS)
         transform_index = 3
 
         obj_to_mirror = copy(obj)
@@ -135,14 +151,17 @@ class Example:
         if debug: print(obj_type)
 
         id = self.ids[-1] + 1 if len(self.ids) > 0 else 0
+        actual_pixels_id = self.actual_pixel_ids[-1] + 1 if len(self.actual_pixel_ids) > 0 else 0
         args = {'colour': self.get_random_colour(),
                 'border_size': Surround(0, 0, 0, 0),  # For now and then we will see
                 'canvas_pos': Point(0, 0, 0),
-                '_id': id}
+                '_id': id,
+                'actual_pixels_id': actual_pixels_id}
         self.ids.append(id)
+        self.actual_pixel_ids.append(actual_pixels_id)
 
         if obj_type.name == 'InverseCross' or obj_type.name == 'Steps' or obj_type.name == 'Pyramid':  # These objects have height not size
-            args['height'] = np.random.randint(2, 10)
+            args['height'] = np.random.randint(2, MAX_SIZE_OF_OBJECT)
             if obj_type.name == 'InverseCross' and args['height'] % 2 == 0:  # Inverted Crosses need odd height
                 args['height'] += 1
 
@@ -154,14 +173,14 @@ class Example:
                 args['fill_height'] += 1
 
         if obj_type.name == 'Diagonal':  # Diagonal has length, not size
-            args['length'] = np.random.randint(2, 10)
+            args['length'] = np.random.randint(2, MAX_SIZE_OF_OBJECT)
 
         if obj_type.name == 'Steps':  # Steps also has depth
             args['depth'] = np.random.randint(1, args['height'])
 
         if not np.any(np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie'])
                       == obj_type.name):
-            size = Dimension2D(np.random.randint(2, 10), np.random.randint(2, 10))
+            size = Dimension2D(np.random.randint(2, MAX_SIZE_OF_OBJECT), np.random.randint(2, MAX_SIZE_OF_OBJECT))
             if np.any(np.array(['Cross', 'InvertedCross']) == obj_type.name):   # Crosses need odd size
                 if size.dx % 2 == 0:
                     size.dx += 1
@@ -184,7 +203,9 @@ class Example:
 
         object = globals()[obj_type.name](**args)
 
-        # Deal with the allowed minimum distance to other objects
+        # Deal with the allowed minimum distance to other objects.
+        # Create a standard distance and then check if the object allows for overlap or needs to be far away from
+        # others and change the distance to others accordingly
         if 'length' in args:
             min_distance_to_others = Surround(Up=args['length'], Down=0, Left=0, Right=args['length'])
         elif 'height' in args:
@@ -211,9 +232,8 @@ class Example:
                                                    Right=np.random.randint(1, min_distance_to_others.Right - 2))
 
         object.required_dist_to_others = min_distance_to_others
-        self.objects.append(object)
 
-        return self.objects[-1]
+        return object
 
     def generate_canvasses(self):
         """
@@ -229,14 +249,18 @@ class Example:
             output_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
                                       np.random.randint(min_pad_size, MAX_PAD_SIZE))
 
-            input_canvas = Canvas(size=input_size)
-            if np.all([input_size.dx > 10, input_size.dy > 10]) and np.random.random() < 0.1:
+            input_canvas = Canvas(size=input_size, _id=2*c + 1)
+            if np.all([input_size.dx > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
+                       input_size.dy > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ]) \
+                    and np.random.random() < PROB_OF_BACKGROUND_OBJ:
                 background_object = Random(size=input_size, occupancy_prob=np.random.gamma(1, 0.05)+0.1)
                 input_canvas.create_background_from_object(background_object)
             self.input_canvases.append(input_canvas)
 
-            output_canvas = Canvas(size=output_size)
-            if np.all([output_size.dx > 10, output_size.dy > 10]) and np.random.random() < 0.1:
+            output_canvas = Canvas(size=output_size, _id=2*c + 2)
+            if np.all([output_size.dx > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
+                       output_size.dy > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ]) \
+                    and np.random.random() < PROB_OF_BACKGROUND_OBJ:
                 background_object = Random(size=output_size, occupancy_prob=np.random.gamma(1, 0.05)+0.1)
                 output_canvas.create_background_from_object(background_object)
             self.output_canvases.append(output_canvas)
@@ -244,8 +268,10 @@ class Example:
         test_canvas_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
                                        np.random.randint(min_pad_size, MAX_PAD_SIZE))
 
-        self.test_canvas = Canvas(size=test_canvas_size)
-        if np.all([test_canvas_size.dx > 10, test_canvas_size.dy > 10]) and np.random.random() < 0.1:
+        self.test_canvas = Canvas(size=test_canvas_size, _id=0)
+        if np.all([test_canvas_size.dx > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
+                   test_canvas_size.dy > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ]) \
+                and np.random.random() < PROB_OF_BACKGROUND_OBJ:
             background_object = Random(size=test_canvas_size, occupancy_prob=np.random.gamma(1, 0.05) + 0.1)
             self.test_canvas.create_background_from_object(background_object)
 
@@ -273,12 +299,14 @@ class Example:
                 o = copy(obj)
                 o.canvas_pos = canvas_pos
                 c.add_new_object(o)
+                self.objects.append(o)
 
         test_canvas_pos = self.get_random_position(obj, self.test_canvas)
         if test_canvas_pos is not None:
             o = copy(obj)
             o.canvas_pos = test_canvas_pos
             self.test_canvas.add_new_object(o)
+            self.objects.append(o)
 
     def place_new_object_on_canvases(self):
         """
@@ -298,13 +326,14 @@ class Example:
 
             self.temp_objects = [self.create_random_object(debug=False)]
 
-            num_of_transformed_copies = np.random.randint(1, 5) if np.all(self.temp_objects[-1].size.to_numpy() < 6) else \
-                np.random.randint(4, 10)
+            num_of_transformed_copies = np.random.randint(1, MAX_NUM_OF_LARGE_OBJECTS) \
+                if np.any(self.temp_objects[-1].size.to_numpy() > LARGE_OBJECT_THRESHOLD) else \
+                np.random.randint(MIN_NUM_OF_SMALL_OBJECTS, MAX_NUM_OF_SMALL_OBJECTS)
 
             for _ in range(num_of_transformed_copies):
                 self.temp_objects.append(copy(self.temp_objects[-1]))
 
-            num_of_transformations = 1  # np.random.choice([0, 1, 2], p=[0.1, 0.5, 0.4])
+            num_of_transformations = NUMBER_OF_TRANSFORMATIONS
             probs_of_transformations = [0.1, 0.2, 0.05, 0.05, 0.3, 0.3]
             for k, obj in enumerate(self.temp_objects):
 
@@ -315,8 +344,9 @@ class Example:
                 self.randomly_position_object_in_all_canvases(obj)
 
         elif self.experiment_type == 'Symmetry':
-            base_object = Parallelogram(size=[2, 2])
 
+            # Make sure the base object of a symmetry object is not a Parallelogram
+            base_object = Parallelogram(size=[2, 2])
             while base_object.get_str_type() == 'Parallelogram':
                 base_object = self.create_random_object(debug=False)
 
@@ -331,7 +361,7 @@ class Example:
         """
         num_of_objects = 1
         if self.experiment_type == 'Object':
-            num_of_objects = np.random.randint(1, 8)
+            num_of_objects = np.random.randint(1, MAX_NUM_OF_DIFFERENT_PRIMITIVES)
 
         for _ in range(num_of_objects):
             self.place_new_object_on_canvases()
@@ -346,8 +376,30 @@ class Example:
 
         return result
 
-    def create_json_output(self):
-        pass
+    def create_output(self):
+        obj_pix_ids = []
+        obj_with_unique_pix_ids = []
+        positions_of_same_objects = {}
+        actual_pixels_list = []
+        unique_objects = []
+        for obj in self.objects:
+            obj_pix_id = (obj.id, obj.actual_pixels_id)
+            if not obj_pix_id in obj_pix_ids:
+                unique_objects.append(obj.json_output())
+                actual_pixels_list.append(obj.actual_pixels)
+                obj_pix_ids.append(obj_pix_id)
+                obj_with_unique_pix_ids.append(obj)
+                positions_of_same_objects[obj_pix_id] = [obj.canvas_id,
+                                                         [obj.canvas_pos.x, obj.canvas_pos.y, obj.canvas_pos.z]]
+            else:
+                positions_of_same_objects[obj_pix_id].append([obj.canvas_id,
+                                                              [obj.canvas_pos.x, obj.canvas_pos.y, obj.canvas_pos.z]])
+
+        actual_pixels_array = np.zeros((MAX_PAD_SIZE, MAX_PAD_SIZE, len(actual_pixels_list)))
+        for i, ap in enumerate(actual_pixels_list):
+            actual_pixels_array[:ap.shape[0], :ap.shape[1], i] = ap
+
+        return unique_objects, actual_pixels_array, positions_of_same_objects
 
     def show(self, canvas_index: int | str = 'all'):
         """

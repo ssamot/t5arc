@@ -15,20 +15,9 @@ np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
-class CanvasJSONEncoder(JSONEncoder):
-    def default(self, obj):
-        #print(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        if isinstance(obj, np.int32):
-            return int(obj)
-        if isinstance(obj, list):
-            return [ob.__repr__ for ob in obj]
-        return obj.__dict__
-
-
 class Canvas:
-    def __init__(self, size: Dimension2D | np.ndarray | List, objects: List[Object] | None = None, num_of_objects:int = 0):
+    def __init__(self, size: Dimension2D | np.ndarray | List, objects: List[Object] | None = None,
+                 _id: int | None = None):
 
         if type(size) != Dimension2D:
             self.size = Dimension2D(array=size)
@@ -37,10 +26,9 @@ class Canvas:
 
         if objects is None:
             self.objects = []
-            self.num_of_objects = num_of_objects
         else:
             self.objects = objects
-            self.num_of_objects = len(objects)
+        self.id = _id
 
         self.actual_pixels = np.ones((size.dy, size.dx))
         self.full_canvas = np.zeros((MAX_PAD_SIZE, MAX_PAD_SIZE))
@@ -50,8 +38,7 @@ class Canvas:
         self.embed_objects()
 
     def __repr__(self):
-        print(self.__dict__)
-        return json.dumps(self, cls=CanvasJSONEncoder, sort_keys=True, indent=4)
+        return f'Canvas {self.id} with {len(self.objects)} Primitives'
 
     def get_coloured_pixels_positions(self) -> np.ndarray:
         """
@@ -136,6 +123,7 @@ class Canvas:
 
     def add_new_object(self, obj: Object):
         self.objects.append(obj)
+        obj.canvas_id = self.id
         self.embed_objects()
 
     def remove_object(self, obj: Object):

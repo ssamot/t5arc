@@ -19,7 +19,7 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 class PrimitivesJSONEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
-            return obj.tolist()
+            return 'actual_pixels_id_placeholder' #obj.tolist()
         if isinstance(obj, np.int32):
             return int(obj)
         if isinstance(obj, Orientation):
@@ -80,6 +80,27 @@ class Primitive(Object):
 
         self.required_dist_to_others = required_dist_to_others
 
+    def json_output(self):
+        args = self.__dict__.copy()
+        for arg in ['border_size', '_canvas_pos', 'rotation_axis', 'number_of_coloured_pixels', 'actual_pixels',
+                    'required_dist_to_others']:
+            args.pop(arg, None)
+        if 'size' in args:
+            args.pop('size', None)
+
+        type_name = self.get_str_type()
+        args['primitive'] = type_name
+        args['id'] = self.id
+        args['canvas_pos'] = [self.canvas_pos.x, self.canvas_pos.y, self.canvas_pos.z]
+
+        args['symmetries'] = [[s.orientation.name, s.length, s.origin.x, s.origin.y] for s in self.symmetries]
+        args['dimensions'] = [self.dimensions.dx, self.dimensions.dy]
+        args['transformations'] = [[t[0].name, t[1]] for t in self.transformations]
+        args['bbox'] = [[self.bbox.top_left.x, self.bbox.top_left.y],
+                        [self.bbox.bottom_right.x, self.bbox.bottom_right.y]]
+
+        return args
+
     def __repr__(self):
         return json.dumps(self, cls=PrimitivesJSONEncoder, sort_keys=True, indent=4)
 
@@ -138,10 +159,11 @@ class Primitive(Object):
 
     def __copy__(self):
         args = self.__dict__.copy()
-        for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'rotation_axis', 'dimensions',
-                    'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox']:
+        for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'actual_pixels_id', 'rotation_axis',
+                    'dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox']:
             args.pop(arg, None)
         args['_id'] = self.id
+        args['actual_pixels_id'] = self.actual_pixels_id
         type_name = self.get_str_type()
         if type_name in np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie']):
             args.pop('size', None)
@@ -169,7 +191,7 @@ class Random(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None, occupancy_prob: float = 0.5,
                  required_dist_to_others: Surround = Surround(0, 0, 0, 0),
-                 _id: None | int = None):
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
 
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
@@ -182,13 +204,15 @@ class Random(Primitive):
 
         self.generate_actual_pixels(array=array)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, border_size=border_size, canvas_pos=canvas_pos, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, border_size=border_size, canvas_pos=canvas_pos,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
 class Parallelogram(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None,
+                 actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A solid colour parallelogram inside a black region (border)
         :param size: The size of the parallelogram
@@ -202,7 +226,8 @@ class Parallelogram(Primitive):
 
         self.generate_actual_pixels(array=self.colour)
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size, _id=_id)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         self.generate_symmetries()
 
@@ -210,7 +235,8 @@ class Parallelogram(Primitive):
 class Cross(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None,
+                 actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A single colour cross surrounded by black border
         :param size: Dimension2D. The x, y size of the cross. Since the cross has to be symmetric the dx, dy should be
@@ -235,7 +261,8 @@ class Cross(Primitive):
         cross = np.transpose(cross)
         self.generate_actual_pixels(array=cross)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos,  border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos,  border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         '''
         mirrored = False
@@ -256,7 +283,7 @@ class Hole(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, thickness: Surround = Surround(1, 1, 1, 1),
                  border_size: Surround = Surround(0, 0, 0, 0), canvas_pos: Point = Point(0, 0),
                  colour: None | int = None, required_dist_to_others: Surround = Surround(0, 0, 0, 0),
-                 _id: None | int = None):
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         This is a hole formed by an outside coloured parallelogram and an inside black parallelogram. The object also
         holds the position of the black hole as a self.hole_bbox Bbox.
@@ -286,7 +313,8 @@ class Hole(Primitive):
         self.hole_bbox = Bbox(top_left=Point(self.border_size.Left + th_left, self.size.dy + self.border_size.Down - th_up - 1),
                               bottom_right=Point(self.size.dx + self.border_size.Left - th_right - 1, self.border_size.Down + th_down))
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels,  border_size=border_size, _id=_id)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels,  border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         sym = None
         if th_up == th_down:
@@ -303,7 +331,8 @@ class Hole(Primitive):
 class Pi(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others:  Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others:  Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A Pi shaped object.
         :param size: The x, y size of the object
@@ -328,7 +357,8 @@ class Pi(Primitive):
         pi = np.array(pi)
 
         self.generate_actual_pixels(array=pi)
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         self.generate_symmetries('y')
 
@@ -337,7 +367,8 @@ class InverseCross(Primitive):
     def __init__(self, height: int, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: Surround = Surround(0, 0, 0, 0),
-                 fill_colour: None | int = None, fill_height: None | int = None, _id: None | int = None):
+                 fill_colour: None | int = None, fill_height: None | int = None,
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A cross made out of a central dot with four arms 45 degrees to the vertical and perpendicular with a second
         colour (fill_colour) filling up to a point (fill_height) the inbetween pixels
@@ -384,7 +415,8 @@ class InverseCross(Primitive):
 
         self.generate_actual_pixels(array=cross)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         self.generate_symmetries()
 
@@ -392,7 +424,8 @@ class InverseCross(Primitive):
 class Dot(Primitive):
     def __init__(self, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A solid colour Dot inside a black region (border)
         :param border_size: The [Up, Down, Left, Right] black pixels surrounding the Dot
@@ -405,13 +438,15 @@ class Dot(Primitive):
 
         self.generate_actual_pixels(array=self.colour)
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size, _id=_id)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
 class Angle(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A 90 degrees down left pointing angle
         :param size: The x, y size of the object
@@ -435,13 +470,15 @@ class Angle(Primitive):
 
         self.generate_actual_pixels(array=angle)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
 class Diagonal(Primitive):
     def __init__(self, length: int, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A Diagonal line
         :param length: The number of pixels
@@ -467,7 +504,8 @@ class Diagonal(Primitive):
 
         self.generate_actual_pixels(array=diagonal)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         # TODO: Add diagonal symmetries
         '''
@@ -479,7 +517,8 @@ class Diagonal(Primitive):
 class Steps(Primitive):
     def __init__(self, height: int, depth: int, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A Steps object from top left to bottom right.
         :param height: The height of the Steps (which will determine its width also)
@@ -507,13 +546,15 @@ class Steps(Primitive):
 
         self.generate_actual_pixels(array=zigzag)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
 class Fish(Primitive):
     def __init__(self, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A Fish like object. 50% of the times the center pixel will be black.
         :param border_size: The [Up, Down, Left, Right] black pixels surrounding the Fish
@@ -532,13 +573,15 @@ class Fish(Primitive):
 
         self.generate_actual_pixels(array=fish)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
 class Bolt(Primitive):
     def __init__(self, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
                 A Bolt like object (a 3x3 cross with its top left and bottom right filled.
                 50% of the times the center pixel will be black.
@@ -558,13 +601,15 @@ class Bolt(Primitive):
 
         self.generate_actual_pixels(array=bolt)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
 class Tie(Primitive):
     def __init__(self, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A Tie like object (a 4 pixels square connected to a single pixel on its bottom left side)
         :param border_size: The [Up, Down, Left, Right] black pixels surrounding the Tie
@@ -582,13 +627,15 @@ class Tie(Primitive):
 
         self.generate_actual_pixels(array=tie)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
 class Spiral(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None, gap: int = 1,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A clockwise twisting Spiral.
         :param size: The x, y size of the object
@@ -637,13 +684,15 @@ class Spiral(Primitive):
 
         self.generate_actual_pixels(array=spiral)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
 class Pyramid(Primitive):
     def __init__(self, height: int = 3, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None, full: bool = True,
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0), _id: None | int = None):
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A Pyramid shaped object.
         :param height: height of the Pyramid
@@ -677,7 +726,8 @@ class Pyramid(Primitive):
 
         self.generate_actual_pixels(array=pi)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size, _id=_id)
+        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         self.generate_symmetries('y')
 

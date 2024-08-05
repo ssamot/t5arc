@@ -34,8 +34,11 @@ class Transformations(Enum):
             else:
                 args['_shear'] = np.random.gamma(shape=1, scale=0.1) + 0.05  # Mainly between 0.05 and 0.4
                 args['_shear'] = 0.4 if args['_shear'] > 0.4 else args['_shear']
+            args['_shear'] = round(args['_shear'], 2)
         if self.name == 'mirror' or self.name == 'flip':
             args['axis'] = np.random.choice([Orientation.Up, Orientation.Down, Orientation.Left, Orientation.Right])
+        if self.name == 'mirror':
+            args['on_axis'] = False if np.random.rand() < 0.5 else True
         if self.name == 'randomise_colour':
             if random_obj_or_not == 'Random':
                 args['ratio'] = np.random.gamma(shape=1, scale=0.1) + 0.1  # Mainly between 0.1 and 0.4
@@ -43,6 +46,7 @@ class Transformations(Enum):
             else:
                 args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.4
                 args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
+            args['ratio'] = round(args['ratio'], 2)
         if self.name == 'randomise_shape':
             args['add_or_subtract'] = 'add' if np.random.random() > 0.5 else 'subtract'
             if random_obj_or_not == 'Random':
@@ -51,17 +55,19 @@ class Transformations(Enum):
             else:
                 args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.3
                 args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
-
+            args['ratio'] = round(args['ratio'], 2)
         return args
 
 
 class Object:
 
     def __init__(self, actual_pixels: np.ndarray, _id: None | int = None,
-                 border_size: Surround = Surround(0, 0, 0, 0),
-                 canvas_pos: List | np.ndarray | Point = (0, 0, 0)):
+                 actual_pixels_id: int | None = None, border_size: Surround = Surround(0, 0, 0, 0),
+                 canvas_pos: List | np.ndarray | Point = (0, 0, 0), canvas_id: int | None = None):
 
         self.id = _id
+        self.actual_pixels_id = actual_pixels_id
+        self.canvas_id = canvas_id
         self.actual_pixels = actual_pixels
         self._canvas_pos = canvas_pos
         self.border_size = border_size
