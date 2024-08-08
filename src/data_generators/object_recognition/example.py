@@ -169,7 +169,8 @@ class Example:
         if obj_type.name == 'InverseCross':
             fill_colour = self.get_random_colour(other_colour=args['colour'])
             args['fill_colour'] = fill_colour
-            args['fill_height'] = np.random.randint(1, args['height'] - 2)
+            args['fill_height'] = np.random.randint(1, args['height'] - 2) if args['height'] > 3 else 0
+
             if args['fill_height'] % 2 == 0:  # Inverted Crosses need odd fill_height
                 args['fill_height'] += 1
 
