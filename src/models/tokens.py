@@ -30,7 +30,6 @@ keywords = [
               "fill_colour",
               "length",
               "Random",
-              "Random"
           "Parallelogram",
               "Cross",
               "Hole",
@@ -58,15 +57,9 @@ keywords = [
               ]
 
 
-subobjects = [ "Orientation",
-              "name",
-              "value",  "Up",
-              "Down",
-              "Left",
-              "Right", "'_shear'"]
 
-numbers =[ str(i) for i in range(-1,64)]
+numbers =[ str(i) for i in range(-10,64)]
 
 keywords = [f"'{k}'" for k in keywords]
-token_list = keywords + numbers + connections + subobjects
+token_list = keywords + numbers + connections
 

@@ -87,26 +87,8 @@ def load_data_for_generator(json_dir, solver_dir, max_examples=20):
     return train, test, solver_list
 
 
-def load_data(json_dir, solver_dir, max_examples = 20):
-    json_data_list = []
-    solver_list = []
+def load_data(json_data_list, max_examples = 20):
 
-    # Iterate over each file in the directory
-    for filename in os.listdir(json_dir):
-        if filename.endswith('.json') and (not filename.startswith(".")):
-            file_path = os.path.join(json_dir, filename)
-            #print(filename)
-            solver_file = filename.split(".json")[0] + ".py"
-
-
-            # Open and read the JSON file
-            with open(file_path, 'r') as file:
-                data = json.load(file)
-                json_data_list.append(data)
-
-            with open(os.path.join(solver_dir, solver_file), 'r') as file:
-                data = file.read()
-                solver_list.append(data)
 
     train = [[] for _ in range(len(json_data_list))]
     test = [[] for _ in range(len(json_data_list))]
@@ -128,7 +110,8 @@ def load_data(json_dir, solver_dir, max_examples = 20):
         #train[i] = pad(32, train[i])
 
         train[i] = [pad_array_with_random_position(e, 32) for e in train[i]]
-        test[i] = dict(data["test"])
+        #print(data["test"])
+        test[i] = dict(data["test"][0])
         # print(train[i])
 
     train = np.array(train)
@@ -136,7 +119,7 @@ def load_data(json_dir, solver_dir, max_examples = 20):
     train = np.transpose(train, (0,1, 3,4,2))
 
     #print(train.shape)
-    return train, test, solver_list
+    return train, test
 
 
 def do_two_objects_overlap(object_a: Primitive | Object, object_b: Primitive | Object) -> bool:

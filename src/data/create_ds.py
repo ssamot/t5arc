@@ -6,6 +6,9 @@ from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from models.tokenizer import CharacterTokenizer
 from data_generators.object_recognition.example import Example
+import numpy as np
+from data.utils import load_data
+from models.tokens import token_list
 
 @click.command()
 @click.argument('json_files', type=click.Path(exists=True))
@@ -16,18 +19,46 @@ from data_generators.object_recognition.example import Example
 def main(json_files, programme_files, output_filepath, max_token_length, repetitions):
     # build_model()
     # Initialize a list to store the contents of the JSON files
-    train_data, test_data, solvers = [], [], []
+    json_data_list = []
+    objects = []
+    object_pixels = []
+    repetitions = 100
+
     for _ in tqdm.tqdm(range(repetitions)):
         # Create an Example
         e = Example()
         e.populate_canvases()
         arc_style_input = e.create_canvas_arrays_input()
         unique_objects, actual_pixels_array, positions_of_same_objects = e.create_output()
-        print(len(arc_style_input))
-        print(unique_objects)
-        print(actual_pixels_array.shape)
-        print(positions_of_same_objects)
-        exit()
+        json_data_list.append(arc_style_input)
+        objects.append(str(unique_objects).replace(" ", ""))
+        object_pixels.append(actual_pixels_array)
+
+    train, test = load_data(json_data_list)
+
+
+    #print(train.shape)
+    #print(objects[-1])
+    model_max_length = 20000000
+
+    tokenizer = CharacterTokenizer(token_list, model_max_length)
+    tokenized_inputs = tokenizer(
+        objects,
+        padding="longest",
+        truncation=True,
+        return_tensors="np",
+    )
+
+    object_ids = tokenized_inputs.input_ids
+    print(object_ids.shape)
+
+
+    exit()
+        # exit()
+        # print(unique_objects)
+        # print(actual_pixels_array.shape)
+        # print(positions_of_same_objects)
+        # exit()
     train_data = np.array(train_data)
     test_data = np.array(test_data)
     # print("train_data.shape", train_data.shape)
@@ -41,15 +72,7 @@ def main(json_files, programme_files, output_filepath, max_token_length, repetit
 
     print("num_decoder_tokens", num_decoder_tokens)
 
-    model_max_length = 20000000
 
-    tokenizer = CharacterTokenizer(chars, model_max_length)
-    tokenized_inputs = tokenizer(
-        solvers,
-        padding="longest",
-        truncation=True,
-        return_tensors="np",
-    )
 
     inputs = [c for c in np.transpose(train_data[indices], (1, 0, 2, 3, 4))]
 
