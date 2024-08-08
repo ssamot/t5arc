@@ -93,9 +93,11 @@ class Primitive(Object):
         args['id'] = self.id
         args['canvas_pos'] = [self.canvas_pos.x, self.canvas_pos.y, self.canvas_pos.z]
 
-        args['symmetries'] = [[s.orientation.name, s.length, s.origin.x, s.origin.y] for s in self.symmetries]
+        args['symmetries'] = [[s.orientation.value, s.length, s.origin.x, s.origin.y] for s in self.symmetries]
         args['dimensions'] = [self.dimensions.dx, self.dimensions.dy]
-        args['transformations'] = [[t[0].name, t[1]] for t in self.transformations]
+        #args['transformations'] = [[t[0].name, t[1]] for t in self.transformations]
+        args['transformations'] = [[t[0].value, [t[1][b] if 'axis' not in b else t[1][b].value for b in t[1]]]
+                                   for t in self.transformations]
         args['bbox'] = [[self.bbox.top_left.x, self.bbox.top_left.y],
                         [self.bbox.bottom_right.x, self.bbox.bottom_right.y]]
 
