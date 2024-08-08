@@ -5,9 +5,7 @@ import tqdm
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from models.tokenizer import CharacterTokenizer
-import numpy as np
-from models.utils import load_data
-
+from data_generators.object_recognition.example import Example
 
 @click.command()
 @click.argument('json_files', type=click.Path(exists=True))
@@ -20,11 +18,16 @@ def main(json_files, programme_files, output_filepath, max_token_length, repetit
     # Initialize a list to store the contents of the JSON files
     train_data, test_data, solvers = [], [], []
     for _ in tqdm.tqdm(range(repetitions)):
-        tr_data, te_data, so = load_data(json_files, programme_files)
-        train_data.extend(tr_data)
-        test_data.extend(te_data)
-        solvers.extend(so)
-
+        # Create an Example
+        e = Example()
+        e.populate_canvases()
+        arc_style_input = e.create_canvas_arrays_input()
+        unique_objects, actual_pixels_array, positions_of_same_objects = e.create_output()
+        print(len(arc_style_input))
+        print(unique_objects)
+        print(actual_pixels_array.shape)
+        print(positions_of_same_objects)
+        exit()
     train_data = np.array(train_data)
     test_data = np.array(test_data)
     # print("train_data.shape", train_data.shape)
