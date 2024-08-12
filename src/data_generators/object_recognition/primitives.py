@@ -45,8 +45,11 @@ class ObjectType(Enum):
     Pyramid: int = 14
 
     @staticmethod
-    def random():
-        probabilities = np.array([0.2, 0.1, 0.1, 0.1, 0.1, 0.08, 0.08, 0.04, 0.04, 0.04, 0.04, 0.02, 0.02, 0.02, 0.02])
+    def random(_probabilities: None | np.ndarray = None):
+        if _probabilities is None:
+            probabilities = np.array([0.2, 0.1, 0.1, 0.1, 0.1, 0.08, 0.08, 0.04, 0.04, 0.04, 0.04, 0.02, 0.02, 0.02, 0.02])
+        else:
+            probabilities = _probabilities
         return ObjectType(np.random.choice(np.arange(len(probabilities)), p=probabilities))
 
 
@@ -74,7 +77,7 @@ class Primitive(Object):
         self.border_size = border_size
 
         if colour is None:
-            self.colour = np.random.randint(2, len(const.COLOR_MAP))
+            self.colour = np.random.randint(2, len(const.COLOR_MAP)-1)
         else:
             self.colour = colour
 
@@ -171,7 +174,7 @@ class Primitive(Object):
     def __copy__(self):
         args = self.__dict__.copy()
         for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'actual_pixels_id', 'rotation_axis',
-                    'dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox']:
+                    'dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox', '_holes']:
             args.pop(arg, None)
         args['_id'] = self.id
         args['actual_pixels_id'] = self.actual_pixels_id
@@ -185,6 +188,7 @@ class Primitive(Object):
 
         object = type(self)(**args)
         object.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y, self.canvas_pos.z)
+        object._holes = copy(self.holes)
         object.dimensions = Dimension2D(self.dimensions.dx, self.dimensions.dy)
         object.actual_pixels = np.ndarray.copy(self.actual_pixels)
         object.transformations = copy(self.transformations)
@@ -282,7 +286,7 @@ class Hole(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, thickness: Surround = Surround(1, 1, 1, 1),
                  border_size: Surround = Surround(0, 0, 0, 0), canvas_pos: Point = Point(0, 0),
                  colour: None | int = None, required_dist_to_others: Surround = Surround(0, 0, 0, 0),
-                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id: None | int = None):
         """
         This is a hole formed by an outside coloured parallelogram and an inside black parallelogram. The object also
         holds the position of the black hole as a self.hole_bbox Bbox.

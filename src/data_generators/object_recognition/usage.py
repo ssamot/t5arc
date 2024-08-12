@@ -1,5 +1,5 @@
 
-from data_generators.object_recognition.example import *
+from data_generators.object_recognition.random_objects_example import *
 
 #  How many, different, Primitives are allowed in the Example. These will be the base Objects
 MAX_NUM_OF_DIFFERENT_PRIMITIVES = 2
@@ -23,10 +23,10 @@ MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS = 2
 # appear in multiple Canvases.
 
 # Create an Example
-e = Example()
+e = RandomObjectsExample()
 
 # Populate the Canvases of the Example with Objects drawn randomly
-e.populate_canvases()
+e.randomly_populate_canvases()
 
 # Generate the Input arrays. These are a dictionary with the same structure as the ARC examples
 arc_style_input = e.create_canvas_arrays_input()
