@@ -2,15 +2,16 @@
 from __future__ import annotations
 
 import copy as cp
+from typing import Tuple
 
 import numpy as np
+from scipy import ndimage as ndi
 import skimage
 from visualization import visualize_data as vis
 from data_generators.object_recognition.basic_geometry import *
 
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
-
 
 
 class Transformations(Enum):
@@ -72,6 +73,8 @@ class Object:
         self._canvas_pos = canvas_pos
         self.border_size = border_size
 
+        self._holes = None
+
         if type(canvas_pos) != Point:
             self._canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
 
@@ -98,6 +101,14 @@ class Object:
         for sym in self.symmetries:
             sym.origin += move
         self.reset_dimensions()
+
+    @property
+    def holes(self):
+        holes, n = self.detect_holes(self.actual_pixels)
+        if n == 0:
+            return None
+        self._holes = holes
+        return self._holes
 
     # Transformation methods
     def scale(self, factor: int):
@@ -353,6 +364,58 @@ class Object:
 
             self.transformations.append([Transformations.randomise_shape, {'ratio': ratio}])
 
+    def create_random_hole(self, hole_size: int) -> bool:
+
+        pixels = copy(self.actual_pixels)
+        initial_holes, initial_n_holes = self.detect_holes(pixels)
+        connected_components, n = ndi.label(np.array(pixels > 1).astype(int))
+        m = np.max(connected_components)
+        largest_component = 0
+        for i in range(1, m+1):
+            if len(np.where(connected_components == i)[0]) > largest_component:
+                largest_component = i
+
+        if largest_component > 0:
+            for _ in range(100):  # Try 100 times
+                pixels = copy(self.actual_pixels)
+                current_hole_size = 0
+                hole_points = []
+                focus_index = np.random.randint(0, len(np.where(connected_components == largest_component)[0]))
+                focus_point = np.array([np.where(connected_components == largest_component)[0][focus_index],
+                                        np.where(connected_components == largest_component)[1][focus_index]])
+                hole_points.append(focus_point)
+                current_hole_size += 1
+                while hole_size > current_hole_size:
+                    new_points = np.array([focus_point + np.array([-1, 0]), focus_point + np.array([1, 0]),
+                                  focus_point + np.array([0, -1]), focus_point + np.array([0, 1])])
+                    new_point_found = False
+                    np.random.shuffle(new_points)
+                    for p in new_points:
+                        try:
+                            if pixels[p[0], p[1]] == pixels[focus_point[0], focus_point[1]]:
+                                hole_points.append(p)
+                                current_hole_size += 1
+                                new_point_found = True
+                                break
+                        except:
+                            pass
+
+                    if new_point_found:
+                        focus_point = p
+                    else:
+                        break
+
+                for hp in hole_points:
+                    pixels[hp[0], hp[1]] = 1
+                final_holes, final_n_holes = self.detect_holes(pixels)
+
+                if final_n_holes > initial_n_holes:
+                    self.actual_pixels = pixels
+                    self.symmetries = []
+                    return True
+
+        return False
+
     # Utility methods
     def reset_dimensions(self):
         """
@@ -451,7 +514,23 @@ class Object:
         else:
             return None
 
-    def show(self, symmetries_on=True):
+    @staticmethod
+    def detect_holes(pixels: np.ndarray) -> Tuple[np.ndarray, int]:
+        connected_components, n = ndi.label(np.array(pixels == 1).astype(int))
+
+        for i in np.unique(connected_components):
+            comp_coords = np.where(connected_components == i)
+            if np.any(comp_coords[0] == 0) or \
+                    np.any(comp_coords[1] == 0) or \
+                    np.any(comp_coords[0] == pixels.shape[0] - 1) or \
+                    np.any(comp_coords[1] == pixels.shape[1] - 1):
+                connected_components[comp_coords[0], comp_coords[1]] = 0
+
+        holes, n = ndi.label(connected_components)
+
+        return holes, n
+
+    def show(self, symmetries_on=True, show_holes=False):
         """
         Show a matplotlib.pyplot.imshow image of the actual_pixels array correctly colour transformed
         :param symmetries_on: Show the symmetries of the object as line
@@ -462,7 +541,11 @@ class Object:
         ymin = self.bbox.bottom_right.y - 0.5
         ymax = self.bbox.top_left.y + 0.5
         extent = [xmin, xmax, ymin, ymax]
-        ax = vis.plot_data(self.actual_pixels, extent=extent)
+
+        pixels_to_show = copy(self.actual_pixels)
+        if show_holes:
+            pixels_to_show[np.where(self.holes > 0)] = 11
+        ax = vis.plot_data(pixels_to_show, extent=extent)
 
         #TODO: DEAL WITH DIAGONAL SYMMETRIES!!!!
         if symmetries_on:
@@ -481,3 +564,4 @@ class Object:
                     plt_lines = ax.hlines
 
                 plt_lines(line_at, line_min, line_max, linewidth=2)
+
