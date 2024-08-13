@@ -399,7 +399,7 @@ class InverseCross(Primitive):
         if fill_colour is None:
             fill_colour = self.colour
             while fill_colour == self.colour:
-                fill_colour = np.random.randint(2, len(const.COLOR_MAP))
+                fill_colour = np.random.randint(2, len(const.COLOR_MAP) - 1)
         self.fill_colour = fill_colour
 
         cross = []

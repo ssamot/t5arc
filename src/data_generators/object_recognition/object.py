@@ -365,18 +365,23 @@ class Object:
             self.transformations.append([Transformations.randomise_shape, {'ratio': ratio}])
 
     def create_random_hole(self, hole_size: int) -> bool:
-
+        """
+        Tries to create a hole in the Object of total empty pixels = hole_size or smaller. If it succeeds it returns True,
+        otherwise it returns False. The hole creation process is totally random and cannot be controlled other than
+        setting the maximum number of empty pixels generated.
+        :param hole_size: The maximum possible number of connected empty pixels the hole is made out of
+        :return: True if the process was successful (there is a hole) and False if not
+        """
         pixels = copy(self.actual_pixels)
         initial_holes, initial_n_holes = self.detect_holes(pixels)
         connected_components, n = ndi.label(np.array(pixels > 1).astype(int))
-        m = np.max(connected_components)
         largest_component = 0
-        for i in range(1, m+1):
+        for i in range(1, np.max(connected_components) + 1):
             if len(np.where(connected_components == i)[0]) > largest_component:
                 largest_component = i
 
         if largest_component > 0:
-            for _ in range(100):  # Try 100 times
+            for _ in range(1000):  # Try 1000 times
                 pixels = copy(self.actual_pixels)
                 current_hole_size = 0
                 hole_points = []
@@ -387,7 +392,7 @@ class Object:
                 current_hole_size += 1
                 while hole_size > current_hole_size:
                     new_points = np.array([focus_point + np.array([-1, 0]), focus_point + np.array([1, 0]),
-                                  focus_point + np.array([0, -1]), focus_point + np.array([0, 1])])
+                                           focus_point + np.array([0, -1]), focus_point + np.array([0, 1])])
                     new_point_found = False
                     np.random.shuffle(new_points)
                     for p in new_points:
@@ -397,7 +402,7 @@ class Object:
                                 current_hole_size += 1
                                 new_point_found = True
                                 break
-                        except:
+                        except IndexError:
                             pass
 
                     if new_point_found:
@@ -516,6 +521,12 @@ class Object:
 
     @staticmethod
     def detect_holes(pixels: np.ndarray) -> Tuple[np.ndarray, int]:
+        """
+        Detects the presence of any holes. A hole is a spatially contiguous set of empty pixels that are fully
+        surrounded by coloured pixels.
+        :param pixels: The 2d array of pixels in which to detect the presence of holes.
+        :return: The array marked with the holes' labels and the number of holes found
+        """
         connected_components, n = ndi.label(np.array(pixels == 1).astype(int))
 
         for i in np.unique(connected_components):
@@ -534,7 +545,8 @@ class Object:
         """
         Show a matplotlib.pyplot.imshow image of the actual_pixels array correctly colour transformed
         :param symmetries_on: Show the symmetries of the object as line
-        :return:
+        :param show_holes: If True it marks any holes with white pixels
+        :return: Nothing
         """
         xmin = self.bbox.top_left.x - 0.5
         xmax = self.bbox.bottom_right.x + 0.5
