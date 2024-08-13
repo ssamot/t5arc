@@ -9,19 +9,30 @@ class FillHoleExample(Example):
 
         self.experiment_type = 'Object'
 
-    def create_random_object_with_holes(self):
+    def create_random_object_with_holes(self) -> Primitive | None:
 
-        obj_type = ObjectType.random(_probabilities=np.array([0.4, 0, 0, 0.1, 0, 0, 0, 0, 0, 0.1, 0.1, 0.1, 0, 0.1, 0.1]))
+        obj_probs = np.array([0.4, 0, 0, 0.1, 0, 0, 0, 0, 0, 0.1, 0.1, 0.1, 0, 0.1, 0.1])
+        transformations_probs = [1 / 7, 1 / 7, 1 / 7, 1 / 7, 1 / 7, 1 / 7, 1 / 7]
 
-        id = self.ids[-1] + 1 if len(self.ids) > 0 else 0
-        actual_pixels_id = self.actual_pixel_ids[-1] + 1 if len(self.actual_pixel_ids) > 0 else 0
+        def new_obj():
+            obj = self.create_object(obj_probs=obj_probs, max_size_of_obj=20)
+            self.do_random_transformations(obj=obj, num_of_transformations=1,
+                                           probs_of_transformations=transformations_probs)
+            _, n_holes = obj.detect_holes(obj.actual_pixels)
+            if n_holes == 0:
+                obj.create_random_hole(hole_size=np.random.randint(2, 10))
 
-        args = {'colour': self.get_random_colour(),
-                'border_size': Surround(0, 0, 0, 0),  # For now and then we will see
-                'canvas_pos': Point(0, 0, 0),
-                '_id': id,
-                'actual_pixels_id': actual_pixels_id}
-        self.ids.append(id)
-        self.actual_pixel_ids.append(actual_pixels_id)
+            if n_holes > 0:
+                return obj
+            return None
+
+        obj = new_obj()
+        tries = 0
+        while obj is None and tries < 5:
+            obj = new_obj()
+            tries += 1
+
+        return obj
+
 
         
