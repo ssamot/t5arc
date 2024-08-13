@@ -10,8 +10,6 @@ MAX_EXAMPLE_PAIRS = const.MAX_EXAMPLE_PAIRS
 MIN_PAD_SIZE = const.MIN_PAD_SIZE
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
-OVERLAP_PROB = 0.8
-FAR_AWAY_PROB = 0.1
 MIRROR_PROB = 0.05
 MAX_NUM_OF_DIFFERENT_PRIMITIVES = 5
 LARGE_OBJECT_THRESHOLD = 10
@@ -24,6 +22,8 @@ MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS = 2
 MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ = 10
 PROB_OF_BACKGROUND_OBJ = 0.1
 
+OVERLAP_PROB = 0.8
+FAR_AWAY_PROB = 0.1
 MAX_SIZE_OF_OBJECT = 15
 
 MAX_NUMBER_OF_MIRRORS = 10
@@ -32,46 +32,6 @@ MAX_NUMBER_OF_MIRRORS = 10
 class RandomObjectsExample(Example):
     def __init__(self):
         super().__init__()
-
-    def do_random_transformations(self, obj: Primitive, debug: bool = False, num_of_transformations: int = 0,
-                                  probs_of_transformations: List = (0.1, 0.2, 0.1, 0.1, 0.25, 0.25)):
-        """
-        Transform the obj Object random n times (0 to 3) with randomly selected Transformations (except mirror). The
-        arguments of each Transformation are also chosen randomly
-        :param obj: The Object to transform
-        :param debug: If True print the transformations and their arguments
-        :param num_of_transformations: How many transformations to do
-        :param probs_of_transformations: The probabilities of the 6 possible transformations (except mirror) in the
-        order of the Transformations enumeration
-        :return:
-        """
-        if debug: print(type(obj))
-
-        if debug: print(f'number of transforms = {num_of_transformations}')
-
-        possible_transform_indices = [0, 1, 2, 4, 5, 6]
-
-        for i in range(num_of_transformations):
-            random_transform_index = np.random.choice(possible_transform_indices, p=probs_of_transformations)
-
-            transform_name = Transformations(random_transform_index)
-            if debug: print(f'Transform = {transform_name.name}')
-
-            obj_type = 'Random' if obj.get_str_type() == 'Random' else 'Non-Random'
-            args = transform_name.get_random_parameters(obj_type)
-            if debug: print(f'Arguments = {args}')
-
-            transform_method = getattr(obj, transform_name.name)
-
-            # Do not allow Cross or InvertedCross to scale by an even factor
-            if np.any(np.array(['Cross', 'InvertedCross']) == obj.get_str_type()) and \
-                transform_name == Transformations.scale and args['factor'] % 2 == 0:
-                continue
-
-            transform_method(**args)
-
-            obj.actual_pixels_id = self.actual_pixel_ids[-1] + 1
-            self.actual_pixel_ids.append(obj.actual_pixels_id)
 
     def do_multiple_mirroring(self, obj: Primitive) -> Primitive:
         """
@@ -96,100 +56,6 @@ class RandomObjectsExample(Example):
 
         return obj_to_mirror
 
-    def create_random_object(self, debug: bool = False) -> Primitive:
-        """
-        Create a random Primitive
-        :return: The Object generated
-        """
-        obj_type = ObjectType.random()
-
-        if debug: print(obj_type)
-
-        id = self.ids[-1] + 1 if len(self.ids) > 0 else 0
-        actual_pixels_id = self.actual_pixel_ids[-1] + 1 if len(self.actual_pixel_ids) > 0 else 0
-        args = {'colour': self.get_random_colour(),
-                'border_size': Surround(0, 0, 0, 0),  # For now and then we will see
-                'canvas_pos': Point(0, 0, 0),
-                '_id': id,
-                'actual_pixels_id': actual_pixels_id}
-        self.ids.append(id)
-        self.actual_pixel_ids.append(actual_pixels_id)
-
-        if obj_type.name == 'InverseCross' or obj_type.name == 'Steps' or obj_type.name == 'Pyramid':  # These objects have height not size
-            args['height'] = np.random.randint(2, MAX_SIZE_OF_OBJECT)
-            if obj_type.name == 'InverseCross' and args['height'] % 2 == 0:  # Inverted Crosses need odd height
-                args['height'] += 1
-
-        if obj_type.name == 'InverseCross':
-            fill_colour = self.get_random_colour(other_colour=args['colour'])
-            args['fill_colour'] = fill_colour
-            args['fill_height'] = np.random.randint(1, args['height'] - 2) if args['height'] > 3 else 0
-            if args['fill_height'] % 2 == 0:  # Inverted Crosses need odd fill_height
-                args['fill_height'] += 1
-
-        if obj_type.name == 'Diagonal':  # Diagonal has length, not size
-            args['length'] = np.random.randint(2, MAX_SIZE_OF_OBJECT)
-
-        if obj_type.name == 'Steps':  # Steps also has depth
-            args['depth'] = np.random.randint(1, args['height'])
-
-        if not np.any(np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie'])
-                      == obj_type.name):
-            size = Dimension2D(np.random.randint(2, MAX_SIZE_OF_OBJECT), np.random.randint(2, MAX_SIZE_OF_OBJECT))
-            if np.any(np.array(['Cross', 'InvertedCross']) == obj_type.name):   # Crosses need odd size
-                if size.dx % 2 == 0:
-                    size.dx += 1
-                if size.dy % 2 == 0:
-                    size.dy += 1
-            args['size'] = size
-
-        if obj_type.name == 'Hole':  # Hole has also thickness
-            if args['size'].dx < 4:
-                args['size'].dx = 4
-            if args['size'].dy < 4:
-                args['size'].dy = 4
-            up = np.random.randint(1, args['size'].dy - 2)
-            down = np.random.randint(1, args['size'].dy - up)
-            left = np.random.randint(1, args['size'].dx - 2)
-            right = np.random.randint(1, args['size'].dx - left)
-            args['thickness'] = Surround(up, down, left, right)
-
-        if debug: print(args)
-
-        object = globals()[obj_type.name](**args)
-
-        # Deal with the allowed minimum distance to other objects.
-        # Create a standard distance and then check if the object allows for overlap or needs to be far away from
-        # others and change the distance to others accordingly
-        if 'length' in args:
-            min_distance_to_others = Surround(Up=args['length'], Down=0, Left=0, Right=args['length'])
-        elif 'height' in args:
-            min_distance_to_others = Surround(Up=args['height'], Down=0, Left=0, Right=args['height'])
-        elif 'size' in args:
-            min_distance_to_others = Surround(Up=args['size'].dy, Down=0, Left=0, Right=args['size'].dx)
-        else:
-            min_distance_to_others = Surround(Up=1, Down=1, Left=1, Right=1)
-
-        min_distance_to_others += args['border_size']
-
-        allow_overlap = np.random.random() < OVERLAP_PROB
-        if allow_overlap and np.all((min_distance_to_others - 2).to_numpy() > 1):
-            min_distance_to_others -= Surround(Up=np.random.randint(1, min_distance_to_others.Up - 2),
-                                               Down=np.random.randint(1, min_distance_to_others.Down - 2),
-                                               Left=np.random.randint(1, min_distance_to_others.Left - 2),
-                                               Right=np.random.randint(1, min_distance_to_others.Right - 2))
-        else:
-            far_away = np.random.random() < FAR_AWAY_PROB
-            if far_away and np.all((min_distance_to_others - 2).to_numpy() > 1):
-                min_distance_to_others += Surround(Up=np.random.randint(1, min_distance_to_others.Up - 2),
-                                                   Down=np.random.randint(1, min_distance_to_others.Down - 2),
-                                                   Left=np.random.randint(1, min_distance_to_others.Left - 2),
-                                                   Right=np.random.randint(1, min_distance_to_others.Right - 2))
-
-        object.required_dist_to_others = min_distance_to_others
-
-        return object
-
     def place_new_object_on_canvases(self):
         """
         Create a new object and put it on different canvases. The process is as follows.
@@ -206,7 +72,8 @@ class RandomObjectsExample(Example):
         """
         if self.experiment_type == 'Object':
 
-            self.temp_objects = [self.create_random_object(debug=False)]
+            self.temp_objects = [self.create_object(debug=False, max_size_of_obj=MAX_SIZE_OF_OBJECT,
+                                                    overlap_prob=OVERLAP_PROB, far_away_prob=FAR_AWAY_PROB)]
 
             num_of_transformed_copies = np.random.randint(1, MAX_NUM_OF_LARGE_OBJECTS) \
                 if np.any(self.temp_objects[-1].size.to_numpy() > LARGE_OBJECT_THRESHOLD) else \
@@ -216,7 +83,7 @@ class RandomObjectsExample(Example):
                 self.temp_objects.append(copy(self.temp_objects[-1]))
 
             num_of_transformations = NUMBER_OF_TRANSFORMATIONS
-            probs_of_transformations = [0.1, 0.2, 0.05, 0.05, 0.3, 0.3]
+            probs_of_transformations = [0.1, 0.2, 0.05, 0, 0.05, 0.3, 0.3]  # No mirroring
             for k, obj in enumerate(self.temp_objects):
 
                 if k > 0:  # Leave one object copy untransformed
@@ -231,15 +98,16 @@ class RandomObjectsExample(Example):
             # Make sure the base object of a symmetry object is not a Parallelogram
             base_object = Parallelogram(size=[2, 2])
             while base_object.get_str_type() == 'Parallelogram':
-                base_object = self.create_random_object(debug=False)
+                base_object = self.create_object(debug=False)
 
             obj = self.do_multiple_mirroring(base_object)
             self.randomly_position_object_in_all_canvases(obj)
 
     def randomly_populate_canvases(self):
         """
-        Generates a random number of objects (if experiment_type is 'Object') or just one object (if type is 'Symmetry')
-        and then places their transformations on all the canvases (in allowed positions)
+        This is the main function to call to generate the Random Experiment.
+        It generates a random number of objects (if experiment_type is 'Object') or just one object (if type is
+        'Symmetry') and then places their transformations on all the canvases (in allowed positions)
         :return:
         """
         num_of_objects = 1
