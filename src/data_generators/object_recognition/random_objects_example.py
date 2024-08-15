@@ -33,14 +33,18 @@ class RandomObjectsExample(Example):
     def __init__(self):
         super().__init__()
 
-    def do_multiple_mirroring(self, obj: Primitive) -> Primitive:
+    def do_multiple_mirroring(self, obj: Primitive, number_of_mirrors: int | None = None) -> Primitive | None:
         """
         Mirror an object multiple times over random directions. Make sure the final size is not larger than the
         maximum canvas sise.
         :param obj: The object to mirror
         :return:
         """
-        number_of_mirrors = np.random.randint(2, MAX_NUMBER_OF_MIRRORS)
+
+        if number_of_mirrors is None:
+            number_of_mirrors = np.random.randint(2, MAX_NUMBER_OF_MIRRORS)
+        if number_of_mirrors == 0:
+            return None
         transform_index = 3
 
         obj_to_mirror = copy(obj)
@@ -101,7 +105,8 @@ class RandomObjectsExample(Example):
                 base_object = self.create_object(debug=False)
 
             obj = self.do_multiple_mirroring(base_object)
-            self.randomly_position_object_in_all_canvases(obj)
+            if obj is not None:
+                self.randomly_position_object_in_all_canvases(obj)
 
     def randomly_populate_canvases(self):
         """
