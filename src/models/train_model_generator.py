@@ -107,13 +107,13 @@ def main(json_files, programme_files, max_token_length, output_filepath):
     max_examples = 20
 
 
-    training_generator = CanvasDataGenerator(batch_size = 6,  len = 10,
-                                             use_multiprocessing=True, workers=12, repeats=100)
+    training_generator = CanvasDataGenerator(batch_size = 10,  len = 50,
+                                             use_multiprocessing=True, workers=50, max_queue_size=1000)
 
     num_decoder_tokens = training_generator.tokenizer.num_decoder_tokens + 1
     model = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens), 64, max_examples)
 
-    model.summary()
+    #model.summary()
 
     model.fit(x=training_generator, epochs=10000)
 
