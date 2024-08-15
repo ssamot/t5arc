@@ -7,7 +7,7 @@ from pathlib import Path
 from functools import partial
 from data.utils import load_data_for_generator, pad_array_with_random_position
 import keras_nlp
-from data.generate_data import CanvasDataGenerator
+from data.data_generator import CanvasDataGenerator
 import constants as consts
 
 def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
