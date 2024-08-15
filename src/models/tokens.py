@@ -9,7 +9,7 @@ connections =   ["{",
 "(",
 "=",
 #"'",
-              ".",]
+              ".","-"]
 keywords = [
           "colour",
           "id",

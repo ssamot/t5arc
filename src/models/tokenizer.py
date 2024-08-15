@@ -57,6 +57,7 @@ class CharacterTokenizer(PreTrainedTokenizer):
             **{ch: i + 7 for i, ch in enumerate(token_list)},
         }
 
+        self.num_decoder_tokens = max(self._vocab_str_to_int.values())
 
         #self.token_pattern = re.compile('|'.join(re.escape(token) for token in token_list))
         self.token_pattern = '|'.join(map(re.escape, self.token_list))

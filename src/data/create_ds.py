@@ -22,7 +22,7 @@ def main(json_files, programme_files, output_filepath, max_token_length, repetit
     json_data_list = []
     objects = []
     object_pixels = []
-    repetitions = 100
+
 
     for _ in tqdm.tqdm(range(repetitions)):
         # Create an Example
@@ -51,6 +51,7 @@ def main(json_files, programme_files, output_filepath, max_token_length, repetit
 
     object_ids = tokenized_inputs.input_ids
     print(object_ids.shape)
+    print(train.shape)
 
 
     exit()
