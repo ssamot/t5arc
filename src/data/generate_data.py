@@ -76,8 +76,8 @@ class CanvasDataGenerator(keras.utils.PyDataset):
         batch_inputs = np.transpose(batch_inputs, (1, 0, 2, 3, 4))
 
 
-        print(batch_inputs.shape)
-        print(batch_targets.shape)
+        #print(batch_inputs.shape)
+        #print(batch_targets.shape)
 
         batch_inputs = [np.array(b, dtype="int") for b in batch_inputs]
         # for b in batch_inputs:
