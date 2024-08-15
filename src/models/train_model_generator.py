@@ -103,27 +103,17 @@ def main(json_files, programme_files, max_token_length, output_filepath):
     # build_model()
     # Initialize a list to store the contents of the JSON files
 
+    max_pad_size = 32
     max_examples = 20
-    train_data, test_data, solvers = load_data_for_generator(json_files,
-                                                             programme_files,
-                                                             max_examples=max_examples)
 
-    max_pad_size = consts.MAX_PAD_SIZE
 
-    augment_fn = partial(pad_array_with_random_position, m = max_pad_size)
+    training_generator = CanvasDataGenerator(batch_size = 10,  len = 50,
+                                             use_multiprocessing=True, workers=50, max_queue_size=1000)
 
-    training_generator = CanvasDataGenerator(train_data,
-                                            solvers,
-                                             128,
-                                             augment_fn,
-                                             shuffle=True,
-                                             max_token_length=max_token_length,
-                                             use_multiprocessing=True, workers=12, repeats=100)
-
-    num_decoder_tokens = training_generator.num_decoder_tokens
+    num_decoder_tokens = training_generator.tokenizer.num_decoder_tokens + 1
     model = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens), 64, max_examples)
 
-    model.summary()
+    #model.summary()
 
     model.fit(x=training_generator, epochs=10000)
 

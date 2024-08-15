@@ -9,13 +9,15 @@ from typing import Dict, List, Optional, Sequence, Union
 
 from transformers.tokenization_utils import AddedToken, PreTrainedTokenizer
 
+import re
+
 
 class CharacterTokenizer(PreTrainedTokenizer):
-    def __init__(self, characters: Sequence[str], model_max_length: int, **kwargs):
+    def __init__(self, token_list: Sequence[str], model_max_length: int, **kwargs):
         """Character tokenizer for Hugging Face transformers.
 
         Args:
-            characters (Sequence[str]): List of desired characters. Any character which
+            token_list (Sequence[str]): List of desired characters. Any character which
                 is not included in this list will be replaced by a special token called
                 [UNK] with id=6. Following are list of all of the special tokens with
                 their corresponding ids:
@@ -30,7 +32,7 @@ class CharacterTokenizer(PreTrainedTokenizer):
 
             model_max_length (int): Model maximum sequence length.
         """
-        self.characters = characters
+        self.characters = token_list
         self.model_max_length = model_max_length
         bos_token = AddedToken("[BOS]", lstrip=False, rstrip=False)
         eos_token = AddedToken("[SEP]", lstrip=False, rstrip=False)
@@ -41,6 +43,9 @@ class CharacterTokenizer(PreTrainedTokenizer):
 
         mask_token = AddedToken("[MASK]", lstrip=True, rstrip=False)
 
+        token_list.sort(key=len, reverse=True)
+        self.token_list = token_list
+        #self.characters = token_list
         self._vocab_str_to_int = {
             "[CLS]": 4,
             "[SEP]": 1,
@@ -49,8 +54,13 @@ class CharacterTokenizer(PreTrainedTokenizer):
             "[PAD]": 0,
             "[RESERVED]": 5,
             "[UNK]": 6,
-            **{ch: i + 7 for i, ch in enumerate(characters)},
+            **{ch: i + 7 for i, ch in enumerate(token_list)},
         }
+
+        self.num_decoder_tokens = max(self._vocab_str_to_int.values())
+
+        #self.token_pattern = re.compile('|'.join(re.escape(token) for token in token_list))
+        self.token_pattern = '|'.join(map(re.escape, self.token_list))
         self._vocab_int_to_str = {v: k for k, v in self._vocab_str_to_int.items()}
 
         super().__init__(
@@ -74,9 +84,18 @@ class CharacterTokenizer(PreTrainedTokenizer):
         return self._vocab_str_to_int
 
     def _tokenize(self, text: str) -> List[str]:
-        return list(text)
+
+
+        # Use re.split to tokenize the string
+        tokenized_parts = re.split(f'({self.token_pattern})', text)
+        tokenized_parts = [part for part in tokenized_parts if part]
+
+        return tokenized_parts
 
     def _convert_token_to_id(self, token: str) -> int:
+        if(token not in self._vocab_str_to_int ):
+            raise Exception(f"{token} not in list of tokens")
+
         return self._vocab_str_to_int.get(token, self._vocab_str_to_int["[UNK]"])
 
     def _convert_id_to_token(self, index: int) -> str:

@@ -22,6 +22,7 @@ MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS = 2
 # Each Canvas can have MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS of each transformed Object and the same transformed Object can
 # appear in multiple Canvases.
 
+
 # Create an Example
 e = RandomObjectsExample()
 

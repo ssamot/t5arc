@@ -5,81 +5,58 @@ import tqdm
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from models.tokenizer import CharacterTokenizer
+from data_generators.object_recognition.example import Example
 import numpy as np
-from models.utils import load_data
-
+from data.utils import load_data
+from models.tokens import token_list
 
 @click.command()
 @click.argument('json_files', type=click.Path(exists=True))
 @click.argument('programme_files', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
-@click.argument('max_token_length', type=click.INT)
 @click.argument('repetitions', type=click.INT)
 def main(json_files, programme_files, output_filepath, max_token_length, repetitions):
     # build_model()
     # Initialize a list to store the contents of the JSON files
-    train_data, test_data, solvers = [], [], []
+    json_data_list = []
+    objects = []
+    object_pixels = []
+
+
     for _ in tqdm.tqdm(range(repetitions)):
-        tr_data, te_data, so = load_data(json_files, programme_files)
-        train_data.extend(tr_data)
-        test_data.extend(te_data)
-        solvers.extend(so)
+        # Create an Example
+        e = Example()
+        e.populate_canvases()
+        arc_style_input = e.create_canvas_arrays_input()
+        unique_objects, actual_pixels_array, positions_of_same_objects = e.create_output()
+        json_data_list.append(arc_style_input)
+        objects.append(str(unique_objects).replace(" ", ""))
+        object_pixels.append(actual_pixels_array)
 
-    train_data = np.array(train_data)
-    test_data = np.array(test_data)
-    # print("train_data.shape", train_data.shape)
-    chars = set("".join(solvers))  # This is character vocab
+    train, test = load_data(json_data_list)
 
-    indices = [i for i, sublist in enumerate(solvers) if len(sublist) < max_token_length]
-    solvers = [sublist for sublist in solvers if len(sublist) < max_token_length]
-    test_data = test_data[indices]
 
-    num_decoder_tokens = len(chars) + 10
-
-    print("num_decoder_tokens", num_decoder_tokens)
-
+    #print(train.shape)
+    #print(objects[-1])
     model_max_length = 20000000
 
-    tokenizer = CharacterTokenizer(chars, model_max_length)
+    tokenizer = CharacterTokenizer(token_list, model_max_length)
     tokenized_inputs = tokenizer(
-        solvers,
+        objects,
         padding="longest",
         truncation=True,
         return_tensors="np",
     )
 
-    inputs = [c for c in np.transpose(train_data[indices], (1, 0, 2, 3, 4))]
+    object_ids = tokenized_inputs.input_ids
+    print(object_ids.shape)
+    print(train.shape)
 
-    encoded_solutions = tokenized_inputs.input_ids
-    #print(encoded_solutions[0])
-    #print(tokenizer.decode(encoded_solutions[0], skip_special_tokens=True))
-    #exit()
 
-    # Create an empty array for the one-hot encoded data
-    one_hot_encoded = np.zeros(
-        (tokenized_inputs.input_ids.shape[0], tokenized_inputs.input_ids.shape[1], num_decoder_tokens))
-    rows = np.arange(tokenized_inputs.input_ids.shape[0])[:, None]
-    cols = np.arange(tokenized_inputs.input_ids.shape[1])
-    one_hot_encoded[rows, cols, tokenized_inputs.input_ids] = 1
 
-    target_texts = np.zeros_like(encoded_solutions)
-    target_texts[:, :-1] = encoded_solutions[:, 1:]
-
-    targets_one_hot_encoded = one_hot_encoded[:, 1:, :]
-    targets_inputs = encoded_solutions[:, :-1]
-    print("Target one-hot encoded shape", one_hot_encoded.shape)
-    print("Inputs shape", len(inputs), inputs[0].shape)
-    print("Test shape", len(test_data))
-    print("Chars", len(chars))
-    print("max_token_length", max_token_length)
-    inputs, targets_inputs, targets_one_hot_encoded, test_data, chars, max_token_length
-    np.savez(output_filepath, inputs=inputs,
-             targets_inputs=targets_inputs,
-             targets_one_hot_encoded=targets_one_hot_encoded,
-             test_data=test_data,
-             chars=chars,
+    np.savez(output_filepath, inputs=train, outputs = object_ids,
              max_token_length=max_token_length,
-             num_decoder_tokens = num_decoder_tokens,
+             num_decoder_tokens = tokenizer.num_decoder_tokens,
              )
 
 
