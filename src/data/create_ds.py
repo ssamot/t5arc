@@ -5,17 +5,16 @@ import tqdm
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from models.tokenizer import CharacterTokenizer
-from data_generators.object_recognition.example import Example
+from data_generators.object_recognition.random_objects_example import RandomObjectsExample
 import numpy as np
 from data.utils import load_data
 from models.tokens import token_list
+import secrets
 
 @click.command()
-@click.argument('json_files', type=click.Path(exists=True))
-@click.argument('programme_files', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
 @click.argument('repetitions', type=click.INT)
-def main(json_files, programme_files, output_filepath, max_token_length, repetitions):
+def main(output_filepath, repetitions):
     # build_model()
     # Initialize a list to store the contents of the JSON files
     json_data_list = []
@@ -25,8 +24,8 @@ def main(json_files, programme_files, output_filepath, max_token_length, repetit
 
     for _ in tqdm.tqdm(range(repetitions)):
         # Create an Example
-        e = Example()
-        e.populate_canvases()
+        e = RandomObjectsExample()
+        e.randomly_populate_canvases()
         arc_style_input = e.create_canvas_arrays_input()
         unique_objects, actual_pixels_array, positions_of_same_objects = e.create_output()
         json_data_list.append(arc_style_input)
@@ -52,10 +51,10 @@ def main(json_files, programme_files, output_filepath, max_token_length, repetit
     print(object_ids.shape)
     print(train.shape)
 
+    hex = secrets.token_hex(nbytes=16)
 
-
+    output_filepath = f"{output_filepath}/{hex}.npz"
     np.savez(output_filepath, inputs=train, outputs = object_ids,
-             max_token_length=max_token_length,
              num_decoder_tokens = tokenizer.num_decoder_tokens,
              )
 
