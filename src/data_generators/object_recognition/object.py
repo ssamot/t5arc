@@ -61,6 +61,25 @@ class Transformations(Enum):
                 args['ratio'] = 15 if args['ratio'] > 15 else args['ratio']
         return args
 
+    @staticmethod
+    def get_specific_parameters(transformation_index, values):
+        args = {}
+        if transformation_index == 0:
+            args['factor'] = values
+        elif transformation_index == 1:
+            args['times'] = values
+        elif transformation_index == 2:
+            args['_shear'] = values
+        elif transformation_index == 3:
+            args['axis'] = values[0]
+            args['on_axis'] = values[1]
+        elif transformation_index == 5:
+            args['ratio'] = values
+        elif transformation_index == 6:
+            args['ratio'] = values
+
+        return args
+
 
 class Object:
 
@@ -189,8 +208,8 @@ class Object:
         self.bbox.transform(translation=-center)
         self.bbox.transform(rotation=radians)
         self.bbox.transform(translation=center)
-        self._canvas_pos.x = self.bbox.top_left.x
-        self._canvas_pos.y = self.bbox.bottom_right.y
+        self._canvas_pos.x = int(self.bbox.top_left.x)
+        self._canvas_pos.y = int(self.bbox.bottom_right.y)
 
         for sym in self.symmetries:
             sym.transform(translation=-center)
@@ -459,7 +478,7 @@ class Object:
         pass
 
     #TODO: This can now be achieved with the setter of canvas_pos. Do I still need this function?
-    def move_along_z(self, orientation: OrientationZ | None = None, to_z: float | None = None):
+    def move_along_z(self, orientation: OrientationZ | None = None, to_z: int | None = None):
         """
         Change the z of the canvas_pos and the bbox
         :param orientation: Change the z by one point in the orientation given

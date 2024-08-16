@@ -86,7 +86,7 @@ class Primitive(Object):
     def json_output(self):
         args = self.__dict__.copy()
         for arg in ['border_size', '_canvas_pos', 'rotation_axis', 'number_of_coloured_pixels', 'actual_pixels',
-                    'required_dist_to_others', 'canvas_id', '_holes']:
+                    'required_dist_to_others', 'canvas_id', '_holes', '_center_on']:
             args.pop(arg, None)
         if 'size' in args:
             args.pop('size', None)
@@ -98,7 +98,7 @@ class Primitive(Object):
 
         args['symmetries'] = [[s.orientation.name, s.length, s.origin.x, s.origin.y] for s in self.symmetries]
         args['dimensions'] = [self.dimensions.dx, self.dimensions.dy]
-        # args['transformations'] = [[t[0].name, t[1]] for t in self.transformations]
+
         args['transformations'] = [[t[0].value, [t[1][b] if 'axis' not in b else t[1][b].value for b in t[1]]]
                                    for t in self.transformations]
         args['bbox'] = [[self.bbox.top_left.x, self.bbox.top_left.y],
@@ -174,7 +174,7 @@ class Primitive(Object):
     def __copy__(self):
         args = self.__dict__.copy()
         for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'actual_pixels_id', 'rotation_axis',
-                    'dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox', '_holes']:
+                    'dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox', '_holes', '_center_on']:
             args.pop(arg, None)
         args['_id'] = self.id
         args['actual_pixels_id'] = self.actual_pixels_id
@@ -582,7 +582,7 @@ class Fish(Primitive):
 
 
 class Bolt(Primitive):
-    def __init__(self, border_size: Surround = Surround(0, 0, 0, 0),
+    def __init__(self, _center_on: bool = False, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: Surround = Surround(0, 0, 0, 0),
                  _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
@@ -598,7 +598,8 @@ class Bolt(Primitive):
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
-        center_colour = self.colour if np.random.random() > 0.5 else 1
+        self._center_on = _center_on
+        center_colour = self.colour if _center_on else 1
         bolt = np.array([[1, self.colour, self.colour],
                          [self.colour, center_colour, self.colour],
                          [self.colour, self.colour, 1]])
@@ -607,6 +608,15 @@ class Bolt(Primitive):
 
         Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
+
+    @property
+    def center_on(self):
+        if self.actual_pixels[2, 2] != 1:
+            self._center_on = True
+        else:
+            self._center_on = False
+
+        return self._center_on
 
 
 class Tie(Primitive):

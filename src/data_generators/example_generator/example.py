@@ -26,6 +26,7 @@ class Example:
         self.input_canvases = []
         self.output_canvases = []
         self.test_input_canvas = None
+        self.test_output_canvas = None
 
         # TODO: Develop the Grd Primitive to be able to also create the Grid Experiment type
         self.experiment_type = np.random.choice(['Object', 'Symmetry', 'Grid'], p=[0.8, 0.2, 0])
@@ -204,6 +205,56 @@ class Example:
         object.required_dist_to_others = min_distance_to_others
 
         return object
+
+    def generate_objects_from_output(self, unique_objects: List):
+        for obj_discr in unique_objects:
+            obj_type = obj_discr['primitive']
+
+            args = {}
+            if obj_type in ['InverseCross', 'Steps', 'Pyramid']:
+                args['height'] = obj_discr['dimensions'].dy
+                if obj_type == 'InverseCross':
+                    args['fill_colour'] = obj_discr['fill_colour']
+                    args['fill_height'] = obj_discr['fill_height']
+            elif obj_type == 'Diagonal':
+                args['length'] = obj_discr['dimensions'].dx
+            elif obj_type in ['Tie', 'Bolt', 'Fish', 'Dot']:
+                pass
+            else:
+                args['size'] = obj_discr['dimensions']
+
+            if obj_type == 'Bolt':
+                args['_center_on'] = obj_discr['center_on']
+
+            args['colour'] = obj_discr['colour']
+            args['_id'] = obj_discr['id']
+            args['actual_pixels_id'] = obj_discr['actual_pixels_id']
+
+            for canvas_and_pos in obj_discr['canvases_positions']:
+                args['canvas_id'] = canvas_and_pos[0]
+                args['canvas_pos'] = canvas_and_pos[1]
+
+                if int(args['canvas_id'] / 2) <= self.number_of_io_pairs - 1:
+                    canvas = self.input_canvases[int(args['canvas_id'] / 2)] if args['canvas_id'] % 2 == 0 else \
+                        self.output_canvases[int(args['canvas_id'] / 2)]
+                elif int(args['canvas_id'] / 2) == self.number_of_io_pairs:
+                    canvas = self.test_input_canvas
+                elif int(args['canvas_id'] / 2) == self.number_of_io_pairs + 1:
+                    canvas = self.test_output_canvas
+                obj = globals()[obj_type](**args)
+
+                for tr in obj_discr['transformations']:
+                    print(tr)
+                    transform_name = Transformations(tr[0])
+                    tr_args = transform_name.get_specific_parameters(tr[0], tr[1])
+                    transform_method = getattr(obj, transform_name.name)
+                    transform_method(**tr_args)
+
+                if 'actual_pixels' in obj_discr:
+                    obj.actual_pixels = obj_discr['actual_pixels']
+
+                self.objects.append(obj)
+                canvas.add_new_object(obj)
 
     def do_random_transformations(self, obj: Primitive, debug: bool = False, num_of_transformations: int = 0,
                                   probs_of_transformations: List = (0.1, 0.2, 0.1, 0.1, 0.25, 0.25)):

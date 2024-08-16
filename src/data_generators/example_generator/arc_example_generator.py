@@ -4,6 +4,7 @@ from typing import List
 import numpy as np
 from data import load_data as ld
 from data_generators.example_generator.example import Example
+from data_generators.object_recognition.basic_geometry import Dimension2D
 from data_generators.object_recognition.canvas import Canvas
 
 
@@ -40,17 +41,27 @@ class ARCExample(Example):
 
         self.test_output_canvas = None
 
-    def generate_canvasses(self):
+    def generate_canvasses(self, empty: bool = True):
         self.number_of_io_pairs = len(self.task_data['train'])
         self.number_of_canvasses = self.number_of_io_pairs * 2 + 2
 
         for pair in range(self.number_of_io_pairs):
             input_data = np.flipud(np.array(self.task_data['train'][pair]['input']) + 1)
             output_date = np.flipud(np.array(self.task_data['train'][pair]['output']) + 1)
-            self.input_canvases.append(Canvas(actual_pixels=input_data, _id=pair * 2))
-            self.output_canvases.append(Canvas(actual_pixels=output_date, _id=pair * 2 + 1))
+            if not empty:
+                self.input_canvases.append(Canvas(actual_pixels=input_data, _id=pair * 2))
+                self.output_canvases.append(Canvas(actual_pixels=output_date, _id=pair * 2 + 1))
+            else:
+                self.input_canvases.append(Canvas(size=Dimension2D(input_data.shape[1], input_data.shape[0]), _id=pair * 2))
+                self.output_canvases.append(Canvas(size=Dimension2D(output_date.shape[1], output_date.shape[0]), _id=pair * 2 + 1))
 
         test_input_date = np.flipud(np.array(self.task_data['test'][0]['input']) + 1)
         test_output_data = np.flipud(np.array(self.solution_data[0]) + 1)  # TODO: Fix this!
-        self.test_input_canvas = Canvas(actual_pixels=test_input_date, _id=2 * self.number_of_io_pairs)
-        self.test_output_canvas = Canvas(actual_pixels=test_output_data, _id=2 * self.number_of_io_pairs + 1)
+        if not empty:
+            self.test_input_canvas = Canvas(actual_pixels=test_input_date, _id=2 * self.number_of_io_pairs)
+            self.test_output_canvas = Canvas(actual_pixels=test_output_data, _id=2 * self.number_of_io_pairs + 1)
+        else:
+            self.test_input_canvas = Canvas(size=Dimension2D(test_input_date.shape[1], test_input_date.shape[0]),
+                                            _id=2 * self.number_of_io_pairs)
+            self.test_output_canvas = Canvas(size=Dimension2D(test_output_data.shape[1], test_output_data.shape[0]),
+                                             _id=2 * self.number_of_io_pairs + 1)
