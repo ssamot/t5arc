@@ -1,7 +1,34 @@
 import numpy as np
-import os
-import json
 import keras
+
+
+class SequenceAccuracy(keras.metrics.Metric):
+    def __init__(self, name="sequence_accuracy", **kwargs):
+        super(SequenceAccuracy, self).__init__(name=name, **kwargs)
+        self.total_sequences = self.add_weight(name="total_sequences", initializer="zeros")
+        self.correct_sequences = self.add_weight(name="correct_sequences", initializer="zeros")
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        # Convert predictions to binary or integer outputs (assume argmax for categorical predictions)
+        y_pred = np.argmax(y_pred, axis=-1)
+
+        # Ensure y_true and y_pred are numpy arrays
+        y_true = np.array(y_true)
+
+        # Check if the entire sequence is correct
+        correct_predictions = np.all(np.equal(y_true, y_pred), axis=-1)  # Shape: (batch_size,)
+
+        # Update the total and correct sequence counts
+        self.total_sequences.assign_add(np.float32(y_true.shape[0]))  # Batch size
+        self.correct_sequences.assign_add(np.sum(correct_predictions.astype(np.float32)))
+
+    def result(self):
+        # Calculate accuracy as the ratio of fully correct sequences
+        return self.correct_sequences / self.total_sequences
+
+    def reset_states(self):
+        self.total_sequences.assign(0.0)
+        self.correct_sequences.assign(0.0)
 
 
 

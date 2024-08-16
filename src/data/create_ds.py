@@ -29,6 +29,8 @@ def main(output_filepath, repetitions):
         arc_style_input = e.create_canvas_arrays_input()
         unique_objects, actual_pixels_array, positions_of_same_objects = e.create_output()
         json_data_list.append(arc_style_input)
+        print(unique_objects)
+        exit()
         objects.append(str(unique_objects).replace(" ", ""))
         object_pixels.append(actual_pixels_array)
 

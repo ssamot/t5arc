@@ -9,6 +9,7 @@ from data.utils import load_data_for_generator, pad_array_with_random_position
 import keras_nlp
 from data.data_generator import CanvasDataGenerator
 import constants as consts
+from models.utils import SequenceAccuracy
 
 def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     total_features = input_shape[0] * input_shape[1] * input_shape[2]
@@ -86,8 +87,10 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
         lstm_out)
 
     model = keras.models.Model(encoder_inputs + [decoder_inputs], decoder_outputs)
-    optimizer = keras.optimizers.AdamW(learning_rate=0.001)
-    model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
+    optimizer = keras.optimizers.AdamW(learning_rate=0.0001)
+    model.compile(optimizer=optimizer,
+                  loss="categorical_crossentropy",
+                  metrics=["accuracy",SequenceAccuracy() ])
 
     # encoder_model.compile()
 
@@ -107,7 +110,7 @@ def main(json_files, programme_files, max_token_length, output_filepath):
     max_examples = 20
 
 
-    training_generator = CanvasDataGenerator(batch_size = 10,  len = 50,
+    training_generator = CanvasDataGenerator(batch_size = 20,  len = 200,
                                              use_multiprocessing=True, workers=50, max_queue_size=1000)
 
     num_decoder_tokens = training_generator.tokenizer.num_decoder_tokens + 1
@@ -115,7 +118,7 @@ def main(json_files, programme_files, max_token_length, output_filepath):
 
     #model.summary()
 
-    model.fit(x=training_generator, epochs=10000)
+    model.fit(x=training_generator, epochs=1000)
 
 
 if __name__ == '__main__':
