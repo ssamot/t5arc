@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from utils import *
 from data.utils import *
@@ -15,12 +16,15 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
 class Canvas:
-    def __init__(self, size: Dimension2D | np.ndarray | List, objects: List[Object] | None = None,
-                 _id: int | None = None):
+    def __init__(self, size: Dimension2D | np.ndarray | List | None = None, objects: List[Object] | None = None,
+                 _id: int | None = None, actual_pixels: np.ndarray | None = None):
 
-        if type(size) != Dimension2D:
+        assert size is not None or actual_pixels is not None, print(f'Making a canvas with id {_id}. '
+                                                                    f'Both size and actual_pixels are None!')
+
+        if type(size) != Dimension2D and size is not None:
             self.size = Dimension2D(array=size)
-        else:
+        elif type(size) == Dimension2D:
             self.size = size
 
         if objects is None:
@@ -29,7 +33,12 @@ class Canvas:
             self.objects = objects
         self.id = _id
 
-        self.actual_pixels = np.ones((size.dy, size.dx))
+        if actual_pixels is None:
+            self.actual_pixels = np.ones((size.dy, size.dx))
+        else:
+            self.actual_pixels = actual_pixels
+            self.size = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
+
         self.full_canvas = np.zeros((MAX_PAD_SIZE, MAX_PAD_SIZE))
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
         self.background_pixels = np.ndarray.copy(self.actual_pixels)
@@ -182,7 +191,7 @@ class Canvas:
             ymax = self.actual_pixels.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
             if fig_to_add is None:
-                fig, ax = vis.plot_data(self.actual_pixels, extent=extent)
+                _ = vis.plot_data(self.actual_pixels, extent=extent)
             else:
                 ax = fig_to_add.add_subplot(nrows, ncoloumns, index)
                 _ = vis.plot_data(self.actual_pixels, extent=extent, axis=ax)
