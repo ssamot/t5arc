@@ -25,7 +25,7 @@ class Example:
 
         self.input_canvases = []
         self.output_canvases = []
-        self.test_canvas = None
+        self.test_input_canvas = None
 
         # TODO: Develop the Grd Primitive to be able to also create the Grid Experiment type
         self.experiment_type = np.random.choice(['Object', 'Symmetry', 'Grid'], p=[0.8, 0.2, 0])
@@ -66,7 +66,7 @@ class Example:
     def generate_canvasses(self):
         """
         Generate random size canvases and add background (single colour) pixels to 10% of them if they are bigger than
-        10x10
+        10x10. Override if a subclass requires a different way to generate canvases.
         :return:
         """
         min_pad_size = const.MIN_PAD_SIZE if self.experiment_type == 'Object' else const.MIN_PAD_SIZE + 10
@@ -96,12 +96,12 @@ class Example:
         test_canvas_size = Dimension2D(np.random.randint(min_pad_size, const.MAX_PAD_SIZE),
                                        np.random.randint(min_pad_size, const.MAX_PAD_SIZE))
 
-        self.test_canvas = Canvas(size=test_canvas_size, _id=0)
+        self.test_input_canvas = Canvas(size=test_canvas_size, _id=0)
         if np.all([test_canvas_size.dx > self.min_canvas_size_for_background_object,
                    test_canvas_size.dy > self.min_canvas_size_for_background_object]) \
                 and np.random.random() < self.prob_of_background_object:
             background_object = Random(size=test_canvas_size, occupancy_prob=np.random.gamma(1, 0.05) + 0.1)
-            self.test_canvas.create_background_from_object(background_object)
+            self.test_input_canvas.create_background_from_object(background_object)
 
     def create_object(self, obj_probs: np.ndarray | None = None, max_size_of_obj: int = 15,
                       overlap_prob: float = 0.8, far_away_prob: float = 0.1, debug: bool = False) -> Primitive:
@@ -271,15 +271,15 @@ class Example:
                 c.add_new_object(o)
                 self.objects.append(o)
 
-        test_canvas_pos = self.get_random_position(obj, self.test_canvas)
+        test_canvas_pos = self.get_random_position(obj, self.test_input_canvas)
         if test_canvas_pos is not None:
             o = copy(obj)
             o.canvas_pos = test_canvas_pos
-            self.test_canvas.add_new_object(o)
+            self.test_input_canvas.add_new_object(o)
             self.objects.append(o)
 
     def create_canvas_arrays_input(self) -> dict:
-        result = {'test': [{'input': np.flipud(self.test_canvas.full_canvas).tolist()}],
+        result = {'test': [{'input': np.flipud(self.test_input_canvas.full_canvas).tolist()}],
                   'train': []}
 
         for input_canvas, output_canvas in zip(self.input_canvases, self.output_canvases):
@@ -333,7 +333,7 @@ class Example:
             canvas.show()
 
         elif canvas_index == 'test':
-            self.test_canvas.show()
+            self.test_input_canvas.show()
 
         elif canvas_index == 'all':
             fig = plt.figure()
@@ -344,7 +344,7 @@ class Example:
                 self.input_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index)
                 self.output_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1)
                 if p == 0:
-                    self.test_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2)
+                    self.test_input_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2)
                 index += 3
             plt.tight_layout()
 
