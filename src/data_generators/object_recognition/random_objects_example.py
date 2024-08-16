@@ -8,7 +8,6 @@ from data_generators.object_recognition.primitives import Primitive, Parallelogr
 import constants as const
 from data_generators.object_recognition.object import Transformations
 
-#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_EXAMPLE_PAIRS = const.MAX_EXAMPLE_PAIRS
 MIN_PAD_SIZE = const.MIN_PAD_SIZE
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -60,7 +59,7 @@ class RandomObjectsExample(Example):
             mirror_method(**args)
 
         if np.any(obj_to_mirror.dimensions.to_numpy() > MAX_PAD_SIZE):
-            obj_to_mirror = self.do_multiple_mirroring(obj)
+            obj_to_mirror = self.do_multiple_mirroring(obj, number_of_mirrors=number_of_mirrors - 1)
 
         return obj_to_mirror
 
