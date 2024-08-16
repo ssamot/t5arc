@@ -7,8 +7,9 @@ from pathlib import Path
 from functools import partial
 from data.utils import load_data_for_generator, pad_array_with_random_position
 import keras_nlp
-from data.generate_data import CanvasDataGenerator
+from data.data_generator import CanvasDataGenerator
 import constants as consts
+from models.utils import SequenceAccuracy
 
 def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     total_features = input_shape[0] * input_shape[1] * input_shape[2]
@@ -86,8 +87,10 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
         lstm_out)
 
     model = keras.models.Model(encoder_inputs + [decoder_inputs], decoder_outputs)
-    optimizer = keras.optimizers.AdamW(learning_rate=0.001)
-    model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
+    optimizer = keras.optimizers.AdamW(learning_rate=0.0001)
+    model.compile(optimizer=optimizer,
+                  loss="categorical_crossentropy",
+                  metrics=["accuracy",SequenceAccuracy() ])
 
     # encoder_model.compile()
 
@@ -103,29 +106,19 @@ def main(json_files, programme_files, max_token_length, output_filepath):
     # build_model()
     # Initialize a list to store the contents of the JSON files
 
+    max_pad_size = 32
     max_examples = 20
-    train_data, test_data, solvers = load_data_for_generator(json_files,
-                                                             programme_files,
-                                                             max_examples=max_examples)
 
-    max_pad_size = consts.MAX_PAD_SIZE
 
-    augment_fn = partial(pad_array_with_random_position, m = max_pad_size)
+    training_generator = CanvasDataGenerator(batch_size = 20,  len = 200,
+                                             use_multiprocessing=True, workers=50, max_queue_size=1000)
 
-    training_generator = CanvasDataGenerator(train_data,
-                                            solvers,
-                                             128,
-                                             augment_fn,
-                                             shuffle=True,
-                                             max_token_length=max_token_length,
-                                             use_multiprocessing=True, workers=12, repeats=100)
-
-    num_decoder_tokens = training_generator.num_decoder_tokens
+    num_decoder_tokens = training_generator.tokenizer.num_decoder_tokens + 1
     model = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens), 64, max_examples)
 
-    model.summary()
+    #model.summary()
 
-    model.fit(x=training_generator, epochs=10000)
+    model.fit(x=training_generator, epochs=1000)
 
 
 if __name__ == '__main__':

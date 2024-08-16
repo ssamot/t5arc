@@ -15,7 +15,7 @@ from data_generators.object_recognition.basic_geometry import Point, Vector, Ori
 
 import constants as const
 
-np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
+#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 

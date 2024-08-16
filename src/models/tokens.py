@@ -1,0 +1,65 @@
+connections =   ["{",
+              "}",
+                "]",
+"[",
+              ":",
+              " ",
+              ",",
+")",
+"(",
+"=",
+#"'",
+              ".","-"]
+keywords = [
+          "colour",
+          "id",
+          "actual_pixels_id",
+          "canvas_id",
+          "canvas_pos",
+          "dimensions",
+          "symmetries",
+          "transformations",
+          "bbox",
+              "primitive",
+              "thickness",
+              "hole_bbox",
+              "border_size",
+              "height",
+              "depth",
+              "fill_height",
+              "fill_colour",
+              "length",
+              "Random",
+          "Parallelogram",
+              "Cross",
+              "Hole",
+              "Pi",
+              "InverseCross",
+              "Dot",
+              "Angle",
+              "Diagonal",
+              "Steps",
+              "Fish",
+              "Bolt",
+              "Spiral",
+              "Tie",
+              "Pyramid",
+          "scale",
+              "rotate",
+              "shear",
+              "mirror",
+              "flip",
+              "randomise_colour",
+              "randomise_shape",
+              "ratio",
+              "axis",
+
+              ]
+
+
+
+numbers =[ str(i) for i in range(-10,64)]
+
+keywords = [f"'{k}'" for k in keywords]
+token_list = keywords + numbers + connections
+

@@ -62,10 +62,10 @@ def build_model(input_shape, num_decoder_tokens, latent_dim):
 
 
 @click.command()
-@click.argument('data_file', type=click.Path(exists=True))
+@click.argument('data_path', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
 @click.argument('bootstrap', type=click.BOOL)
-def main(data_file, output_filepath, bootstrap):
+def main(data_path, output_filepath, bootstrap):
     x = np.load(data_file, allow_pickle=True)
 
     inputs = x["inputs"]

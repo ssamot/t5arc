@@ -8,7 +8,7 @@ from copy import copy
 from enum import Enum
 from dataclasses import dataclass
 
-np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
+#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
