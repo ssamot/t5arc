@@ -10,7 +10,7 @@ import skimage
 from visualization import visualize_data as vis
 from data_generators.object_recognition.basic_geometry import *
 
-np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
+#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 

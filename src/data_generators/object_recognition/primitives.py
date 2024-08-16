@@ -12,7 +12,7 @@ from enum import Enum
 from data_generators.object_recognition.object import Object
 from data_generators.object_recognition.basic_geometry import Point, Bbox, Dimension2D, Orientation, Surround, Vector
 
-np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
+#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 

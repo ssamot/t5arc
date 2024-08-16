@@ -5,7 +5,7 @@ import constants as const
 from data_generators.object_recognition.basic_geometry import Point,  Dimension2D
 from data_generators.object_recognition.object import Transformations
 
-np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
+#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_EXAMPLE_PAIRS = const.MAX_EXAMPLE_PAIRS
 MIN_PAD_SIZE = const.MIN_PAD_SIZE
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
