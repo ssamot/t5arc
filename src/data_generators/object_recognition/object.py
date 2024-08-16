@@ -1,14 +1,19 @@
 
 from __future__ import annotations
 
-import copy as cp
+from enum import Enum
+from typing import List, Union
+from copy import copy, deepcopy
 from typing import Tuple
 
 import numpy as np
 from scipy import ndimage as ndi
 import skimage
 from visualization import visualize_data as vis
-from data_generators.object_recognition.basic_geometry import *
+from data_generators.object_recognition.basic_geometry import Point, Vector, Orientation, Surround, OrientationZ, Bbox,\
+                                                              Dimension2D
+
+import constants as const
 
 np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -78,7 +83,7 @@ class Object:
         if type(canvas_pos) != Point:
             self._canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
 
-        self.rotation_axis = cp.deepcopy(self._canvas_pos)
+        self.rotation_axis = deepcopy(self._canvas_pos)
 
         self.dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 

@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
-import json
 
 from utils import *
 from data.utils import *
 from visualization import visualize_data as vis
-from data_generators.object_recognition.primitives import *
+from data_generators.object_recognition.primitives import Primitive
 from data_generators.object_recognition.basic_geometry import Point, Dimension2D
 
-np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
+#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 

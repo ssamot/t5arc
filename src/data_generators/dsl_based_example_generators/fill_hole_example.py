@@ -1,7 +1,9 @@
 
 
-from data_generators.example_generator.example import *
+import numpy as np
 
+from data_generators.example_generator.example import Example
+from data_generators.object_recognition.primitives import Primitive
 
 class FillHoleExample(Example):
     def __init__(self):

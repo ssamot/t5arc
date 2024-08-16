@@ -1,36 +1,25 @@
 
 from __future__ import annotations
 
-from data_generators.object_recognition.canvas import *
-from data_generators.object_recognition.basic_geometry import Point, Dimension2D
+from typing import List
+
+from matplotlib import pyplot as plt
+import numpy as np
+from copy import copy
+
+from data_generators.object_recognition.canvas import Canvas
+from data_generators.object_recognition.primitives import Primitive, ObjectType, Random,  Parallelogram, Cross, Hole, \
+     Pi, InverseCross, Dot, Angle, Diagonal, Steps, Fish, Bolt, Spiral, Tie, Pyramid
+from data_generators.object_recognition.basic_geometry import Point, Dimension2D, Surround
 from data_generators.object_recognition.object import Transformations
-
-np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
-MAX_EXAMPLE_PAIRS = const.MAX_EXAMPLE_PAIRS
-MIN_PAD_SIZE = const.MIN_PAD_SIZE
-MAX_PAD_SIZE = const.MAX_PAD_SIZE
-
-OVERLAP_PROB = 0.8
-FAR_AWAY_PROB = 0.1
-MIRROR_PROB = 0.05
-MAX_NUM_OF_DIFFERENT_PRIMITIVES = 5
-LARGE_OBJECT_THRESHOLD = 10
-MAX_NUM_OF_LARGE_OBJECTS = 3
-MIN_NUM_OF_SMALL_OBJECTS = 2
-MAX_NUM_OF_SMALL_OBJECTS = 6
-NUMBER_OF_TRANSFORMATIONS = 1
-MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS = 2
-
-MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ = 10
-PROB_OF_BACKGROUND_OBJ = 0.1
-
-MAX_SIZE_OF_OBJECT = 15
-
-MAX_NUMBER_OF_MIRRORS = 10
+import constants as const
 
 
 class Example:
-    def __init__(self):
+    def __init__(self, min_canvas_size_for_background_object: int = 10, prob_of_background_object: float = 0.1):
+
+        self.min_canvas_size_for_background_object = min_canvas_size_for_background_object
+        self.prob_of_background_object = prob_of_background_object
         self.number_of_io_pairs = np.random.randint(2, const.MAX_EXAMPLE_PAIRS)
         self.number_of_canvasses = self.number_of_io_pairs * 2 + 1
 
@@ -80,37 +69,37 @@ class Example:
         10x10
         :return:
         """
-        min_pad_size = MIN_PAD_SIZE if self.experiment_type == 'Object' else MIN_PAD_SIZE + 10
+        min_pad_size = const.MIN_PAD_SIZE if self.experiment_type == 'Object' else const.MIN_PAD_SIZE + 10
 
         for c in range(self.number_of_io_pairs):
-            input_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
-                                     np.random.randint(min_pad_size, MAX_PAD_SIZE))
-            output_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
-                                      np.random.randint(min_pad_size, MAX_PAD_SIZE))
+            input_size = Dimension2D(np.random.randint(min_pad_size, const.MAX_PAD_SIZE),
+                                     np.random.randint(min_pad_size, const.MAX_PAD_SIZE))
+            output_size = Dimension2D(np.random.randint(min_pad_size, const.MAX_PAD_SIZE),
+                                      np.random.randint(min_pad_size, const.MAX_PAD_SIZE))
 
             input_canvas = Canvas(size=input_size, _id=2*c + 1)
-            if np.all([input_size.dx > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
-                       input_size.dy > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ]) \
-                    and np.random.random() < PROB_OF_BACKGROUND_OBJ:
+            if np.all([input_size.dx > self.min_canvas_size_for_background_object,
+                       input_size.dy > self.min_canvas_size_for_background_object]) \
+                    and np.random.random() < self.prob_of_background_object:
                 background_object = Random(size=input_size, occupancy_prob=np.random.gamma(1, 0.05)+0.1)
                 input_canvas.create_background_from_object(background_object)
             self.input_canvases.append(input_canvas)
 
             output_canvas = Canvas(size=output_size, _id=2*c + 2)
-            if np.all([output_size.dx > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
-                       output_size.dy > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ]) \
-                    and np.random.random() < PROB_OF_BACKGROUND_OBJ:
+            if np.all([output_size.dx > self.min_canvas_size_for_background_object,
+                       output_size.dy > self.min_canvas_size_for_background_object]) \
+                    and np.random.random() < self.prob_of_background_object:
                 background_object = Random(size=output_size, occupancy_prob=np.random.gamma(1, 0.05)+0.1)
                 output_canvas.create_background_from_object(background_object)
             self.output_canvases.append(output_canvas)
 
-        test_canvas_size = Dimension2D(np.random.randint(min_pad_size, MAX_PAD_SIZE),
-                                       np.random.randint(min_pad_size, MAX_PAD_SIZE))
+        test_canvas_size = Dimension2D(np.random.randint(min_pad_size, const.MAX_PAD_SIZE),
+                                       np.random.randint(min_pad_size, const.MAX_PAD_SIZE))
 
         self.test_canvas = Canvas(size=test_canvas_size, _id=0)
-        if np.all([test_canvas_size.dx > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
-                   test_canvas_size.dy > MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ]) \
-                and np.random.random() < PROB_OF_BACKGROUND_OBJ:
+        if np.all([test_canvas_size.dx > self.min_canvas_size_for_background_object,
+                   test_canvas_size.dy > self.min_canvas_size_for_background_object]) \
+                and np.random.random() < self.prob_of_background_object:
             background_object = Random(size=test_canvas_size, occupancy_prob=np.random.gamma(1, 0.05) + 0.1)
             self.test_canvas.create_background_from_object(background_object)
 
@@ -312,17 +301,23 @@ class Example:
                 actual_pixels_list.append(obj.actual_pixels)
                 obj_pix_ids.append(obj_pix_id)
                 obj_with_unique_pix_ids.append(obj)
-                positions_of_same_objects[obj_pix_id] = [obj.canvas_id,
-                                                         [obj.canvas_pos.x, obj.canvas_pos.y, obj.canvas_pos.z]]
+                positions_of_same_objects[obj_pix_id] = [[obj.canvas_id,
+                                                         [obj.canvas_pos.x, obj.canvas_pos.y, obj.canvas_pos.z]]]
             else:
                 positions_of_same_objects[obj_pix_id].append([obj.canvas_id,
                                                               [obj.canvas_pos.x, obj.canvas_pos.y, obj.canvas_pos.z]])
 
-        actual_pixels_array = np.zeros((MAX_PAD_SIZE, MAX_PAD_SIZE, len(actual_pixels_list)))
+        for unique_object in unique_objects:
+            o_p_id = (unique_object['id'], unique_object['actual_pixels_id'])
+            unique_object['canvasses_positions'] = positions_of_same_objects[o_p_id]
+            unique_object.pop('canvas_pos', None)
+            unique_object.pop('dimensions', None)
+
+        actual_pixels_array = np.zeros((const.MAX_PAD_SIZE, const.MAX_PAD_SIZE, len(actual_pixels_list)))
         for i, ap in enumerate(actual_pixels_list):
             actual_pixels_array[:ap.shape[0], :ap.shape[1], i] = ap
 
-        return unique_objects, actual_pixels_array, positions_of_same_objects
+        return unique_objects, actual_pixels_array
 
     def show(self, canvas_index: int | str = 'all'):
         """

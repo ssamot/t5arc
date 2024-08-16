@@ -1,5 +1,7 @@
 
-from data_generators.object_recognition.random_objects_example import *
+import numpy as np
+from data_generators.object_recognition.random_objects_example import RandomObjectsExample
+np.random.seed(11)
 
 #  How many, different, Primitives are allowed in the Example. These will be the base Objects
 MAX_NUM_OF_DIFFERENT_PRIMITIVES = 2
@@ -22,25 +24,28 @@ MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS = 2
 # Each Canvas can have MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS of each transformed Object and the same transformed Object can
 # appear in multiple Canvases.
 
-# Create an Example
-e = RandomObjectsExample()
+for i in range(200):
+    # Create an Example
+    print(i)
 
-# Populate the Canvases of the Example with Objects drawn randomly
-e.randomly_populate_canvases()
+    e = RandomObjectsExample()
 
-# Generate the Input arrays. These are a dictionary with the same structure as the ARC examples
-arc_style_input = e.create_canvas_arrays_input()
+    # Populate the Canvases of the Example with Objects drawn randomly
+    e.randomly_populate_canvases()
 
-# Generate the Output info
-# unique_objects is a list of dictionaries, each describing one unique transformed Object in the Example
-# actual_pixels_array is a 3D numpy array (MAX_PAD_SIZE, MAX_PAD_SIZE, len(unique_objects)) where each
-# (MAX_PAD_SIZE, MAX_PAD_SIZE) 2D slice has the actual pixels of a transformed Object. The actual_pixels_id of the
-# transformed Object (found in the unique_objects representation) is the index of the actual_pixels slice in the 3D
-# array.
-# The positions_of_same_objects is a dict with keys the tuple (object.id, object.actual_pixels_id) for each
-# transformed Object and value a List of all the [Canvas id, [canvas_pos.x, canvas_pos.y]] lists that show on which
-# Canvases and on which locations the transformed Object appears.
-unique_objects, actual_pixels_array, positions_of_same_objects = e.create_output()
+    # Generate the Input arrays. These are a dictionary with the same structure as the ARC examples
+    arc_style_input = e.create_canvas_arrays_input()
+
+    # Generate the Output info
+    # unique_objects is a list of dictionaries, each describing one unique transformed Object in the Example
+    # actual_pixels_array is a 3D numpy array (MAX_PAD_SIZE, MAX_PAD_SIZE, len(unique_objects)) where each
+    # (MAX_PAD_SIZE, MAX_PAD_SIZE) 2D slice has the actual pixels of a transformed Object. The actual_pixels_id of the
+    # transformed Object (found in the unique_objects representation) is the index of the actual_pixels slice in the 3D
+    # array.
+    # The positions_of_same_objects is a dict with keys the tuple (object.id, object.actual_pixels_id) for each
+    # transformed Object and value a List of all the [Canvas id, [canvas_pos.x, canvas_pos.y]] lists that show on which
+    # Canvases and on which locations the transformed Object appears.
+    unique_objects, actual_pixels_array = e.create_output()
 
 
 # VISUALISATION

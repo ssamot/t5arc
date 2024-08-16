@@ -1,11 +1,14 @@
 
 from __future__ import annotations
-from data_generators.example_generator.example import *
+import numpy as np
+from copy import copy
+
+from data_generators.example_generator.example import Example
+from data_generators.object_recognition.primitives import Primitive, Parallelogram
 import constants as const
-from data_generators.object_recognition.basic_geometry import Point,  Dimension2D
 from data_generators.object_recognition.object import Transformations
 
-np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
+#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_EXAMPLE_PAIRS = const.MAX_EXAMPLE_PAIRS
 MIN_PAD_SIZE = const.MIN_PAD_SIZE
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -31,7 +34,8 @@ MAX_NUMBER_OF_MIRRORS = 10
 
 class RandomObjectsExample(Example):
     def __init__(self):
-        super().__init__()
+        super().__init__(min_canvas_size_for_background_object=MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
+                         prob_of_background_object=PROB_OF_BACKGROUND_OBJ)
 
     def do_multiple_mirroring(self, obj: Primitive, number_of_mirrors: int | None = None) -> Primitive | None:
         """
