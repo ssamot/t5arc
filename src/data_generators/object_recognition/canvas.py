@@ -11,7 +11,6 @@ from visualization import visualize_data as vis
 from data_generators.object_recognition.primitives import Primitive
 from data_generators.object_recognition.basic_geometry import Point, Dimension2D
 
-#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
@@ -19,8 +18,8 @@ class Canvas:
     def __init__(self, size: Dimension2D | np.ndarray | List | None = None, objects: List[Object] | None = None,
                  _id: int | None = None, actual_pixels: np.ndarray | None = None):
 
-        assert size is not None or actual_pixels is not None, print(f'Making a canvas with id {_id}. '
-                                                                    f'Both size and actual_pixels are None!')
+        assert not(size is None and actual_pixels is None), print(f'Making a canvas with id {_id}. '
+                                                                   f'Both size and actual_pixels are None!')
 
         if type(size) != Dimension2D and size is not None:
             self.size = Dimension2D(array=size)

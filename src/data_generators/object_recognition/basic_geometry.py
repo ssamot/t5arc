@@ -275,12 +275,12 @@ class Point:
 
 
 class Vector:
-    def __init__(self, orientation:Orientation = Orientation.Up,
+    def __init__(self, orientation: Orientation = Orientation.Up,
                  length: None | int = 0,
                  origin: Point = Point(0, 0, 0)):
         self.orientation = orientation
-        self.length = length
-        self.origin = origin
+        self.length = int(np.round(length)) if length is not None else None
+        self.origin = Point(int(np.round(origin.x)), int(np.round(origin.y)), int(np.round(origin.z)))
 
     def __repr__(self):
         return f'Vector(Orientation: {self.orientation}, Length: {self.length}, Origin Point: {self.origin})'

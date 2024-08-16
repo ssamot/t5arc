@@ -36,32 +36,29 @@ class Transformations(Enum):
             args['times'] = np.random.randint(1, 4)
         if self.name == 'shear':
             if random_obj_or_not == 'Random':
-                args['_shear'] = np.random.gamma(shape=1, scale=0.2) + 0.1  # Mainly between 0.1 and 0.75
+                args['_shear'] = int(np.random.gamma(shape=1, scale=15) + 10)  # Mainly between 1 and 75
             else:
-                args['_shear'] = np.random.gamma(shape=1, scale=0.1) + 0.05  # Mainly between 0.05 and 0.4
-                args['_shear'] = 0.4 if args['_shear'] > 0.4 else args['_shear']
-            args['_shear'] = round(args['_shear'], 2)
+                args['_shear'] = int(np.random.gamma(shape=1, scale=10) + 5)  # Mainly between 0.05 and 0.4
+                args['_shear'] = 40 if args['_shear'] > 40 else args['_shear']
         if self.name == 'mirror' or self.name == 'flip':
             args['axis'] = np.random.choice([Orientation.Up, Orientation.Down, Orientation.Left, Orientation.Right])
         if self.name == 'mirror':
             args['on_axis'] = False if np.random.rand() < 0.5 else True
         if self.name == 'randomise_colour':
             if random_obj_or_not == 'Random':
-                args['ratio'] = np.random.gamma(shape=1, scale=0.1) + 0.1  # Mainly between 0.1 and 0.4
-                args['ratio'] = 0.4 if args['ratio'] > 0.4 else args['ratio']
+                args['ratio'] = int(np.random.gamma(shape=1, scale=10) + 1)  # Mainly between 10 and 40
+                args['ratio'] = int(40) if args['ratio'] > 40 else args['ratio']
             else:
-                args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.4
-                args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
-            args['ratio'] = round(args['ratio'], 2)
+                args['ratio'] = int(np.random.gamma(shape=1, scale=5) + 2)  # Mainly between 10 and 40
+                args['ratio'] = int(15) if args['ratio'] > 15 else args['ratio']
         if self.name == 'randomise_shape':
             args['add_or_subtract'] = 'add' if np.random.random() > 0.5 else 'subtract'
             if random_obj_or_not == 'Random':
-                args['ratio'] = np.random.gamma(shape=1, scale=0.07) + 0.1  # Mainly between 0.1 and 0.3
-                args['ratio'] = 0.3 if args['ratio'] > 0.3 else args['ratio']
+                args['ratio'] = int(np.random.gamma(shape=1, scale=7) + 1)  # Mainly between 0.1 and 0.3
+                args['ratio'] = 30 if args['ratio'] > 30 else args['ratio']
             else:
-                args['ratio'] = np.random.gamma(shape=1, scale=0.05) + 0.02  # Mainly between 0.1 and 0.3
-                args['ratio'] = 0.15 if args['ratio'] > 0.15 else args['ratio']
-            args['ratio'] = round(args['ratio'], 2)
+                args['ratio'] = int(np.random.gamma(shape=1, scale=5) + 2)  # Mainly between 0.1 and 0.3
+                args['ratio'] = 15 if args['ratio'] > 15 else args['ratio']
         return args
 
 
@@ -159,7 +156,7 @@ class Object:
                 d = np.abs(sym.origin - self.canvas_pos)
                 multiplier = Point(factor, factor) if sym.orientation == Orientation.Up else Point(factor + 1, factor)
                 sym.origin.x = d.x * multiplier.x + self.canvas_pos.x if d.x > 0 else sym.origin.x
-                sym.origin.y = d.y * multiplier.y  + self.canvas_pos.y if d.y > 0 else sym.origin.y
+                sym.origin.y = d.y * multiplier.y + self.canvas_pos.y if d.y > 0 else sym.origin.y
 
                 sym.origin.x += 0.5 * (factor -1) if sym.orientation == Orientation.Up\
                     else -(factor -1) + (factor - 2) *2
@@ -208,10 +205,13 @@ class Object:
     def shear(self, _shear: np.ndarray | List):
         """
         Shears the actual pixels
-        :param _shear: Shear percentage (0 to 1)
+        :param _shear: Shear percentage (0 to 100)
         :return:
         """
+        self.transformations.append([Transformations.shear, {'_shear': _shear}])
+
         self.flip(Orientation.Left)
+        _shear = _shear / 100
         transform = skimage.transform.AffineTransform(shear=_shear)
 
         temp_pixels = self.actual_pixels[self.border_size.Down: self.dimensions.dy - self.border_size.Up,
@@ -233,8 +233,6 @@ class Object:
         self.flip(Orientation.Right)
         self.reset_dimensions()
         self.symmetries = []  # Loose any symmetries
-
-        self.transformations.append([Transformations.shear, {'_shear': _shear}])
 
     def mirror(self, axis: Orientation, on_axis=False):
         """
@@ -315,10 +313,10 @@ class Object:
 
         self.transformations.append([Transformations.flip, {'axis': axis}])
 
-    def randomise_colour(self, ratio: float = 0.1, colour: str = 'random'):
+    def randomise_colour(self, ratio: int = 10, colour: str = 'random'):
         """
         Changes the colour of ratio of the coloured pixels (picked randomly) to a new random (not already there) colour
-        :param ratio: The ratio of the coloured pixels to be recoloured
+        :param ratio: The percentage of the coloured pixels to be recoloured (0 to 100)
         :param colour: The colour to change the pixels to. 'random' means a random colour (not already on the object),
         'x' means use the colour number x
         :return:
@@ -338,7 +336,7 @@ class Object:
 
             self.transformations.append([Transformations.randomise_colour, {'ratio': ratio}])
 
-    def randomise_shape(self, add_or_subtract: str = 'add', ratio: float = 0.1, colour: str = 'common'):
+    def randomise_shape(self, add_or_subtract: str = 'add', ratio: int = 10, colour: str = 'common'):
         """
         Adds or subtracts coloured pixels to the object
         :param add_or_subtract: To add or subtract pixels. 'add' or 'subtract'
@@ -498,7 +496,7 @@ class Object:
         coloured_pos -= canv_pos
         return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
 
-    def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: float = 0.1) -> None | np.ndarray:
+    def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: int = 10) -> None | np.ndarray:
         """
         Returns the positions (in the self.actual_pixels array) of a random number (ratio percentage) of either
         coloured or background pixels
@@ -514,7 +512,7 @@ class Object:
         elif coloured_or_background == 'background':
             pixels_pos = self.get_background_pixels_positions()
 
-        num_of_new_pixels = int((pixels_pos.size // 2) * ratio)
+        num_of_new_pixels = int((pixels_pos.size // 2) * ratio / 100)
         if num_of_new_pixels < 1:
             num_of_new_pixels = 1
 
