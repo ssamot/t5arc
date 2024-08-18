@@ -33,7 +33,35 @@ from keras_nlp.src.layers.modeling.transformer_layer_utils import (  # isort:ski
 )
 
 
-@keras_nlp_export("keras_nlp.layers.TransformerDecoder")
+# Copyright 2023 The KerasNLP Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import keras
+from keras import ops
+
+from keras_nlp.src.api_export import keras_nlp_export
+from keras_nlp.src.layers.modeling.cached_multi_head_attention import (
+    CachedMultiHeadAttention,
+)
+from keras_nlp.src.utils.keras_utils import clone_initializer
+
+from keras_nlp.src.layers.modeling.transformer_layer_utils import (  # isort:skip
+    compute_causal_mask,
+    merge_padding_and_attention_mask,
+)
+
+
 class TransformerDecoder(keras.layers.Layer):
     """Transformer decoder.
 
@@ -191,37 +219,7 @@ class TransformerDecoder(keras.layers.Layer):
         # Cross attention layers are optional.
         self._cross_attention_layer = None
         if encoder_sequence_shape:
-            self._cross_attention_layer = CachedMultiHeadAttention(
-                num_heads=self.num_heads,
-                key_dim=head_dim,
-                value_dim=head_dim,
-                dropout=self.dropout,
-                kernel_initializer=clone_initializer(self.kernel_initializer),
-                bias_initializer=clone_initializer(self.bias_initializer),
-                dtype=self.dtype_policy,
-                name="cross_attention",
-            )
-            if hasattr(self._cross_attention_layer, "_build_from_signature"):
-                self._cross_attention_layer._build_from_signature(
-                    query=decoder_sequence_shape,
-                    value=encoder_sequence_shape,
-                )
-            else:
-                self._cross_attention_layer.build(
-                    query_shape=decoder_sequence_shape,
-                    value_shape=encoder_sequence_shape,
-                )
-            self._cross_attention_layer_norm = keras.layers.LayerNormalization(
-                epsilon=self.layer_norm_epsilon,
-                dtype=self.dtype_policy,
-                name="cross_attention_layer_norm",
-            )
-            self._cross_attention_layer_norm.build(decoder_sequence_shape)
-            self._cross_attention_dropout = keras.layers.Dropout(
-                rate=self.dropout,
-                dtype=self.dtype_policy,
-                name="cross_attention_dropout",
-            )
+           pass
 
         # Feedforward layers.
         self._feedforward_intermediate_dense = keras.layers.Dense(
@@ -322,42 +320,9 @@ class TransformerDecoder(keras.layers.Layer):
 
         has_encoder_sequence = encoder_sequence is not None
 
-        has_cross_attention = self._cross_attention_layer is not None
-        if not has_cross_attention and has_encoder_sequence:
-            raise ValueError(
-                "The number of call arguments to "
-                "`keras_nlp.layers.TransformerDecoder` should not change. "
-                "Use `layer(decoder_sequence, encoder_sequence)` to "
-                "build a layer with cross attention, or "
-                "`layer(decoder_sequence)` to build a layer without. "
-                "This layer has been built without cross attention, but "
-                "you are trying to call it with encoder_sequence."
-            )
-        elif has_cross_attention and not has_encoder_sequence:
-            raise ValueError(
-                "The number of call arguments to "
-                "`keras_nlp.layers.TransformerDecoder` should not change. "
-                "Use `layer(decoder_sequence, encoder_sequence)` to "
-                "build a layer with cross attention, or "
-                "`layer(decoder_sequence)` to build a layer without. "
-                "This layer has been built with cross attention, but "
-                "you did not provide encoder_sequence."
-            )
 
-        has_self_attention_cache = self_attention_cache is not None
-        has_cross_attention_cache = cross_attention_cache is not None
-        if has_cross_attention and (
-            has_self_attention_cache != has_cross_attention_cache
-        ):
-            raise ValueError(
-                "When calling `keras_nlp.layers.TransformerDecoder` with "
-                "cross-attention (with both `encoder_sequence` and "
-                "`decoder_sequence`), `self_attention_cache` and "
-                "`cross_attention_cache` should both be set or both be `None`. "
-                "One cannot be `None` while the other is not. Received: "
-                f"self_attention_cache={self_attention_cache}, "
-                f"cross_attention_cache={cross_attention_cache}."
-            )
+
+
 
         self_attention_mask = self._compute_self_attention_mask(
             decoder_sequence=decoder_sequence,
@@ -392,32 +357,10 @@ class TransformerDecoder(keras.layers.Layer):
             x = self._self_attention_layer_norm(x)
 
         # Cross attention is optional.
-        if has_cross_attention:
-            # Compute cross attention mask.
-            cross_attention_mask = merge_padding_and_attention_mask(
-                encoder_sequence, encoder_padding_mask, encoder_attention_mask
-            )
 
-            # Cross attention block.
-            residual = x
-            if self.normalize_first:
-                x = self._cross_attention_layer_norm(x)
-            attention_output = self._cross_attention_layer(
-                query=x,
-                value=encoder_sequence,
-                attention_mask=cross_attention_mask,
-                cache=cross_attention_cache,
-                cache_update_index=cross_attention_cache_update_index,
-                training=training,
-            )
-            if cross_attention_cache is None:
-                x = attention_output
-            else:
-                x, cross_attention_cache = attention_output
-            x = self._cross_attention_dropout(x, training=training)
-            x = x + residual
-            if not self.normalize_first:
-                x = self._cross_attention_layer_norm(x)
+
+        x = x + encoder_sequence
+
 
         # Feedforward block.
         residual = x
@@ -431,10 +374,7 @@ class TransformerDecoder(keras.layers.Layer):
             x = self._feedforward_layer_norm(x)
 
         if self_attention_cache is not None:
-            if has_cross_attention:
-                return (x, self_attention_cache, cross_attention_cache)
-            else:
-                return (x, self_attention_cache)
+            return (x, self_attention_cache)
         else:
             return x
 
@@ -500,8 +440,6 @@ class TransformerDecoder(keras.layers.Layer):
 
     def compute_output_shape(self, decoder_sequence_shape):
         return decoder_sequence_shape
-
-
 
 def generate_text(model, images, start_token = 4, max_len=20):
     # Initialize the input sequence with the start token
