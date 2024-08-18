@@ -9,13 +9,12 @@ from data.utils import load_data_for_generator, pad_array_with_random_position
 import keras_nlp
 from data.data_generator import CanvasDataGenerator
 import constants as consts
-
+from models.utils import SequenceAccuracy
 
 def categorical_accuracy_per_sequence(y_true, y_pred):
     return keras.ops.mean(keras.ops.min(keras.ops.equal(keras.ops.argmax(y_true, axis=-1),
                   keras.ops.argmax(y_pred, axis=-1)), axis=-1))
 
-activation = "relu"
 
 def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     total_features = input_shape[0] * input_shape[1] * input_shape[2]
@@ -26,21 +25,18 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     x = keras.layers.Embedding(input_dim=20, output_dim=2, input_length=total_features)(x)
     x = keras.layers.Flatten()(x)
 
-    n_neurons = 512
-    x = keras.layers.Dense(n_neurons, activation=activation)(x)
+    n_neurons = 128
+    x = keras.layers.Dense(n_neurons, activation='relu')(x)
     x = keras.layers.BatchNormalization()(x)
     xs = [x]
     for i in range(4):
         # skip connections
-        x_new = keras.layers.Dense(n_neurons, activation=activation)(x)
+        x_new = keras.layers.Dense(n_neurons, activation='relu')(x)
         x_new = keras.layers.BatchNormalization()(x_new)
         xs.append(x_new)
         x = keras.layers.add(xs)
 
-
-    #x = keras.layers.MaxPool2D(x)
     x = keras.layers.Flatten()(x)
-    x = keras.layers.Dense(latent_dim, activation= activation)(x)
 #    print(x.shape)
     conv_model = keras.models.Model(conv_input, x)
 
@@ -56,10 +52,10 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     #     differences.append(diff)
     #exit()
 
-    encoder_states = keras.layers.average(conv_outputs)
+    encoder_states = keras.layers.concatenate(conv_outputs)
     print(encoder_states.shape)
 
-    encoder_states = keras.layers.Dense(latent_dim, activation=activation)(encoder_states)
+    encoder_states = keras.layers.Dense(latent_dim, activation="relu")(encoder_states)
     encoder_states = keras.ops.expand_dims(encoder_states, 1)
 
     decoder_inputs = keras.layers.Input(shape=(None,))  # (batch_size, sequence_length)
@@ -67,7 +63,7 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
         decoder_inputs)
 
     lstm_out = keras_nlp.layers.TransformerDecoder(
-        intermediate_dim=latent_dim, num_heads=8,activation=activation)(dec_embedding, encoder_states)
+        intermediate_dim=latent_dim, num_heads=8)(dec_embedding, encoder_states)
 
     # lstm_out = keras.layers.LSTM(latent_dim, return_sequences=True)(dec_embedding,
     #                                                                 initial_state=[encoder_states, encoder_states])
@@ -99,7 +95,7 @@ def main(json_files, programme_files, max_token_length, output_filepath):
     max_examples = 20
 
 
-    training_generator = CanvasDataGenerator(batch_size = 20,  len = 100,
+    training_generator = CanvasDataGenerator(batch_size = 20,  len = 10,
                                              use_multiprocessing=True, workers=50, max_queue_size=1000)
 
     num_decoder_tokens = training_generator.tokenizer.num_decoder_tokens + 1
