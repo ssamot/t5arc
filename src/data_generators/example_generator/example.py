@@ -244,7 +244,6 @@ class Example:
                 obj = globals()[obj_type](**args)
 
                 for tr in obj_discr['transformations']:
-                    print(tr)
                     transform_name = Transformations(tr[0])
                     tr_args = transform_name.get_specific_parameters(tr[0], tr[1])
                     transform_method = getattr(obj, transform_name.name)

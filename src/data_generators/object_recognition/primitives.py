@@ -83,6 +83,9 @@ class Primitive(Object):
 
         self.required_dist_to_others = required_dist_to_others
 
+    def set_new_colour(self, new_colour: int):
+        self.actual_pixels[np.where(self.actual_pixels > 1)] = new_colour
+
     def json_output(self):
         args = self.__dict__.copy()
         for arg in ['border_size', '_canvas_pos', 'rotation_axis', 'number_of_coloured_pixels', 'actual_pixels',
