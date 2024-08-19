@@ -20,7 +20,7 @@ class FillHoleExample(Example):
             obj = self.create_object(obj_probs=obj_probs, max_size_of_obj=20)
             self.do_random_transformations(obj=obj, num_of_transformations=1,
                                            probs_of_transformations=transformations_probs)
-            _, n_holes = obj.detect_holes(obj.actual_pixels)
+            _, n_holes = obj.detect_holes()
             if n_holes == 0:
                 obj.create_random_hole(hole_size=np.random.randint(2, 10))
 
