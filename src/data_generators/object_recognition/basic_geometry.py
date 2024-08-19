@@ -205,26 +205,39 @@ class Point:
     def __abs__(self):
         return Point(np.abs(self.x), np.abs(self.y), np.abs(self.z))
 
-    def euclidean_dist_2d(self, other: Point) -> Vector:
+    def euclidean_dist_2d(self, other: Point) -> Vector | None:
+        """
+        Calculates the Euclidean distance on the x,y plane of this Point and another Point as long as the two Points
+        lie along one of the 8 directions defined in the Direction class.
+        :param other: The other Point
+        :return: The Vector specifying the Euclidean distance or None if the two Points do not align along a Direction
+        """
         origin = copy(self)
-        length = np.sqrt(np.power((self.x - other.x), 2) + np.power((self.y - other.y), 2))
+        length = None  # np.sqrt(np.power((self.x - other.x), 2) + np.power((self.y - other.y), 2))
         orientation = None
         if self.y == other.y:
+            length = np.abs(self.x - other.x)
             orientation = Orientation.Left if self.x > other.x else Orientation.Right
         elif self.x == other.x:
             orientation = Orientation.Up if self.y < other.y else Orientation.Down
+            length = np.abs(self.y - other.y)
         elif np.sign(self.x - other.x) == np.sign(self.y - other.y):
-            orientation = Orientation.Up_Right if self.x < other.x else Orientation.Down_Left
-            assert np.abs(self.x - other.x) == np.abs(self.y - other.y), \
-                print('Cannot create Euclidean distance Vector with Orientation other than the ones'
-                      ' allowed by the Orientation class')
+            if np.abs(self.x - other.x) == np.abs(self.y - other.y):
+                orientation = Orientation.Up_Right if self.x < other.x else Orientation.Down_Left
+                length = np.abs(self.x - other.x)
+            else:
+                orientation = None
         elif np.sign(self.x - other.x) != np.sign(self.y - other.y):
-            orientation = Orientation.Up_Left if self.x < other.x else Orientation.Down_Right
-            assert np.abs(self.x - other.x) == np.abs(self.y - other.y), \
-                print('Cannot create Euclidean distance Vector with Orientation other than the ones'
-                      ' allowed by the Orientation class')
+            if np.abs(self.x - other.x) == np.abs(self.y - other.y):
+                orientation = Orientation.Down_Right if self.x < other.x else Orientation.Up_Left
+                length = np.abs(self.x - other.x)
+            else:
+                orientation = None
 
-        return Vector(orientation=orientation, length=int(length), origin=origin)
+        if length is None:
+            return None
+        else:
+            return Vector(orientation=orientation, length=int(length), origin=origin)
 
     def to_numpy(self) -> np.ndarray:
         return np.array([self.x, self.y, self.z])
@@ -270,14 +283,14 @@ class Point:
                     if translation.orientation == Orientation.Right:
                         temp_trans = [translation.length, 0]
                     elif translation.orientation == Orientation.Left:
-                        temp_trans = [- translation.length, 0]
+                        temp_trans = [-translation.length, 0]
                     if translation.orientation == Orientation.Up_Right:
                         temp_trans = [translation.length, translation.length]
                     elif translation.orientation == Orientation.Down_Right:
                         temp_trans = [translation.length, - translation.length]
                     if translation.orientation == Orientation.Up_Left:
                         temp_trans = [- translation.length, translation.length]
-                    elif translation.orientation == Orientation.Left:
+                    elif translation.orientation == Orientation.Down_Left:
                         temp_trans = [translation.length, - translation.length]
                     translation = temp_trans
                 translation_x = int(translation[0])
@@ -318,7 +331,7 @@ class Point:
 
 
 class Vector:
-    def __init__(self, orientation: Orientation = Orientation.Up,
+    def __init__(self, orientation: Orientation | None = Orientation.Up,
                  length: None | int = 0,
                  origin: Point = Point(0, 0, 0)):
         self.orientation = orientation
