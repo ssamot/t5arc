@@ -1,9 +1,11 @@
 
+from copy import copy
 
 from data_generators.example_generator.arc_example_generator import ARCExample
 from data_generators.object_recognition.basic_geometry import Dimension2D, Point
+from dsls.our_dsl.functions import dsl_functions as dsl
 
-a = ARCExample('045e512c')
+example = ARCExample('045e512c')
 
 unique_objects = [
     {'primitive': 'Hole', 'colour': 9, 'id': 0, 'actual_pixels_id': 0,'dimensions': Dimension2D(3, 3),
@@ -90,6 +92,24 @@ unique_objects = [
      'symmetries': []},
 ]
 
-a.generate_objects_from_output(unique_objects=unique_objects)
+example.generate_objects_from_output(unique_objects=unique_objects)
 
-a.show()
+# example.show()
+
+# Solution
+
+canvas = example.input_canvases[0]
+largest_object = canvas.sort_objects_by_size(used_dim='area')[-1]
+other_objects = canvas.sort_objects_by_size(used_dim='area')[:-1]
+for oo in other_objects:
+    match_positions = largest_object.match(oo, match_shape_only=True)
+    eucl_dist = dsl.furthest(largest_object.canvas_pos, match_positions)
+
+    so = copy(largest_object)
+    for _ in range(3):
+        no = copy(so)
+        no.set_new_colour(oo.colour)
+        no.canvas_pos.transform(translation=eucl_dist)
+        canvas.add_new_object(no)
+        so = no
+
