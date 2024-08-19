@@ -47,6 +47,33 @@ class Canvas:
     def __repr__(self):
         return f'Canvas {self.id} with {len(self.objects)} Primitives'
 
+    def sort_objects_by_size(self, used_dim: str = 'area') -> List[Object]:
+        """
+        Returns a list of all the Object on Canvas sorted from largest to smallest according to the dimension used
+        :param used_dim: The dimension to use to sort the Objects. It can be 'area', 'height', 'width', 'coloured_pixels'
+        :return:
+        """
+        sorted_objects = np.array(copy(self.objects))
+        dim = []
+        for o in sorted_objects:
+            if used_dim == 'area':
+                metric = o.dimensions.dx * o.dimensions.dy
+            elif used_dim == 'height':
+                metric = o.dimensions.dy
+            elif used_dim == 'length':
+                metric = o.dimensions.dx
+            elif used_dim == 'coloured_pixels':
+                metric = len(o.get_coloured_pixels_positions())
+            dim.append(metric)
+        dim = np.array(dim)
+        sorted_indices = dim.argsort()
+        sorted_objects = sorted_objects[sorted_indices]
+
+        return sorted_objects
+
+    def group_objects_by_colour(self):
+        pass
+
     def get_coloured_pixels_positions(self) -> np.ndarray:
         """
         Returns the Union of the positions of the coloured pixels of all the objects in the self.object list
