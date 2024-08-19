@@ -74,12 +74,12 @@ unique_objects = [
      'canvases_positions': [[5, Point(10, 15, 0)], [5, Point(14, 19, 0)]], 'center_on': False,
      'transformations': [],
      'symmetries': []},
-    {'primitive': 'Diagonal', 'colour': 10, 'id': 5, 'actual_pixels_id': 15, 'dimensions': Dimension2D(2, 2),
-     'canvases_positions': [[4, Point(10, 15, 0)]],
+    {'primitive': 'Diagonal', 'colour': 7, 'id': 5, 'actual_pixels_id': 15, 'dimensions': Dimension2D(2, 2),
+     'canvases_positions': [[4, Point(11, 15, 0)]],
      'transformations': [[1, 1]],
      'symmetries': []},
     {'primitive': 'Angle', 'colour': 2, 'id': 6, 'actual_pixels_id': 16, 'dimensions': Dimension2D(2, 2),
-     'canvases_positions': [[4, Point(10, 8, 0)]],
+     'canvases_positions': [[4, Point(10, 9, 0)]],
      'transformations': [[1, 3]],
      'symmetries': []},
     {'primitive': 'Pi', 'colour': 9, 'id': 7, 'actual_pixels_id': 17, 'dimensions': Dimension2D(3, 3),
@@ -98,7 +98,9 @@ example.generate_objects_from_output(unique_objects=unique_objects)
 
 # Solution
 
-canvas = example.input_canvases[0]
+canvas = example.input_canvases[1]
+canvas = example.test_input_canvas
+
 largest_object = canvas.sort_objects_by_size(used_dim='area')[-1]
 other_objects = canvas.sort_objects_by_size(used_dim='area')[:-1]
 for oo in other_objects:
