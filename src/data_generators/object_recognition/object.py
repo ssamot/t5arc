@@ -116,7 +116,7 @@ class Object:
         return self._canvas_pos
 
     @canvas_pos.setter
-    def canvas_pos(self, new_pos):
+    def canvas_pos(self, new_pos: Point):
         move = new_pos - self._canvas_pos
         self._canvas_pos = new_pos
         for sym in self.symmetries:
@@ -395,7 +395,7 @@ class Object:
         :return: True if the process was successful (there is a hole) and False if not
         """
         pixels = copy(self.actual_pixels)
-        initial_holes, initial_n_holes = self.detect_holes(pixels)
+        initial_holes, initial_n_holes = self.detect_holes()
         connected_components, n = ndi.label(np.array(pixels > 1).astype(int))
         largest_component = 0
         for i in range(1, np.max(connected_components) + 1):
@@ -477,30 +477,6 @@ class Object:
     def superimpose(self, other: Object, z_order: int = 1):
         pass
 
-    #TODO: This can now be achieved with the setter of canvas_pos. Do I still need this function?
-    def move_along_z(self, orientation: OrientationZ | None = None, to_z: int | None = None):
-        """
-        Change the z of the canvas_pos and the bbox
-        :param orientation: Change the z by one point in the orientation given
-        :param to_z: Take the z to the to_z number
-        :return:
-        """
-        assert orientation is not None or to_z is not None, print('Either Orientation or to_z must ')
-
-        if orientation is not None:
-            self._canvas_pos.z += -1 if orientation == OrientationZ.Away else 1
-            self.bbox.top_left.z += -1 if orientation == OrientationZ.Away else 1
-            self.bbox.bottom_right.z += -1 if orientation == OrientationZ.Away else 1
-            for sym in self.symmetries:
-                sym.origin.z += -1 if orientation == OrientationZ.Away else 1
-
-        if to_z is not None:
-            self._canvas_pos.z = to_z
-            self.bbox.top_left.z = to_z
-            self.bbox.bottom_right.z = to_z
-            for sym in self.symmetries:
-                sym.origin.z = to_z
-
     def get_coloured_pixels_positions(self) -> np.ndarray:
         result = np.argwhere(self.actual_pixels > 1).astype(int)
         canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
@@ -541,14 +517,16 @@ class Object:
         else:
             return None
 
-    @staticmethod
-    def detect_holes(pixels: np.ndarray) -> Tuple[np.ndarray, int]:
+    def detect_holes(self, pixels: np.ndarray | None = None) -> Tuple[np.ndarray, int]:
         """
         Detects the presence of any holes. A hole is a spatially contiguous set of empty pixels that are fully
         surrounded by coloured pixels.
         :param pixels: The 2d array of pixels in which to detect the presence of holes.
         :return: The array marked with the holes' labels and the number of holes found
         """
+        if pixels is None:
+            pixels = copy(self.actual_pixels)
+
         connected_components, n = ndi.label(np.array(pixels == 1).astype(int))
 
         for i in np.unique(connected_components):
@@ -562,6 +540,37 @@ class Object:
         holes, n = ndi.label(connected_components)
 
         return holes, n
+
+    def match(self, other: Object, after_rotation: bool = False, match_shape_only: bool = False) -> List[Point]:
+
+        x_base_dim = self.dimensions.dx + 2 * other.dimensions.dx - 2
+        y_base_dim = self.dimensions.dy + 2 * other.dimensions.dy - 2
+        base = np.zeros((y_base_dim, x_base_dim))
+
+        x_res_dim = self.dimensions.dx + other.dimensions.dx - 1
+        y_res_dim = self.dimensions.dy + other.dimensions.dy - 1
+        result = np.zeros((y_res_dim, x_res_dim))
+
+        base[other.dimensions.dy - 1: other.dimensions.dy - 1 + self.dimensions.dy,
+        other.dimensions.dx - 1: other.dimensions.dx - 1 + self.dimensions.dx] = self.actual_pixels
+
+        for x in range(x_res_dim):
+            for y in range(y_res_dim):
+                temp = copy(base[y: other.dimensions.dy + y, x: other.dimensions.dx + x])
+                other_pixels = copy(other.actual_pixels)
+                if match_shape_only:
+                    temp[np.where(temp == 1)] = 0
+                    temp[np.where(temp > 1)] = 1
+                    other_pixels[np.where(other_pixels == 1)] = 0
+                    other_pixels[np.where(other_pixels > 1)] = 1
+                comp = (temp == other_pixels).astype(int)
+                result[y, x] = comp.sum()
+        best_relative_positions = np.argwhere(result == np.amax(result))
+        best_positions = [Point(x=other.dimensions.dx - brp[1] - 1 + other.canvas_pos.x,
+                                y=other.dimensions.dy - brp[0] - 1 + other.canvas_pos.y)
+                          for brp in best_relative_positions]
+
+        return best_positions
 
     def show(self, symmetries_on=True, show_holes=False):
         """
