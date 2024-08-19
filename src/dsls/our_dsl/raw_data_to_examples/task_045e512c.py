@@ -101,6 +101,7 @@ example.generate_objects_from_output(unique_objects=unique_objects)
 canvas = example.input_canvases[1]
 canvas = example.test_input_canvas
 
+canvas.show()
 largest_object = canvas.sort_objects_by_size(used_dim='area')[-1]
 other_objects = canvas.sort_objects_by_size(used_dim='area')[:-1]
 for oo in other_objects:
@@ -115,3 +116,4 @@ for oo in other_objects:
         canvas.add_new_object(no)
         so = no
 
+canvas.show()
