@@ -205,6 +205,27 @@ class Point:
     def __abs__(self):
         return Point(np.abs(self.x), np.abs(self.y), np.abs(self.z))
 
+    def euclidean_dist_2d(self, other: Point) -> Vector:
+        origin = copy(self)
+        length = np.sqrt(np.power((self.x - other.x), 2) + np.power((self.y - other.y), 2))
+        orientation = None
+        if self.y == other.y:
+            orientation = Orientation.Left if self.x > other.x else Orientation.Right
+        elif self.x == other.x:
+            orientation = Orientation.Up if self.y < other.y else Orientation.Down
+        elif np.sign(self.x - other.x) == np.sign(self.y - other.y):
+            orientation = Orientation.Up_Right if self.x < other.x else Orientation.Down_Left
+            assert np.abs(self.x - other.x) == np.abs(self.y - other.y), \
+                print('Cannot create Euclidean distance Vector with Orientation other than the ones'
+                      ' allowed by the Orientation class')
+        elif np.sign(self.x - other.x) != np.sign(self.y - other.y):
+            orientation = Orientation.Up_Left if self.x < other.x else Orientation.Down_Right
+            assert np.abs(self.x - other.x) == np.abs(self.y - other.y), \
+                print('Cannot create Euclidean distance Vector with Orientation other than the ones'
+                      ' allowed by the Orientation class')
+
+        return Vector(orientation=orientation, length=int(length), origin=origin)
+
     def to_numpy(self) -> np.ndarray:
         return np.array([self.x, self.y, self.z])
 
@@ -218,7 +239,7 @@ class Point:
     def transform(self, affine_matrix: np.ndarray | None = None,
                   rotation: float = 0,
                   shear: List | np.ndarray | Point | None = None,
-                  translation: List | np.ndarray | Point | None = None,
+                  translation: List | np.ndarray | Point | Vector | None = None,
                   scale: List | np.ndarray | Point | None = None):
 
         assert affine_matrix is None or np.all([rotation == 0, shear is None, translation is None, scale is None])
@@ -240,8 +261,27 @@ class Point:
             if translation is not None:
                 if type(translation) == Point:
                     translation = translation.to_numpy()
-                translation_x = translation[0] if type(translation) != Point else translation.x
-                translation_y = translation[1] if type(translation) != Point else translation.y
+                if type(translation) == Vector:
+                    temp_trans = []
+                    if translation.orientation == Orientation.Up:
+                        temp_trans = [0, translation.length]
+                    elif translation.orientation == Orientation.Down:
+                        temp_trans = [0, - translation.length]
+                    if translation.orientation == Orientation.Right:
+                        temp_trans = [translation.length, 0]
+                    elif translation.orientation == Orientation.Left:
+                        temp_trans = [- translation.length, 0]
+                    if translation.orientation == Orientation.Up_Right:
+                        temp_trans = [translation.length, translation.length]
+                    elif translation.orientation == Orientation.Down_Right:
+                        temp_trans = [translation.length, - translation.length]
+                    if translation.orientation == Orientation.Up_Left:
+                        temp_trans = [- translation.length, translation.length]
+                    elif translation.orientation == Orientation.Left:
+                        temp_trans = [translation.length, - translation.length]
+                    translation = temp_trans
+                translation_x = int(translation[0])
+                translation_y = int(translation[1])
             else:
                 translation_x = 0
                 translation_y = 0
@@ -269,6 +309,9 @@ class Point:
 
             self.y = scale_x * x * (np.sin(rotation) - np.tan(shear_y) * np.cos(rotation)) - \
                      scale_y * y * (np.tan(shear_x) * np.sin(rotation) - np.cos(rotation)) + translation_y
+
+            self.x = int(self.x)
+            self.y = int(self.y)
 
     def copy(self) -> Point:
         return Point(self.x, self.y, self.z)
