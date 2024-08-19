@@ -50,7 +50,7 @@ class CanvasDataGenerator(keras.utils.PyDataset):
             e = RandomObjectsExample()
             e.randomly_populate_canvases()
             arc_style_input = e.create_canvas_arrays_input()
-            unique_objects, actual_pixels_array, positions_of_same_objects = e.create_output()
+            unique_objects, actual_pixels_array = e.create_output()
             json_data_list.append(arc_style_input)
             objects.append(str(unique_objects).replace(" ", ""))
             object_pixels.append(actual_pixels_array)
@@ -69,12 +69,13 @@ class CanvasDataGenerator(keras.utils.PyDataset):
         )
 
         batch_targets = tokenized_inputs.input_ids
-        batch_inputs = np.transpose(batch_inputs, (1, 0, 2, 3, 4))
+        #batch_inputs = np.transpose(batch_inputs, (1, 0, 2, 3, 4))
 
         # print(batch_inputs.shape)
         # print(batch_targets.shape)
+        # exit()
 
-        batch_inputs = [np.array(b, dtype="int") for b in batch_inputs]
+       # batch_inputs = [np.array(b, dtype="int") for b in batch_inputs]
         # for b in batch_inputs:
         #     print(np.max(b), np.min(b))
         # exit()
@@ -91,4 +92,4 @@ class CanvasDataGenerator(keras.utils.PyDataset):
         targets_one_hot_encoded = one_hot_encoded[:, 1:, :]
         targets_inputs = batch_targets[:, :-1]
 
-        return batch_inputs + [targets_inputs], targets_one_hot_encoded
+        return  [batch_inputs,targets_inputs], targets_one_hot_encoded

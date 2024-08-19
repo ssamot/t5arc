@@ -398,4 +398,6 @@ class Example:
                 index += 3
             plt.tight_layout()
 
+        plt.show()
+
 

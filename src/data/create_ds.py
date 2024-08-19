@@ -21,25 +21,42 @@ def main(output_filepath, repetitions):
     objects = []
     object_pixels = []
 
-
+    model_max_length = 20000000
     for _ in tqdm.tqdm(range(repetitions)):
         # Create an Example
         e = RandomObjectsExample()
         e.randomly_populate_canvases()
         arc_style_input = e.create_canvas_arrays_input()
-        unique_objects, actual_pixels_array, positions_of_same_objects = e.create_output()
+        unique_objects, actual_pixels_array = e.create_output()
         json_data_list.append(arc_style_input)
-        print(unique_objects)
-        exit()
-        objects.append(str(unique_objects).replace(" ", ""))
+
+        clean_object = str(unique_objects).replace(" ", "")
+        #tokenizer = CharacterTokenizer(token_list, model_max_length)
+
+        # try:
+        #     tokenizer(
+        #         [clean_object],
+        #         padding="longest",
+        #         truncation=True,
+        #         return_tensors="np",
+        #     )
+        # except Exception:
+        #     print("======")
+        #     print(clean_object)
+        #     print(tokenizer._tokenize(clean_object))
+        #     print(e)
+
+
+
+        objects.append(clean_object)
         object_pixels.append(actual_pixels_array)
 
     train, test = load_data(json_data_list)
 
 
-    #print(train.shape)
-    #print(objects[-1])
-    model_max_length = 20000000
+    print(train.shape)
+    ##print(objects[-1])
+
 
     tokenizer = CharacterTokenizer(token_list, model_max_length)
     tokenized_inputs = tokenizer(
@@ -52,6 +69,7 @@ def main(output_filepath, repetitions):
     object_ids = tokenized_inputs.input_ids
     print(object_ids.shape)
     print(train.shape)
+    #exit()
 
     hex = secrets.token_hex(nbytes=16)
 

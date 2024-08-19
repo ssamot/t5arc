@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 
 path = dirname(relpath(__file__))
-path = r'E:\Code\Competitions\ARC2024\t5arc\src'
+path = '/Users/ssamot/projects/t5arc/src/'
 raw_data_path = join(path, 'data', 'raw_data')
 
 train_challenges_path = join(raw_data_path, 'arc-agi_training_challenges.json')
