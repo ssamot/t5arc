@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 from data import load_data as ld
 from data_generators.example_generator.example import Example
-from data_generators.object_recognition.basic_geometry import Dimension2D
+from data_generators.object_recognition.basic_geometry import Dimension2D, Point
 from data_generators.object_recognition.canvas import Canvas
 
 
@@ -65,3 +65,24 @@ class ARCExample(Example):
                                             _id=2 * self.number_of_io_pairs)
             self.test_output_canvas = Canvas(size=Dimension2D(test_output_data.shape[1], test_output_data.shape[0]),
                                              _id=2 * self.number_of_io_pairs + 1)
+
+    def get_object_pixels_from_data(self, canvas_id: int, canvas_pos: Point, size: Dimension2D):
+
+        group = 'train'
+        from_in_or_out = 'input'
+        if canvas_id % 2 == 1:
+            from_in_or_out = 'output'
+        from_canvas = canvas_id // 2
+        if canvas_id == self.number_of_io_pairs * 2:
+            group = 'test'
+            from_canvas = 0
+            from_in_or_out = 'input'
+
+        actual_pixels = np.flipud(self.task_data[group][from_canvas][from_in_or_out])\
+            [canvas_pos.y:canvas_pos.y + size.dy, canvas_pos.x:canvas_pos.x + size.dx] + 1
+
+        return actual_pixels
+
+    def reset_object_colours(self):
+        for o in self.objects:
+            o.set_colour_to_most_common()

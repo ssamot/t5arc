@@ -4,31 +4,29 @@ from typing import List
 from data_generators.object_recognition.basic_geometry import Point, Vector, Dimension2D
 
 
-def furthest(origin: Point, targets: List[Point]):
+def furthest(origin: Point, targets: List[Point]) -> Vector | None:
     result = targets[0]
-    if origin.euclidean_dist_2d(origin) is not None:
-        for t in targets[1:]:
-            if origin.euclidean_dist_2d(result) is None:
+    for t in targets[1:]:
+        if origin.manhattan_direction(result) is None:
+            result = t
+        elif origin.manhattan_direction(t) is not None:
+            if origin.manhattan_direction(t).length > origin.manhattan_direction(result).length:
                 result = t
-            elif origin.euclidean_dist_2d(t) is not None:
-                if origin.euclidean_dist_2d(t).length > origin.euclidean_dist_2d(result).length:
-                    result = t
-    else:
-        return None
 
-    return origin.euclidean_dist_2d(result)
+    return origin.manhattan_direction(result)
 
 
 def closest(origin: Point, targets: List[Point]):
     result = targets[0]
-    if origin.euclidean_dist_2d(origin) is not None:
-        for t in targets[1:]:
-            if origin.euclidean_dist_2d(result) is None:
+    for t in targets[1:]:
+        if origin.manhattan_direction(result) is None:
+            result = t
+        elif origin.manhattan_direction(t) is not None:
+            if origin.manhattan_direction(t).length < origin.manhattan_direction(result).length:
                 result = t
-            elif origin.euclidean_dist_2d(t) is not None:
-                if origin.euclidean_dist_2d(t).length < origin.euclidean_dist_2d(result).length:
-                    result = t
-    else:
-        return None
 
-    return origin.euclidean_dist_2d(result)
+    return origin.manhattan_direction(result)
+
+
+def loop():
+    pass

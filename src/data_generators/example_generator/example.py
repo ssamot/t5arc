@@ -211,13 +211,11 @@ class Example:
             obj_type = obj_discr['primitive']
 
             args = {}
-            if obj_type in ['InverseCross', 'Steps', 'Pyramid']:
+            if obj_type in ['InverseCross', 'Steps', 'Pyramid', 'Diagonal']:
                 args['height'] = obj_discr['dimensions'].dy
                 if obj_type == 'InverseCross':
                     args['fill_colour'] = obj_discr['fill_colour']
                     args['fill_height'] = obj_discr['fill_height']
-            elif obj_type == 'Diagonal':
-                args['length'] = obj_discr['dimensions'].dx
             elif obj_type in ['Tie', 'Bolt', 'Fish', 'Dot']:
                 pass
             else:
@@ -251,6 +249,8 @@ class Example:
 
                 if 'actual_pixels' in obj_discr:
                     obj.actual_pixels = obj_discr['actual_pixels']
+                    # [obj.border_size.Down: obj.size.dy + obj.border_size.Down,
+                    #                            obj.border_size.Left: obj.size.dx + obj.border_size.Left]
 
                 self.objects.append(obj)
                 canvas.add_new_object(obj)
