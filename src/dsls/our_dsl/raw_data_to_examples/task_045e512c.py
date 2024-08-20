@@ -94,14 +94,18 @@ unique_objects = [
 
 example.generate_objects_from_output(unique_objects=unique_objects)
 
-# example.show()
+task_index = 1  # number or 'input'
+if type(task_index) == int:
+    canvas = example.input_canvases[task_index]
+    canvas = copy(canvas)
+    example.output_canvases[task_index] = canvas
+else:
+    canvas = example.test_input_canvas
+    canvas = copy(canvas)
+    example.test_output_canvas = canvas
 
 # Solution
 
-canvas = example.input_canvases[1]
-canvas = example.test_input_canvas
-
-canvas.show()
 largest_object = canvas.sort_objects_by_size(used_dim='area')[-1]
 other_objects = canvas.sort_objects_by_size(used_dim='area')[:-1]
 for oo in other_objects:
@@ -115,5 +119,3 @@ for oo in other_objects:
         no.canvas_pos.transform(translation=eucl_dist)
         canvas.add_new_object(no)
         so = no
-
-canvas.show()
