@@ -491,6 +491,15 @@ class Object:
         coloured_pos -= canv_pos
         return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
 
+    def set_colour_to_most_common(self):
+        colours = self.actual_pixels[np.where(self.actual_pixels > 1)]
+        self.colour = int(np.median(colours))
+
+    def negative_colour(self):
+        temp = copy(self.actual_pixels)
+        self.actual_pixels = np.ones(self.actual_pixels.shape)
+        self.actual_pixels[np.where(temp == 1)] = self.colour
+
     def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: int = 10) -> None | np.ndarray:
         """
         Returns the positions (in the self.actual_pixels array) of a random number (ratio percentage) of either
@@ -541,33 +550,59 @@ class Object:
 
         return holes, n
 
-    def match(self, other: Object, after_rotation: bool = False, match_shape_only: bool = False) -> List[Point]:
+    def match(self, other: Object, after_rotation: bool = False, match_shape_only: bool = False,
+              border: Surround = Surround(0, 0, 0, 0)) -> List[Point]:
+        """
+        Calculates the canvas positions that this Object should be moved to, to generate the best match
+        (cross - correlation) with the other Object. Multiple best matches generate multiple positions.
+        :param other: The other Object
+        :param after_rotation: Also rotates this Object to check for matches # TODO Not implemented yet!
+        :param match_shape_only: Cares only about the shape of the Objects and ignores the colours
+        :return: The List of Points that this Object could have as canvas_pos that would generate the largest overlap
+        with the other Object.
+        """
 
-        x_base_dim = self.dimensions.dx + 2 * other.dimensions.dx - 2
-        y_base_dim = self.dimensions.dy + 2 * other.dimensions.dy - 2
-        base = np.zeros((y_base_dim, x_base_dim))
+        def match_for_a_specific_rotation(rot: int):
 
-        x_res_dim = self.dimensions.dx + other.dimensions.dx - 1
-        y_res_dim = self.dimensions.dy + other.dimensions.dy - 1
-        result = np.zeros((y_res_dim, x_res_dim))
+            x_base_dim = self.dimensions.dx + 2 * other.dimensions.dx - 2
+            y_base_dim = self.dimensions.dy + 2 * other.dimensions.dy - 2
+            base = np.zeros((y_base_dim, x_base_dim))
 
-        base[other.dimensions.dy - 1: other.dimensions.dy - 1 + self.dimensions.dy,
-        other.dimensions.dx - 1: other.dimensions.dx - 1 + self.dimensions.dx] = self.actual_pixels
+            x_res_dim = self.dimensions.dx + other.dimensions.dx - 1
+            y_res_dim = self.dimensions.dy + other.dimensions.dy - 1
+            result = np.zeros((y_res_dim, x_res_dim))
 
-        for x in range(x_res_dim):
-            for y in range(y_res_dim):
-                temp = copy(base[y: other.dimensions.dy + y, x: other.dimensions.dx + x])
-                other_pixels = copy(other.actual_pixels)
-                if match_shape_only:
-                    temp[np.where(temp == 1)] = 0
-                    temp[np.where(temp > 1)] = 1
-                    other_pixels[np.where(other_pixels == 1)] = 0
-                    other_pixels[np.where(other_pixels > 1)] = 1
-                comp = (temp == other_pixels).astype(int)
-                result[y, x] = comp.sum()
+            base_rotated_object = copy(self)
+            base_rotated_object.rotate(rot)
+
+            base[other.dimensions.dy - 1: other.dimensions.dy - 1 + self.dimensions.dy,
+                 other.dimensions.dx - 1: other.dimensions.dx - 1 + self.dimensions.dx] = \
+                base_rotated_object.actual_pixels
+
+            for x in range(x_res_dim):
+                for y in range(y_res_dim):
+                    temp = copy(base[y: other.dimensions.dy + y, x: other.dimensions.dx + x])
+                    other_pixels = copy(other.actual_pixels)
+                    if match_shape_only:
+                        temp[np.where(temp == 1)] = 0
+                        temp[np.where(temp > 1)] = 1
+                        other_pixels[np.where(other_pixels == 1)] = 0
+                        other_pixels[np.where(other_pixels > 1)] = 1
+                    comp = (temp == other_pixels).astype(int)
+                    result[y, x] = comp.sum()
+            return result
+
+        if not after_rotation:
+            result = [match_for_a_specific_rotation(0)]
+        else:
+            result = []
+            for rot in range(4):
+                result.append(match_for_a_specific_rotation(rot))
+
         best_relative_positions = np.argwhere(result == np.amax(result))
-        best_positions = [Point(x=other.dimensions.dx - brp[1] - 1 + other.canvas_pos.x,
-                                y=other.dimensions.dy - brp[0] - 1 + other.canvas_pos.y)
+        best_positions = [[Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x,
+                                 y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y),
+                                 brp[0]]
                           for brp in best_relative_positions]
 
         return best_positions
