@@ -9,7 +9,7 @@ import numpy as np
 import constants as const
 from typing import List
 from enum import Enum
-from data_generators.object_recognition.object import Object
+from data_generators.object_recognition.object import Object, Transformations
 from data_generators.object_recognition.basic_geometry import Point, Bbox, Dimension2D, Orientation, Surround, Vector
 
 #np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
@@ -85,6 +85,10 @@ class Primitive(Object):
 
     def set_new_colour(self, new_colour: int):
         self.actual_pixels[np.where(self.actual_pixels > 1)] = new_colour
+        self.colour = new_colour
+
+    def set_new_size(self, new_size: Dimension2D):
+        self.size = new_size
 
     def json_output(self):
         args = self.__dict__.copy()
@@ -124,20 +128,15 @@ class Primitive(Object):
     def get_str_type(self):
         return str(type(self)).split('.')[-1].split("'")[0]
 
-    def print_border_size(self):
-        """
-        A pretty print of the border size
-        :return:
-        """
-        print(f'Border sizes: Up = {self.border_size:.Up}, Down = {self.border_size:.Down}, Right = {self.border_size[2]}, ' \
-                'Down = {self.border_size[2]}')
-
     def generate_actual_pixels(self, array: np.ndarray | int):
         """
         Embeds the array into the objects actual_pixels
         :param array:
         :return:
         """
+
+        self.size = Dimension2D(array.shape[1], array.shape[0])
+        self.dimensions = self.size
         background_size = np.array([self.border_size.Up + self.size.dy + self.border_size.Down,
                                     self.border_size.Left + self.size.dx + self.border_size.Right])
         self.actual_pixels = np.ones(background_size)
@@ -177,7 +176,8 @@ class Primitive(Object):
     def __copy__(self):
         args = self.__dict__.copy()
         for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'actual_pixels_id', 'rotation_axis',
-                    'dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox', '_holes', '_center_on']:
+                    'dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox', '_holes',
+                    '_center_on']:
             args.pop(arg, None)
         args['_id'] = self.id
         args['actual_pixels_id'] = self.actual_pixels_id
@@ -242,7 +242,8 @@ class Parallelogram(Primitive):
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
-        self.generate_actual_pixels(array=self.colour)
+        array = np.ones(self.size.to_numpy()) * self.colour
+        self.generate_actual_pixels(array=array)
 
         Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
@@ -304,7 +305,8 @@ class Hole(Primitive):
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
-        self.generate_actual_pixels(array=self.colour)
+        array = np.ones(self.size.to_numpy()) * self.colour
+        self.generate_actual_pixels(array=array)
 
         th_up = thickness.Up
         th_down = thickness.Down
@@ -443,7 +445,7 @@ class Dot(Primitive):
         Primitive.__init__(self, size=Dimension2D(1, 1), border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
-        self.generate_actual_pixels(array=self.colour)
+        self.generate_actual_pixels(array=np.array([[self.colour]]))
 
         Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
@@ -482,32 +484,26 @@ class Angle(Primitive):
 
 
 class Diagonal(Primitive):
-    def __init__(self, length: int, border_size: Surround = Surround(0, 0, 0, 0),
+    def __init__(self, height: int, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None,
                  required_dist_to_others: Surround = Surround(0, 0, 0, 0),
                  _id: None | int = None, actual_pixels_id: None | int = None, canvas_id : None | int = None):
         """
         A Diagonal line
-        :param length: The number of pixels
+        :param height: The number of pixels
         :param border_size: The [Up, Down, Left, Right] black pixels surrounding the Diagonal Line
         :param canvas_pos: The position on the canvas
         :param colour: The Diagonal Line's colour
         :param _id: The id of the object
         """
 
-        self.length = length
-        size = Dimension2D(length, length)
+        self.height = height
+        size = Dimension2D(height, height)
 
-        Primitive.__init__(self, size=size, border_size=border_size,
-                           required_dist_to_others=required_dist_to_others, colour=colour)
+        super().__init__(size=size, border_size=border_size,
+                         required_dist_to_others=required_dist_to_others, colour=colour)
 
-        diagonal = np.ones((length, length))
-        for y in range(self.size.dy):
-            for x in range(self.size.dx):
-                if x == y:
-                    diagonal[y, x] = self.colour
-
-        diagonal = np.array(diagonal)
+        diagonal = self.create_diagonal_pixels(height)
 
         self.generate_actual_pixels(array=diagonal)
 
@@ -519,6 +515,36 @@ class Diagonal(Primitive):
         sym_origin = Point(canvas_pos.x + border_size[2] + length, canvas_pos.y + border_size:.Down)
         self.symmetries.append(Vector(orientation=Orientation.Up_Left, length=length, origin=sym_origin))
         '''
+
+    def create_diagonal_pixels(self, height) -> np.ndarray:
+        diagonal = np.ones((height, height))
+        self.size = Dimension2D(height, height)
+        for y in range(self.size.dy):
+            for x in range(self.size.dx):
+                if x == y:
+                    diagonal[y, x] = self.colour
+
+        diagonal = np.array(diagonal)
+
+        return diagonal
+
+    def change_height(self, by: Vector):
+        new_canvas_pos = copy(self.canvas_pos) if by.orientation == Orientation.Up_Right \
+            else copy(self.canvas_pos) - by.length
+        new_height = self.height + by.length
+
+        self.canvas_pos = new_canvas_pos
+
+        new_pixels = self.create_diagonal_pixels(new_height)
+        self.generate_actual_pixels(array=new_pixels)
+        self.reset_dimensions()
+
+        transformations = copy(self.transformations)
+        for tr in transformations:
+            tranformation = tr[0]
+            tr_args = tr[1]
+            transform_method = getattr(self, tranformation.name)
+            transform_method(**tr_args)
 
 
 class Steps(Primitive):
