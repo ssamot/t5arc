@@ -47,6 +47,12 @@ class Canvas:
     def __repr__(self):
         return f'Canvas {self.id} with {len(self.objects)} Primitives'
 
+    def __copy__(self):
+        new_canvas = Canvas(size=self.size, _id=None)
+        for o in self.objects:
+            new_canvas.add_new_object(copy(o))
+        return new_canvas
+
     def sort_objects_by_size(self, used_dim: str = 'area') -> List[Object]:
         """
         Returns a list of all the Object on Canvas sorted from largest to smallest according to the dimension used
@@ -115,7 +121,7 @@ class Canvas:
         """
         self.actual_pixels = np.ndarray.copy(self.background_pixels)
 
-        self.objects = sorted(self.objects, key=lambda obj: obj._canvas_pos.z)
+        self.objects = sorted(self.objects, key=lambda obj: obj.canvas_pos.z)
 
         for i, obj in enumerate(self.objects):
             xmin = 0
@@ -151,8 +157,13 @@ class Canvas:
             ymin = int(ymin)
             ymax = int(ymax)
 
-            self.actual_pixels[ymin_canv: ymax_canv, xmin_canv: xmax_canv] = \
-                obj.actual_pixels[ymin:ymax, xmin:xmax]
+            # The following will add to the canvas only the object's pixels that are not 1
+            bbox_to_embed = copy(obj.actual_pixels[ymin:ymax, xmin:xmax])
+            bbox_to_embed_in = copy(self.actual_pixels[ymin_canv: ymax_canv, xmin_canv: xmax_canv])
+            bbox_to_embed_in[np.where(bbox_to_embed > 1)] = bbox_to_embed[np.where(bbox_to_embed > 1)]
+            self.actual_pixels[ymin_canv: ymax_canv, xmin_canv: xmax_canv] = bbox_to_embed_in
+            #self.actual_pixels[ymin_canv: ymax_canv, xmin_canv: xmax_canv] = \
+            #    obj.actual_pixels[ymin:ymax, xmin:xmax]
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
 
     def add_new_object(self, obj: Object):
