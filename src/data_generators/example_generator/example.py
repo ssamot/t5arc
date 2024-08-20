@@ -249,8 +249,6 @@ class Example:
 
                 if 'actual_pixels' in obj_discr:
                     obj.actual_pixels = obj_discr['actual_pixels']
-                    # [obj.border_size.Down: obj.size.dy + obj.border_size.Down,
-                    #                            obj.border_size.Left: obj.size.dx + obj.border_size.Left]
 
                 self.objects.append(obj)
                 canvas.add_new_object(obj)
