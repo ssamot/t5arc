@@ -3,7 +3,8 @@
 from copy import copy
 import numpy as np
 from data_generators.example_generator.arc_example_generator import ARCExample
-from data_generators.object_recognition.basic_geometry import Dimension2D, Point
+from data_generators.object_recognition.basic_geometry import Dimension2D, Point, Surround
+from data_generators.object_recognition.canvas import Canvas
 from dsls.our_dsl.functions import dsl_functions as dsl
 
 example = ARCExample('97a05b5b')
@@ -35,7 +36,7 @@ unique_objects = [
      'transformations': [],
      'symmetries': []},
     {'primitive': 'Random', 'colour': 1, 'id': 5, 'actual_pixels_id': 5, 'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[0, Point(13, 19, 0)]], 
+     'canvases_positions': [[0, Point(13, 19, 0)]],
      'actual_pixels': example.get_object_pixels_from_data(0, Point(13, 19, 0), Dimension2D(3, 3)),
      'transformations': [],
      'symmetries': []},
@@ -64,23 +65,63 @@ unique_objects = [
      'actual_pixels': example.get_object_pixels_from_data(4, Point(5, 12, 0), Dimension2D(3, 3)),
      'transformations': [],
      'symmetries': []},
+    {'primitive': 'Random', 'colour': 3, 'id': 11, 'actual_pixels_id': 11, 'dimensions': Dimension2D(12, 8),
+     'canvases_positions': [[6, Point(2, 10, 0)]],
+     'actual_pixels': example.get_object_pixels_from_data(6, Point(2, 10, 0), Dimension2D(12, 8)),
+     'transformations': [],
+     'symmetries': []},
+    {'primitive': 'Random', 'colour': 1, 'id': 12, 'actual_pixels_id': 12, 'dimensions': Dimension2D(3, 3),
+     'canvases_positions': [[6, Point(1, 5, 0)]],
+     'actual_pixels': example.get_object_pixels_from_data(6, Point(1, 5, 0), Dimension2D(3, 3)),
+     'transformations': [],
+     'symmetries': []},
+    {'primitive': 'Random', 'colour': 1, 'id': 13, 'actual_pixels_id': 13, 'dimensions': Dimension2D(3, 3),
+     'canvases_positions': [[6, Point(3, 0, 0)]],
+     'actual_pixels': example.get_object_pixels_from_data(6, Point(3, 0, 0), Dimension2D(3, 3)),
+     'transformations': [],
+     'symmetries': []},
+    {'primitive': 'Random', 'colour': 1, 'id': 12, 'actual_pixels_id': 12, 'dimensions': Dimension2D(3, 3),
+     'canvases_positions': [[6, Point(8, 5, 0)]],
+     'actual_pixels': example.get_object_pixels_from_data(6, Point(8, 5, 0), Dimension2D(3, 3)),
+     'transformations': [],
+     'symmetries': []},
+    {'primitive': 'Random', 'colour': 1, 'id': 12, 'actual_pixels_id': 12, 'dimensions': Dimension2D(3, 3),
+     'canvases_positions': [[6, Point(11, 1, 0)]],
+     'actual_pixels': example.get_object_pixels_from_data(6, Point(11, 1, 0), Dimension2D(3, 3)),
+     'transformations': [],
+     'symmetries': []},
 ]
 
 
 example.generate_objects_from_output(unique_objects=unique_objects)
 example.reset_object_colours()
 
-example.show()
+#example.show()
 
+canvas_in = example.input_canvases[1]
+canvas_in = example.test_input_canvas
 
-example.input_canvases[0].show()
-o = example.objects[0]
-n = copy(o)
-n.negative_colour()
-n.show()
+# Solution
 
-oo = example.objects[1]
-o3 = copy(oo)
-o3.actual_pixels[np.where(o3.actual_pixels != o.colour)] = 1
+largest_object = canvas_in.sort_objects_by_size(used_dim='area')[-1]
+other_objects = canvas_in.sort_objects_by_size(used_dim='area')[:-1]
+neg = copy(largest_object)
+neg.negative_colour()
 
-a = o3.match(n, after_rotation=True)
+canvas_out = Canvas(size=largest_object.size)
+new_lo = copy(largest_object)
+new_lo.canvas_pos = Point(0, 0, -1)
+canvas_out.add_new_object(new_lo)
+
+for oo in other_objects:
+    o3 = copy(oo)
+    o3.actual_pixels[np.where(o3.actual_pixels != largest_object.colour)] = 1
+
+    match_positions = o3.match(neg, after_rotation=True, border=Surround(1, 1, 1, 1))[0]
+
+    new = copy(oo)
+    new.rotate(match_positions[1])
+    new.canvas_pos = match_positions[0] - largest_object.canvas_pos
+    canvas_out.add_new_object(new)
+
+canvas_out.show()

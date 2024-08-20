@@ -564,20 +564,26 @@ class Object:
 
         def match_for_a_specific_rotation(rot: int):
 
-            x_base_dim = self.dimensions.dx + 2 * other.dimensions.dx - 2
-            y_base_dim = self.dimensions.dy + 2 * other.dimensions.dy - 2
+            self_dimensions = Dimension2D(self.dimensions.dx + border.Left + border.Right,
+                                          self.dimensions.dy + border.Up + border.Down)
+
+
+            x_base_dim = self_dimensions.dx + 2 * other.dimensions.dx - 2
+            y_base_dim = self_dimensions.dy + 2 * other.dimensions.dy - 2
             base = np.zeros((y_base_dim, x_base_dim))
 
-            x_res_dim = self.dimensions.dx + other.dimensions.dx - 1
-            y_res_dim = self.dimensions.dy + other.dimensions.dy - 1
+            x_res_dim = self_dimensions.dx + other.dimensions.dx - 1
+            y_res_dim = self_dimensions.dy + other.dimensions.dy - 1
             result = np.zeros((y_res_dim, x_res_dim))
 
             base_rotated_object = copy(self)
             base_rotated_object.rotate(rot)
 
-            base[other.dimensions.dy - 1: other.dimensions.dy - 1 + self.dimensions.dy,
-                 other.dimensions.dx - 1: other.dimensions.dx - 1 + self.dimensions.dx] = \
-                base_rotated_object.actual_pixels
+            base_rotated_pixels = np.ones((self_dimensions.dx, self_dimensions.dy))
+            base_rotated_pixels[border.Down: self_dimensions.dy - border.Up,
+                                border.Left: self_dimensions.dx - border.Right] = base_rotated_object.actual_pixels
+            base[other.dimensions.dy - 1: other.dimensions.dy - 1 + self_dimensions.dy,
+                 other.dimensions.dx - 1: other.dimensions.dx - 1 + self_dimensions.dx] = base_rotated_pixels
 
             for x in range(x_res_dim):
                 for y in range(y_res_dim):
@@ -600,8 +606,8 @@ class Object:
                 result.append(match_for_a_specific_rotation(rot))
 
         best_relative_positions = np.argwhere(result == np.amax(result))
-        best_positions = [[Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x,
-                                 y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y),
+        best_positions = [[Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x + border.Left,
+                                 y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y + border.Down),
                                  brp[0]]
                           for brp in best_relative_positions]
 
