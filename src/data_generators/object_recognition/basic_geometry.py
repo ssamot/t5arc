@@ -205,15 +205,19 @@ class Point:
     def __abs__(self):
         return Point(np.abs(self.x), np.abs(self.y), np.abs(self.z))
 
-    def euclidean_dist_2d(self, other: Point) -> Vector | None:
+    def manhattan_distance(self, other: Point) -> int:
+        return np.abs(self.x - other.x) + np.abs(self.y - other.y)
+
+    def manhattan_direction(self, other: Point) -> Vector | None:
         """
-        Calculates the Euclidean distance on the x,y plane of this Point and another Point as long as the two Points
-        lie along one of the 8 directions defined in the Direction class.
+        Calculates the Manhattan distance on the x,y plane of this Point and another Point as long as the two Points
+        lie along one of the 8 directions defined in the Direction class and return the Vector that defines this
+        distance.
         :param other: The other Point
-        :return: The Vector specifying the Euclidean distance or None if the two Points do not align along a Direction
+        :return: The Vector specifying the Manhattan distance or None if the two Points do not align along a Direction
         """
         origin = copy(self)
-        length = None  # np.sqrt(np.power((self.x - other.x), 2) + np.power((self.y - other.y), 2))
+        length = None
         orientation = None
         if self.y == other.y:
             length = np.abs(self.x - other.x)
