@@ -5,7 +5,6 @@ import numpy as np
 from data_generators.example_generator.arc_example_generator import ARCExample
 from data_generators.object_recognition.basic_geometry import Dimension2D, Point, Surround
 from data_generators.object_recognition.canvas import Canvas
-from dsls.our_dsl.functions import dsl_functions as dsl
 
 example = ARCExample('97a05b5b')
 
@@ -98,7 +97,7 @@ example.reset_object_colours()
 
 #example.show()
 
-canvas_in = example.input_canvases[1]
+#canvas_in = example.input_canvases[2]
 canvas_in = example.test_input_canvas
 
 # Solution
@@ -114,10 +113,11 @@ new_lo.canvas_pos = Point(0, 0, -1)
 canvas_out.add_new_object(new_lo)
 
 for oo in other_objects:
+#oo = other_objects[3]
     o3 = copy(oo)
     o3.actual_pixels[np.where(o3.actual_pixels != largest_object.colour)] = 1
 
-    match_positions = o3.match(neg, after_rotation=True, border=Surround(1, 1, 1, 1))[0]
+    match_positions = o3.match(neg, after_rotation=True, padding=Surround(1, 1, 1, 1))[0]
 
     new = copy(oo)
     new.rotate(match_positions[1])

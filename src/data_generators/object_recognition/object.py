@@ -551,11 +551,12 @@ class Object:
         return holes, n
 
     def match(self, other: Object, after_rotation: bool = False, match_shape_only: bool = False,
-              border: Surround = Surround(0, 0, 0, 0)) -> List[Point]:
+              padding: Surround = Surround(0, 0, 0, 0)) -> List[Point]:
         """
         Calculates the canvas positions that this Object should be moved to, to generate the best match
         (cross - correlation) with the other Object. Multiple best matches generate multiple positions.
-        :param other: The other Object
+        :param padding: Whether the Object should be padded with 1s to allow better matching.
+        :param other: The other Object.
         :param after_rotation: Also rotates this Object to check for matches # TODO Not implemented yet!
         :param match_shape_only: Cares only about the shape of the Objects and ignores the colours
         :return: The List of Points that this Object could have as canvas_pos that would generate the largest overlap
@@ -564,31 +565,35 @@ class Object:
 
         def match_for_a_specific_rotation(rot: int):
 
-            self_dimensions = Dimension2D(self.dimensions.dx + border.Left + border.Right,
-                                          self.dimensions.dy + border.Up + border.Down)
+            self_dimensions = Dimension2D(self.dimensions.dx + padding.Left + padding.Right,
+                                          self.dimensions.dy + padding.Up + padding.Down)
 
+            other_dimensions = Dimension2D(other.dimensions.dx + padding.Left + padding.Right,
+                                           other.dimensions.dy + padding.Up + padding.Down)
 
-            x_base_dim = self_dimensions.dx + 2 * other.dimensions.dx - 2
-            y_base_dim = self_dimensions.dy + 2 * other.dimensions.dy - 2
+            x_base_dim = self_dimensions.dx + 2 * other_dimensions.dx - 2
+            y_base_dim = self_dimensions.dy + 2 * other_dimensions.dy - 2
             base = np.zeros((y_base_dim, x_base_dim))
 
-            x_res_dim = self_dimensions.dx + other.dimensions.dx - 1
-            y_res_dim = self_dimensions.dy + other.dimensions.dy - 1
+            x_res_dim = self_dimensions.dx + other_dimensions.dx - 1
+            y_res_dim = self_dimensions.dy + other_dimensions.dy - 1
             result = np.zeros((y_res_dim, x_res_dim))
 
             base_rotated_object = copy(self)
             base_rotated_object.rotate(rot)
 
             base_rotated_pixels = np.ones((self_dimensions.dx, self_dimensions.dy))
-            base_rotated_pixels[border.Down: self_dimensions.dy - border.Up,
-                                border.Left: self_dimensions.dx - border.Right] = base_rotated_object.actual_pixels
-            base[other.dimensions.dy - 1: other.dimensions.dy - 1 + self_dimensions.dy,
-                 other.dimensions.dx - 1: other.dimensions.dx - 1 + self_dimensions.dx] = base_rotated_pixels
+            base_rotated_pixels[padding.Down: self_dimensions.dy - padding.Up,
+                                padding.Left: self_dimensions.dx - padding.Right] = base_rotated_object.actual_pixels
+            base[other_dimensions.dy - 1: other_dimensions.dy - 1 + self_dimensions.dy,
+                 other_dimensions.dx - 1: other_dimensions.dx - 1 + self_dimensions.dx] = base_rotated_pixels
 
             for x in range(x_res_dim):
                 for y in range(y_res_dim):
-                    temp = copy(base[y: other.dimensions.dy + y, x: other.dimensions.dx + x])
-                    other_pixels = copy(other.actual_pixels)
+                    temp = copy(base[y: other_dimensions.dy + y, x: other_dimensions.dx + x])
+                    other_pixels = np.ones((other_dimensions.dy, other_dimensions.dx))
+                    other_pixels[padding.Down: other_dimensions.dy - padding.Up,
+                                 padding.Left: other_dimensions.dx - padding.Right] = copy(other.actual_pixels)
                     if match_shape_only:
                         temp[np.where(temp == 1)] = 0
                         temp[np.where(temp > 1)] = 1
@@ -606,9 +611,9 @@ class Object:
                 result.append(match_for_a_specific_rotation(rot))
 
         best_relative_positions = np.argwhere(result == np.amax(result))
-        best_positions = [[Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x + border.Left,
-                                 y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y + border.Down),
-                                 brp[0]]
+        best_positions = [[Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x + 2 * padding.Left,
+                                 y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y + 2 * padding.Down),
+                           brp[0]]
                           for brp in best_relative_positions]
 
         return best_positions
