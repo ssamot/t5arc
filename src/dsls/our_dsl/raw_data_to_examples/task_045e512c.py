@@ -3,25 +3,13 @@ from copy import copy
 
 from data_generators.example_generator.arc_example_generator import ARCExample
 from data_generators.object_recognition.basic_geometry import Dimension2D, Point
-from dsls.our_dsl.functions import dsl_functions as dsl
+from dsls.our_dsl.solutions import solutions as sols
 
 example = ARCExample('045e512c')
 
 unique_objects = [
     {'primitive': 'Hole', 'colour': 9, 'id': 0, 'actual_pixels_id': 0,'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[0, Point(6, 12, 0)], [1, Point(6, 12, 0)]],
-     'transformations': [],
-     'symmetries': [],
-     'hole_bbox':[[1, 1], [1, 11]],
-     'thickness': [1, 1, 1, 1]},
-    {'primitive': 'Hole', 'colour': 3, 'id': 0, 'actual_pixels_id': 1, 'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[1, Point(6, 8, 0)], [1, Point(6, 4, 0)], [1, Point(6, 0, 0)]],
-     'transformations': [],
-     'symmetries': [],
-     'hole_bbox':[[1, 1], [1, 11]],
-     'thickness': [1, 1, 1, 1]},
-    {'primitive': 'Hole', 'colour': 4, 'id': 0, 'actual_pixels_id': 2, 'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[1, Point(10, 12, 0)], [1, Point(14, 12, 0)], [1, Point(18, 12, 0)]],
+     'canvases_positions': [[0, Point(6, 12, 0)]],
      'transformations': [],
      'symmetries': [],
      'hole_bbox':[[1, 1], [1, 11]],
@@ -43,15 +31,7 @@ unique_objects = [
      'transformations': [],
      'symmetries': []},
     {'primitive': 'Cross', 'colour': 2, 'id': 2, 'actual_pixels_id': 7, 'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[2, Point(11, 11, 0)], [3, Point(11, 11, 0)]],
-     'transformations': [],
-     'symmetries': []},
-    {'primitive': 'Cross', 'colour': 3, 'id': 2, 'actual_pixels_id': 8, 'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[3, Point(7, 11, 0)], [3, Point(3, 11, 0)], [3, Point(-1, 11, 0)]],
-     'transformations': [],
-     'symmetries': []},
-    {'primitive': 'Cross', 'colour': 5, 'id': 2, 'actual_pixels_id': 9, 'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[3, Point(15, 11, 0)], [3, Point(19, 11, 0)], [3, Point(11, 15, 0)], [3, Point(11, 19, 0)]],
+     'canvases_positions': [[2, Point(11, 11, 0)]],
      'transformations': [],
      'symmetries': []},
     {'primitive': 'Dot', 'colour': 3, 'id': 3, 'actual_pixels_id': 10, 'dimensions': Dimension2D(1, 1),
@@ -63,15 +43,7 @@ unique_objects = [
      'transformations': [],
      'symmetries': []},
     {'primitive': 'Bolt', 'colour': 6, 'id': 4, 'actual_pixels_id': 12, 'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[4, Point(6, 11, 0)], [5, Point(6, 11, 0)]], 'center_on': False,
-     'transformations': [],
-     'symmetries': []},
-    {'primitive': 'Bolt', 'colour': 2, 'id': 4, 'actual_pixels_id': 13, 'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[5, Point(10, 7, 0)], [5, Point(14, 3, 0)], [5, Point(18, -1, 0)]], 'center_on': False,
-     'transformations': [],
-     'symmetries': []},
-    {'primitive': 'Bolt', 'colour': 10, 'id': 4, 'actual_pixels_id': 14, 'dimensions': Dimension2D(3, 3),
-     'canvases_positions': [[5, Point(10, 15, 0)], [5, Point(14, 19, 0)]], 'center_on': False,
+     'canvases_positions': [[4, Point(6, 11, 0)]], 'center_on': False,
      'transformations': [],
      'symmetries': []},
     {'primitive': 'Diagonal', 'colour': 7, 'id': 5, 'actual_pixels_id': 15, 'dimensions': Dimension2D(2, 2),
@@ -94,7 +66,7 @@ unique_objects = [
 
 example.generate_objects_from_output(unique_objects=unique_objects)
 
-task_index = 1  # number or 'input'
+task_index = 'input'  # number or 'input'
 if type(task_index) == int:
     canvas = example.input_canvases[task_index]
     canvas = copy(canvas)
@@ -104,18 +76,6 @@ else:
     canvas = copy(canvas)
     example.test_output_canvas = canvas
 
-# Solution
 
-largest_object = canvas.sort_objects_by_size(used_dim='area')[-1]
-other_objects = canvas.sort_objects_by_size(used_dim='area')[:-1]
-for oo in other_objects:
-    match_positions = largest_object.match(oo, match_shape_only=True)
-    eucl_dist = dsl.furthest(largest_object.canvas_pos, match_positions)
-
-    so = copy(largest_object)
-    for _ in range(3):
-        no = copy(so)
-        no.set_new_colour(oo.colour)
-        no.canvas_pos.transform(translation=eucl_dist)
-        canvas.add_new_object(no)
-        so = no
+canvas = sols.solution_045e512c(canvas)
+example.show()
