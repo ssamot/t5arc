@@ -551,7 +551,7 @@ class Object:
         return holes, n
 
     def match(self, other: Object, after_rotation: bool = False, match_shape_only: bool = False,
-              padding: Surround = Surround(0, 0, 0, 0)) -> List[Point]:
+              padding: Surround = Surround(0, 0, 0, 0)) -> List[Point] | List[List[Point, int]]:
         """
         Calculates the canvas positions that this Object should be moved to, to generate the best match
         (cross - correlation) with the other Object. Multiple best matches generate multiple positions.
@@ -560,7 +560,8 @@ class Object:
         :param after_rotation: Also rotates this Object to check for matches # TODO Not implemented yet!
         :param match_shape_only: Cares only about the shape of the Objects and ignores the colours
         :return: The List of Points that this Object could have as canvas_pos that would generate the largest overlap
-        with the other Object.
+        with the other Object. If after_rotation is True then each element of this list is a List[Point, int]
+        where int is the rotation required for that match.
         """
 
         def match_for_a_specific_rotation(rot: int):
@@ -604,17 +605,20 @@ class Object:
             return result
 
         if not after_rotation:
-            result = [match_for_a_specific_rotation(0)]
+            result = match_for_a_specific_rotation(0)
+            best_relative_positions = np.argwhere(result == np.amax(result))
+            best_positions = [Point(x=other.dimensions.dx - brp[1] - 1 + other.canvas_pos.x + 2 * padding.Left,
+                                     y=other.dimensions.dy - brp[0] - 1 + other.canvas_pos.y + 2 * padding.Down)
+                              for brp in best_relative_positions]
         else:
             result = []
             for rot in range(4):
                 result.append(match_for_a_specific_rotation(rot))
-
-        best_relative_positions = np.argwhere(result == np.amax(result))
-        best_positions = [[Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x + 2 * padding.Left,
-                                 y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y + 2 * padding.Down),
-                           brp[0]]
-                          for brp in best_relative_positions]
+            best_relative_positions = np.argwhere(result == np.amax(result))
+            best_positions = [[Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x + 2 * padding.Left,
+                                     y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y + 2 * padding.Down),
+                               brp[0]]
+                              for brp in best_relative_positions]
 
         return best_positions
 
