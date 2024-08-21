@@ -53,7 +53,7 @@ class Canvas:
             new_canvas.add_new_object(copy(o))
         return new_canvas
 
-    def sort_objects_by_size(self, used_dim: str = 'area') -> List[Object]:
+    def sort_objects_by_size(self, used_dim: str = 'area') -> List[Primitive]:
         """
         Returns a list of all the Object on Canvas sorted from largest to smallest according to the dimension used
         :param used_dim: The dimension to use to sort the Objects. It can be 'area', 'height', 'width', 'coloured_pixels'

@@ -78,8 +78,8 @@ class ARCExample(Example):
             from_canvas = 0
             from_in_or_out = 'input'
 
-        actual_pixels = np.flipud(self.task_data[group][from_canvas][from_in_or_out])\
-            [canvas_pos.y:canvas_pos.y + size.dy, canvas_pos.x:canvas_pos.x + size.dx] + 1
+        actual_pixels = np.flipud(self.task_data[group][from_canvas][from_in_or_out])  \
+                                    [canvas_pos.y:canvas_pos.y + size.dy, canvas_pos.x:canvas_pos.x + size.dx] + 1
 
         return actual_pixels
 
