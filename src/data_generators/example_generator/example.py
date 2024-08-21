@@ -393,6 +393,8 @@ class Example:
                 self.output_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1)
                 if p == 0:
                     self.test_input_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2)
+                if p == 1 and self.test_output_canvas is not None:
+                    self.test_output_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2)
                 index += 3
             plt.tight_layout()
 
