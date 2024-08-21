@@ -242,7 +242,7 @@ class Parallelogram(Primitive):
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
-        array = np.ones(self.size.to_numpy()) * self.colour
+        array = np.ones((self.size.dy, self.size.dx)) * self.colour
         self.generate_actual_pixels(array=array)
 
         Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size,
@@ -305,7 +305,7 @@ class Hole(Primitive):
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
-        array = np.ones(self.size.to_numpy()) * self.colour
+        array = np.ones((self.size.dy, self.size.dx)) * self.colour
         self.generate_actual_pixels(array=array)
 
         th_up = thickness.Up
