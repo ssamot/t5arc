@@ -6,6 +6,7 @@ from data_generators.object_recognition.basic_geometry import Point, Surround
 from data_generators.object_recognition.canvas import Canvas
 from dsls.our_dsl.functions import dsl_functions as dsl
 
+
 def solution_045e512c(canvas: Canvas) -> Canvas:
     largest_object = canvas.sort_objects_by_size(used_dim='area')[-1]
     other_objects = canvas.sort_objects_by_size(used_dim='area')[:-1]
@@ -23,7 +24,7 @@ def solution_045e512c(canvas: Canvas) -> Canvas:
     return canvas
 
 
-def solution_97a05b5b(canvas: Canvas):
+def solution_97a05b5b(canvas: Canvas) -> Canvas:
     largest_object = canvas.sort_objects_by_size(used_dim='area')[-1]
     other_objects = canvas.sort_objects_by_size(used_dim='area')[:-1]
     neg = copy(largest_object)
@@ -46,3 +47,7 @@ def solution_97a05b5b(canvas: Canvas):
         canvas_out.add_new_object(new)
 
     return canvas_out
+
+def solution_b775ac94(canvas: Canvas) -> Canvas:
+    pass
+
