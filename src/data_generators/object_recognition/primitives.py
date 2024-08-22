@@ -6,13 +6,12 @@ import json
 from json import JSONEncoder
 
 import numpy as np
-import constants as const
+from src import constants as const
 from typing import List
 from enum import Enum
 from data_generators.object_recognition.object import Object, Transformations
 from data_generators.object_recognition.basic_geometry import Point, Bbox, Dimension2D, Orientation, Surround, Vector
 
-#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
@@ -90,40 +89,8 @@ class Primitive(Object):
     def set_new_size(self, new_size: Dimension2D):
         self.size = new_size
 
-    def json_output(self):
-        args = self.__dict__.copy()
-        for arg in ['border_size', '_canvas_pos', 'rotation_axis', 'number_of_coloured_pixels', 'actual_pixels',
-                    'required_dist_to_others', 'canvas_id', '_holes', '_center_on']:
-            args.pop(arg, None)
-        if 'size' in args:
-            args.pop('size', None)
-
-        type_name = self.get_str_type()
-        args['primitive'] = type_name
-        args['id'] = self.id
-        args['canvas_pos'] = [self.canvas_pos.x, self.canvas_pos.y, self.canvas_pos.z]
-
-        args['symmetries'] = [[s.orientation.name, s.length, s.origin.x, s.origin.y] for s in self.symmetries]
-        args['dimensions'] = [self.dimensions.dx, self.dimensions.dy]
-
-        args['transformations'] = [[t[0].value, [t[1][b] if 'axis' not in b else t[1][b].value for b in t[1]]]
-                                   for t in self.transformations]
-        args['bbox'] = [[self.bbox.top_left.x, self.bbox.top_left.y],
-                        [self.bbox.bottom_right.x, self.bbox.bottom_right.y]]
-
-        if type_name == 'Hole':
-            args['thickness'] = [self.thickness.Up, self.thickness.Down, self.thickness.Left, self.thickness.Right]
-            args['hole_bbox'] = [[self.hole_bbox.top_left.x, self.hole_bbox.top_left.y],
-                                 [self.hole_bbox.bottom_right.x, self.hole_bbox.bottom_right.y]]
-
-        if type_name == 'Dot':
-            args['border_size'] = [self.border_size.Up, self.border_size.Down,
-                                   self.border_size.Left, self.border_size.Right]
-
-        return args
-
-    def __repr__(self):
-        return json.dumps(self, cls=PrimitivesJSONEncoder, sort_keys=True, indent=4)
+    def split_by_colour(self):
+        pass
 
     def get_str_type(self):
         return str(type(self)).split('.')[-1].split("'")[0]
@@ -173,6 +140,38 @@ class Primitive(Object):
         Object.reset_dimensions(self)
         self.size = self.dimensions
 
+    def json_output(self):
+        args = self.__dict__.copy()
+        for arg in ['border_size', '_canvas_pos', 'rotation_axis', 'number_of_coloured_pixels', 'actual_pixels',
+                    'required_dist_to_others', 'canvas_id', '_holes', '_center_on']:
+            args.pop(arg, None)
+        if 'size' in args:
+            args.pop('size', None)
+
+        type_name = self.get_str_type()
+        args['primitive'] = type_name
+        args['id'] = self.id
+        args['canvas_pos'] = [self.canvas_pos.x, self.canvas_pos.y, self.canvas_pos.z]
+
+        args['symmetries'] = [[s.orientation.name, s.length, s.origin.x, s.origin.y] for s in self.symmetries]
+        args['dimensions'] = [self.dimensions.dx, self.dimensions.dy]
+
+        args['transformations'] = [[t[0].value, [t[1][b] if 'axis' not in b else t[1][b].value for b in t[1]]]
+                                   for t in self.transformations]
+        args['bbox'] = [[self.bbox.top_left.x, self.bbox.top_left.y],
+                        [self.bbox.bottom_right.x, self.bbox.bottom_right.y]]
+
+        if type_name == 'Hole':
+            args['thickness'] = [self.thickness.Up, self.thickness.Down, self.thickness.Left, self.thickness.Right]
+            args['hole_bbox'] = [[self.hole_bbox.top_left.x, self.hole_bbox.top_left.y],
+                                 [self.hole_bbox.bottom_right.x, self.hole_bbox.bottom_right.y]]
+
+        if type_name == 'Dot':
+            args['border_size'] = [self.border_size.Up, self.border_size.Down,
+                                   self.border_size.Left, self.border_size.Right]
+
+        return args
+
     def __copy__(self):
         args = self.__dict__.copy()
         for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'actual_pixels_id', 'rotation_axis',
@@ -203,6 +202,9 @@ class Primitive(Object):
         object.rotation_axis = Point(self.rotation_axis.x, self.rotation_axis.y, self.rotation_axis.z)
         object.reset_dimensions()
         return object
+
+    def __repr__(self):
+        return json.dumps(self, cls=PrimitivesJSONEncoder, sort_keys=True, indent=4)
 
 
 class Random(Primitive):

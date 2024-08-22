@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from data_generators.object_recognition.object import Object
 from data_generators.object_recognition.canvas import Canvas
-import constants as const
+from src import constants as const
 
 
 class TestConstructors:

@@ -8,7 +8,7 @@ from functools import partial
 from data.utils import load_data_for_generator, pad_array_with_random_position
 import keras_nlp
 from data.data_generator import CanvasDataGenerator
-import constants as consts
+from src import constants as consts
 from models.utils import TransformerDecoder
 
 
