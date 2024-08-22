@@ -13,7 +13,7 @@ from visualization import visualize_data as vis
 from data_generators.object_recognition.basic_geometry import Point, Vector, Orientation, Surround, OrientationZ, Bbox,\
                                                               Dimension2D
 
-import constants as const
+from src import constants as const
 
 #np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -473,12 +473,62 @@ class Object:
 
     def __sub__(self, other: object):
         pass
+    
+    def distance_to_object(self, other: Object, type: str = 'min') -> Vector:
+        """
+        Calculates the Vector that defines the distance (in pixels) between this and the obj Object. The exact 
+        calculation depends on the type asked for. If type is 'min' then this is the distance between the two nearest 
+        pixels of the Objects. If it is 'max' it is between the two furthest. If it is 'canvas_pos' then it is the 
+        distance between the two canvas positions of the Objects.
+        If the two Points that are being compared lie along a Direction then the returned Vector also has this Direction.
+        If more than two pairs of points qualify to calculate the distance then one with a Direction is chosen (with
+        a preference to Directions Up, Down, Left and Right).
+        :param obj: The other Object
+        :param type: str. Can be 'max', 'min' or 'canvas_pos'
+        :return: A Vector whose length is the distance calculated, whose origin in the Point in this Object used to 
+        calculate the distance and whose orientation is the Orientation between the two Points used if it exists 
+        (otherwise it is None).
+        """
+        if type == 'min' or type == 'max':
+            all_self_colour_points = [Point(pos[1], pos[0]) for pos in self.get_coloured_pixels_positions()]
+            all_other_colour_points = [Point(pos[1], pos[0]) for pos in other.get_coloured_pixels_positions()]
+
+            all_distances = []
+            all_distance_lengths = []
+            for sp in all_self_colour_points:
+                for op in all_other_colour_points:
+                    all_distances.append(sp.euclidean_distance(op))
+                    all_distance_lengths.append(all_distances[-1].length)
+
+            if type == 'max':
+                indices = np.argwhere(np.array(all_distance_lengths) == np.amax(all_distance_lengths)).squeeze()
+            elif type == 'min':
+                indices = np.argwhere(np.array(all_distance_lengths) == np.amin(all_distance_lengths)).squeeze()
+            distances = np.take(all_distances, indices)
+
+            distances_with_ori = [dist for dist in distances if dist.orientation is not None]
+            if len(distances_with_ori) > 0:
+                distances_with_good_ori = [dist for dist in distances_with_ori if (dist.orientation == Orientation.Up
+                                                                                   or dist.orientation == Orientation.Down
+                                                                                   or dist.orientation == Orientation.Right
+                                                                                   or dist.orientation == Orientation.Left)]
+                distance = distances_with_good_ori[0] if len(distances_with_good_ori) > 0 else distances_with_ori[0]
+            else:
+                distance = distances[0]
+
+        if type == 'canvas_pos':
+            distance = self.canvas_pos.euclidean_distance(other.canvas_pos)
+
+        return distance
 
     def superimpose(self, other: Object, z_order: int = 1):
         pass
 
-    def get_coloured_pixels_positions(self) -> np.ndarray:
-        result = np.argwhere(self.actual_pixels > 1).astype(int)
+    def get_coloured_pixels_positions(self, col: int | None = None) -> np.ndarray:
+        if col is None:
+            result = np.argwhere(self.actual_pixels > 1).astype(int)
+        else:
+            result = np.argwhere(self.actual_pixels == col).astype(int)
         canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
         return canv_pos + result
 
@@ -490,6 +540,14 @@ class Object:
         canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
         coloured_pos -= canv_pos
         return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
+
+    def get_colour_groups(self):
+        result = {}
+        colours = self.get_used_colours()
+        for col in colours:
+            positions = self.get_coloured_pixels_positions(col)
+            result[col] = positions
+        return result
 
     def set_colour_to_most_common(self):
         colours = self.actual_pixels[np.where(self.actual_pixels > 1)]
