@@ -20,7 +20,6 @@ class CanvasDataGenerator(keras.utils.PyDataset):
 
         self.batch_size = batch_size
         self.len = len
-        self.tokenizer = CharacterTokenizer(token_list, 2000000000)
 
         self.on_epoch_end()
 
@@ -43,32 +42,10 @@ class CanvasDataGenerator(keras.utils.PyDataset):
         """Generates data containing batch_size images."""
 
         e = AutoEncoderDataExample(self.batch_size)
-        array_reps = e.get_canvases_as_numpy_array()
-        str_reps = e.get_canvasses_as_string()
+        batch_targets = e.get_canvases_as_numpy_array()
 
-        # print(train.shape)
-        # print(objects[-1])
-
-        tokenized_inputs = self.tokenizer(
-            str_reps,
-            padding="longest",
-            truncation=True,
-            return_tensors="np",
-        )
-
-        batch_targets = tokenized_inputs.input_ids
+        one_hot_encoded = np.eye(11)[np.array(batch_targets, dtype=np.int32)]
 
 
-        one_hot_encoded = np.zeros(
-            (batch_targets.shape[0], batch_targets.shape[1], self.tokenizer.num_decoder_tokens + 1))
-        rows = np.arange(batch_targets.shape[0])[:, None]
-        cols = np.arange(batch_targets.shape[1])
-        one_hot_encoded[rows, cols, batch_targets] = 1
 
-        target_texts = np.zeros_like(batch_targets)
-        target_texts[:, :-1] = batch_targets[:, 1:]
-
-        targets_one_hot_encoded = one_hot_encoded[:, 1:, :]
-        targets_inputs = batch_targets[:, :-1]
-
-        return [array_reps,targets_inputs], targets_one_hot_encoded
+        return batch_targets[:,:,:,np.newaxis]/11.0,  one_hot_encoded

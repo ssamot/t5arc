@@ -6,6 +6,7 @@ from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from data.data_generator import CanvasDataGenerator
 from models.decoder import TransformerDecoder
+from keras import layers
 
 
 def acc_seq(y_true, y_pred):
@@ -17,57 +18,33 @@ activation = "relu"
 def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     total_features = input_shape[0] * input_shape[1] * input_shape[2]
 
-    encoder_inputs = keras.layers.Input(shape=input_shape)
-    x = encoder_inputs
-    x = keras.layers.Reshape(input_shape, input_shape=total_features)(x)
-    x = keras.layers.Embedding(input_dim=16, output_dim=2, input_length=total_features)(x)
-    x = keras.layers.Flatten()(x)
-
-    n_neurons = 256
-    x = keras.layers.Dense(n_neurons, activation=activation)(x)
-    x = keras.layers.BatchNormalization()(x)
-    xs = [x]
-    for i in range(4):
-        # skip connections
-        x_new = keras.layers.Dense(n_neurons, activation=activation)(x)
-        x_new = keras.layers.BatchNormalization()(x_new)
-        xs.append(x_new)
-        x = keras.layers.add(xs)
-
-    x = keras.layers.Flatten()(x)
-
-    encoder_states = keras.layers.Dense(latent_dim, activation="relu")(x)
-
-    encoder_model = keras.models.Model( encoder_inputs,encoder_states)
 
 
+    input_img = keras.Input(shape=input_shape)
 
+    x = layers.Conv2D(16, (3, 3), activation='relu', padding='same')(input_img)
+    x = layers.MaxPooling2D((2, 2), padding='same')(x)
+    x = layers.Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+    x = layers.MaxPooling2D((2, 2), padding='same')(x)
+    x = layers.Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+    encoded = layers.MaxPooling2D((2, 2), padding='same')(x)
 
+    # at this point the representation is (4, 4, 8) i.e. 128-dimensional
+    x = layers.Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
+    x = layers.UpSampling2D((2, 2))(x)
+    x = layers.Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+    x = layers.UpSampling2D((2, 2))(x)
+    x = layers.Conv2D(16, (3, 3), activation='relu', padding = 'same')(x)
+    x = layers.UpSampling2D((2, 2))(x)
+    #decode = layers.Dense()
+    decoded = layers.Conv2D(num_decoder_tokens, (3, 3), activation='sigmoid', padding='same')(x)
 
-    decoder_inputs = keras.layers.Input(shape=(None,))  # (batch_size, sequence_length)
-    dec_embedding = keras.layers.Embedding(input_dim=num_decoder_tokens,
-                                           output_dim=latent_dim, mask_zero=True)(
-        decoder_inputs)
+    autoencoder = keras.Model(input_img, decoded)
+    autoencoder.compile(optimizer='adam',
+                        loss='categorical_crossentropy',
+                        metrics=["acc",acc_seq])
 
-
-    lstm_out = TransformerDecoder(
-        intermediate_dim=latent_dim, num_heads=8)(dec_embedding, keras.ops.expand_dims(encoder_states, 1))
-
-    decoder_outputs = keras.layers.TimeDistributed(keras.layers.Dense(num_decoder_tokens, activation='softmax'))(
-        lstm_out)
-    decoder_encoder_inputs = keras.layers.Input(shape=input_shape)
-    decoder_model = keras.models.Model( [decoder_encoder_inputs, decoder_inputs], decoder_outputs)
-
-
-    model = keras.models.Model( [encoder_inputs, decoder_inputs], decoder_outputs)
-    optimizer = keras.optimizers.AdamW(learning_rate=0.001)
-    model.compile(optimizer=optimizer,
-                  loss="categorical_crossentropy",
-                  metrics=["accuracy", acc_seq ])
-
-    # encoder_model.compile()
-
-    return model
+    return autoencoder
 
 
 @click.command()
@@ -83,7 +60,7 @@ def main(output_filepath):
     training_generator = CanvasDataGenerator(batch_size = 24,  len = 100,
                                              use_multiprocessing=True, workers=50, max_queue_size=1000)
 
-    num_decoder_tokens = training_generator.tokenizer.num_decoder_tokens + 1
+    num_decoder_tokens = 11
     model = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens), 256, max_examples)
 
     model.summary()

@@ -52,7 +52,7 @@ train_generator:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_generator.py models/
 
 data:
-	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py  data/processed/ 1000
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src kernprof -lv src/data/create_ds.py  data/processed/ 1000
 
 
 predict:

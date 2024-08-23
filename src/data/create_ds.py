@@ -21,17 +21,17 @@ def main(output_filepath, repetitions):
     arrays = []
     strings = []
 
-    repetitions = 3
+
     model_max_length = 20000000
     for _ in tqdm.tqdm(range(repetitions)):
         # Create an Example
         e = AutoEncoderDataExample(100)
         array_reps = e.get_canvases_as_numpy_array()
-        str_reps = e.get_canvasses_as_string()
+        #str_reps = e.get_canvasses_as_string()
 
 
         #strings.extend([str(str_rep).replace(" ", "") for str_rep in str_reps])
-        strings.extend(str_reps)
+        #strings.extend(str_reps)
         arrays.append(array_reps)
         #tokenizer = CharacterTokenizer(token_list, model_max_length)
 
