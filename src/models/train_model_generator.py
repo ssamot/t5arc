@@ -9,7 +9,7 @@ from data.utils import load_data_for_generator, pad_array_with_random_position
 import keras_nlp
 from data.data_generator import CanvasDataGenerator
 import constants as consts
-from models.utils import TransformerDecoder
+from models.utils import TransformerDecoder, ConcatenateRNN
 
 
 def categorical_accuracy_per_sequence(y_true, y_pred):
@@ -27,7 +27,7 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     x = keras.layers.Embedding(input_dim=16, output_dim=2, input_length=total_features)(x)
     x = keras.layers.Flatten()(x)
 
-    n_neurons = 512
+    n_neurons = 256
     x = keras.layers.Dense(n_neurons, activation=activation)(x)
     x = keras.layers.BatchNormalization()(x)
     xs = [x]
@@ -41,8 +41,8 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
 
     #x = keras.layers.MaxPool2D(x)
     x = keras.layers.Flatten()(x)
-    x = keras.layers.Dense(latent_dim, activation= activation)(x)
-#    print(x.shape)
+    #x = keras.layers.Dense(latent_dim, activation= activation)(x)
+   # print(x.shape)
     conv_model = keras.models.Model(conv_input, x)
 
     # Inputs
@@ -64,8 +64,10 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     encoder_states = keras.ops.expand_dims(encoder_states, 1)
 
     decoder_inputs = keras.layers.Input(shape=(None,))  # (batch_size, sequence_length)
-    dec_embedding = keras.layers.Embedding(input_dim=num_decoder_tokens, output_dim=latent_dim, mask_zero=True)(
+    dec_embedding = keras.layers.Embedding(input_dim=num_decoder_tokens,
+                                           output_dim=latent_dim, mask_zero=True)(
         decoder_inputs)
+
 
     lstm_out = TransformerDecoder(
         intermediate_dim=latent_dim, num_heads=8)(dec_embedding, encoder_states)
@@ -100,7 +102,7 @@ def main(json_files, programme_files, max_token_length, output_filepath):
     max_examples = 20
 
 
-    training_generator = CanvasDataGenerator(batch_size = 22,  len = 100,
+    training_generator = CanvasDataGenerator(batch_size = 24,  len = 100,
                                              use_multiprocessing=True, workers=50, max_queue_size=1000)
 
     num_decoder_tokens = training_generator.tokenizer.num_decoder_tokens + 1

@@ -23,6 +23,25 @@ endif
 
 ## Make Dataset
 
+CYTHON_FILE = optimized_best_first_search.pyx
+SETUP_FILE = setup.py
+MODULE_NAME = optimized_best_first_search
+BUILD_DIR = build
+EXTENSION = $(MODULE_NAME).c
+SO_FILE = $(MODULE_NAME).so
+
+# Targets
+all: $(SO_FILE)
+
+# Rule to build the Cython extension module
+cython:
+	@echo "Building Cython module..."
+	python $(SETUP_FILE) build_ext --inplace
+
+# Clean up build artifacts
+clean:
+	@echo "Cleaning up..."
+	rm -rf $(BUILD_DIR) $(EXTENSION) $(SO_FILE)
 
 
 train:

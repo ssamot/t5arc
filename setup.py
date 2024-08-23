@@ -1,10 +1,6 @@
-from setuptools import find_packages, setup
+from setuptools import setup
+from Cython.Build import cythonize
 
 setup(
-    name='src',
-    packages=find_packages(),
-    version='0.1.0',
-    description='T5 finetuned for SQL',
-    author='ssamot',
-    license='',
+    ext_modules=cythonize("optimized_best_first_search.pyx"),
 )

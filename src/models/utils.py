@@ -2,21 +2,6 @@ import numpy as np
 import keras
 
 
-import tensorflow as tf
-import keras
-# Copyright 2023 The KerasNLP Authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import keras
 from keras import ops
@@ -33,33 +18,17 @@ from keras_nlp.src.layers.modeling.transformer_layer_utils import (  # isort:ski
 )
 
 
-# Copyright 2023 The KerasNLP Authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+class ConcatenateRNN(keras.layers.Layer):
+    def call(self, inputs):
+        dec_embeddings, encoded = inputs
 
-import keras
-from keras import ops
+        # Step 2: Tile x to match the second dimension of y
+        x_tiled = keras.ops.tile(encoded, [1, keras.ops.shape(dec_embeddings)[1], 1])  # Shape: (None, None, 640)
 
-from keras_nlp.src.api_export import keras_nlp_export
-from keras_nlp.src.layers.modeling.cached_multi_head_attention import (
-    CachedMultiHeadAttention,
-)
-from keras_nlp.src.utils.keras_utils import clone_initializer
+        # Step 3: Concatenate y and x_tiled along the last axis
+        output = keras.ops.concatenate([dec_embeddings, x_tiled], axis=-1)  # Shape: (None, None, 672)
 
-from keras_nlp.src.layers.modeling.transformer_layer_utils import (  # isort:skip
-    compute_causal_mask,
-    merge_padding_and_attention_mask,
-)
+        return output
 
 
 class TransformerDecoder(keras.layers.Layer):

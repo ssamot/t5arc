@@ -103,7 +103,7 @@ def load_data(json_data_list, max_examples = 20):
             train[i].append(example["input"])
             train[i].append(example["output"])
 
-        train[i] = train[i] + [[[-1, -1], [-1, -1]] for _ in range(max_examples - len(train[i]))]
+        train[i] = train[i] + [[[0, 0], [0, 0]] for _ in range(max_examples - len(train[i]))]
         train[i] = [np.array(e) for e in train[i]]
         # print(train[i])
         # exit([e.shape for e in train[i]])
