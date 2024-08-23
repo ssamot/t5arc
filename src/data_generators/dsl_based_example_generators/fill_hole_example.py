@@ -17,7 +17,7 @@ class FillHoleExample(Example):
         transformations_probs = [1 / 7, 1 / 7, 1 / 7, 1 / 7, 1 / 7, 1 / 7, 1 / 7]
 
         def new_obj():
-            obj = self.create_object(obj_probs=obj_probs, max_size_of_obj=20)
+            obj = self.create_object(obj_probs=obj_probs, max_size_of_obj=Dimension2D(20,20))
             self.do_random_transformations(obj=obj, num_of_transformations=1,
                                            probs_of_transformations=transformations_probs)
             _, n_holes = obj.detect_holes()

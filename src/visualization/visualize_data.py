@@ -35,7 +35,10 @@ def plot_data(pixels, extent, axis: plt.Axes | None = None):
     ax.imshow(pixels_for_visualisation, origin='lower', extent=extent, interpolation='None', aspect='equal')
     ax = add_vhlines_to_plot(ax, pixels, extent)
 
-    return ax
+    if axis is not None:
+        return ax
+
+    return fig, ax
 
 def plot_task(task):
     n = len(task["train"]) + len(task["test"])

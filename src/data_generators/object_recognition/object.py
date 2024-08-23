@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+import matplotlib.pyplot as plt
 from enum import Enum
 from typing import List, Union
 from copy import copy, deepcopy
@@ -15,7 +16,6 @@ from data_generators.object_recognition.basic_geometry import Point, Vector, Ori
 
 from src import constants as const
 
-#np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
@@ -46,19 +46,19 @@ class Transformations(Enum):
             args['on_axis'] = False if np.random.rand() < 0.5 else True
         if self.name == 'randomise_colour':
             if random_obj_or_not == 'Random':
-                args['ratio'] = int(np.random.gamma(shape=1, scale=10) + 1)  # Mainly between 10 and 40
-                args['ratio'] = int(40) if args['ratio'] > 40 else args['ratio']
+                args['ratio'] = int(np.random.gamma(shape=2, scale=10) + 1)  # Mainly between 10 and 40
+                args['ratio'] = int(60) if args['ratio'] > 60 else args['ratio']
             else:
-                args['ratio'] = int(np.random.gamma(shape=1, scale=5) + 2)  # Mainly between 10 and 40
-                args['ratio'] = int(15) if args['ratio'] > 15 else args['ratio']
+                args['ratio'] = int(np.random.gamma(shape=3, scale=5) + 2)  # Mainly between 10 and 40
+                args['ratio'] = int(60) if args['ratio'] > 60 else args['ratio']
         if self.name == 'randomise_shape':
             args['add_or_subtract'] = 'add' if np.random.random() > 0.5 else 'subtract'
             if random_obj_or_not == 'Random':
-                args['ratio'] = int(np.random.gamma(shape=1, scale=7) + 1)  # Mainly between 0.1 and 0.3
-                args['ratio'] = 30 if args['ratio'] > 30 else args['ratio']
+                args['ratio'] = int(np.random.gamma(shape=3, scale=7) + 1)  # Mainly between 0.1 and 0.3
+                args['ratio'] = 50 if args['ratio'] > 50 else args['ratio']
             else:
-                args['ratio'] = int(np.random.gamma(shape=1, scale=5) + 2)  # Mainly between 0.1 and 0.3
-                args['ratio'] = 15 if args['ratio'] > 15 else args['ratio']
+                args['ratio'] = int(np.random.gamma(shape=3, scale=5) + 2)  # Mainly between 0.1 and 0.3
+                args['ratio'] = 50 if args['ratio'] > 50 else args['ratio']
         return args
 
     @staticmethod
@@ -275,13 +275,16 @@ class Object:
         large_pixels_sheared = skimage.transform.warp(large_pixels, inverse_map=transform.inverse, order=0)
         coloured_pos = np.argwhere(large_pixels_sheared > 1)
 
-        top_left = coloured_pos.min(0)
-        bottom_right = coloured_pos.max(0)
-        new_pixels = large_pixels_sheared[top_left[0]:bottom_right[0] + 1, top_left[1]: bottom_right[1] + 1]
-        self.actual_pixels = np.ones((new_pixels.shape[0] + self.border_size.Up + self.border_size.Down,
-                                       new_pixels.shape[1] + self.border_size.Left + self.border_size.Right))
-        self.actual_pixels[self.border_size.Down: new_pixels.shape[0] + self.border_size.Down,
-                           self.border_size.Right: new_pixels.shape[1] + self.border_size.Right] = new_pixels
+        if len(coloured_pos) == 0:
+            self.show()
+        else:
+            top_left = coloured_pos.min(0)
+            bottom_right = coloured_pos.max(0)
+            new_pixels = large_pixels_sheared[top_left[0]:bottom_right[0] + 1, top_left[1]: bottom_right[1] + 1]
+            self.actual_pixels = np.ones((new_pixels.shape[0] + self.border_size.Up + self.border_size.Down,
+                                           new_pixels.shape[1] + self.border_size.Left + self.border_size.Right))
+            self.actual_pixels[self.border_size.Down: new_pixels.shape[0] + self.border_size.Down,
+                               self.border_size.Right: new_pixels.shape[1] + self.border_size.Right] = new_pixels
 
         self.flip(Orientation.Right)
         self.reset_dimensions()
@@ -784,7 +787,7 @@ class Object:
         pixels_to_show = copy(self.actual_pixels)
         if show_holes:
             pixels_to_show[np.where(self.holes > 0)] = 11
-        ax = vis.plot_data(pixels_to_show, extent=extent)
+        _, ax = vis.plot_data(pixels_to_show, extent=extent)
 
         #TODO: DEAL WITH DIAGONAL SYMMETRIES!!!!
         if symmetries_on:

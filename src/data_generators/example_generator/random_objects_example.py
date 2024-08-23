@@ -4,6 +4,7 @@ import numpy as np
 from copy import copy
 
 from data_generators.example_generator.example import Example
+from data_generators.object_recognition.basic_geometry import Dimension2D
 from data_generators.object_recognition.primitives import Primitive, Parallelogram
 from src import constants as const
 from data_generators.object_recognition.object import Transformations
@@ -79,7 +80,8 @@ class RandomObjectsExample(Example):
         """
         if self.experiment_type == 'Object':
 
-            self.temp_objects = [self.create_object(debug=False, max_size_of_obj=MAX_SIZE_OF_OBJECT,
+            self.temp_objects = [self.create_object(debug=False,
+                                                    max_size_of_obj=Dimension2D(MAX_SIZE_OF_OBJECT, MAX_SIZE_OF_OBJECT),
                                                     overlap_prob=OVERLAP_PROB, far_away_prob=FAR_AWAY_PROB)]
 
             num_of_transformed_copies = np.random.randint(1, MAX_NUM_OF_LARGE_OBJECTS) \

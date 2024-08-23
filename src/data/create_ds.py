@@ -5,7 +5,7 @@ import tqdm
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from models.tokenizer import CharacterTokenizer
-from data_generators.object_recognition.random_objects_example import RandomObjectsExample
+from data_generators.example_generator.random_objects_example import RandomObjectsExample
 import numpy as np
 from data.utils import load_data
 from models.tokens import token_list

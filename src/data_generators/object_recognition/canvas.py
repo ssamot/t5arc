@@ -110,7 +110,6 @@ class Canvas:
                         overlap = True
                 if not overlap:
                     available_canvas_points.append(Point(x, y, 0))
-
         return available_canvas_points
 
     def embed_objects(self):
@@ -247,7 +246,7 @@ class Canvas:
         self.embed_objects()
 
     def show(self, full_canvas=True, fig_to_add: None | plt.Figure = None, nrows: int = 0, ncoloumns: int = 0,
-             index: int = 1):
+             index: int = 1, save_as: str | None = None):
 
         if full_canvas:
             xmin = - 0.5
@@ -256,7 +255,7 @@ class Canvas:
             ymax = self.full_canvas.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
             if fig_to_add is None:
-                vis.plot_data(self.full_canvas, extent=extent)
+                fig, _ = vis.plot_data(self.full_canvas, extent=extent)
             else:
                 ax = fig_to_add.add_subplot(nrows, ncoloumns, index)
                 _ = vis.plot_data(self.full_canvas, extent=extent, axis=ax)
@@ -267,8 +266,12 @@ class Canvas:
             ymax = self.actual_pixels.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
             if fig_to_add is None:
-                _ = vis.plot_data(self.actual_pixels, extent=extent)
+                fig, _ = vis.plot_data(self.actual_pixels, extent=extent)
             else:
                 ax = fig_to_add.add_subplot(nrows, ncoloumns, index)
                 _ = vis.plot_data(self.actual_pixels, extent=extent, axis=ax)
+
+        if fig_to_add is None and save_as is not None:
+            fig.savefig(save_as)
+            plt.close(fig)
 

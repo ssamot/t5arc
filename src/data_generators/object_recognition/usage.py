@@ -1,10 +1,10 @@
 
 import numpy as np
-from data_generators.object_recognition.random_objects_example import RandomObjectsExample
+from data_generators.example_generator.random_objects_example import RandomObjectsExample
 np.random.seed(11)
 
 #  How many, different, Primitives are allowed in the Example. These will be the base Objects
-MAX_NUM_OF_DIFFERENT_PRIMITIVES = 2
+MAX_NUM_OF_DIFFERENT_PRIMITIVES = 4
 
 # This is the maximum number of transformed Objects each base Object is allowed to generate if the base object is LARGE
 # (bigger than LARGE_OBJECT_THRESHOLD in both size dimensions)
@@ -16,7 +16,7 @@ MIN_NUM_OF_SMALL_OBJECTS = 2
 MAX_NUM_OF_SMALL_OBJECTS = 6
 
 # The number of transformations every base Object can have in order to create a transformed Object.
-NUMBER_OF_TRANSFORMATIONS = 1
+NUMBER_OF_TRANSFORMATIONS = 2
 
 # How many possible copies of the exact same transformed Object can coexist on the same Canvas
 MAX_NUM_OF_SAME_OBJECTS_ON_CANVAS = 2

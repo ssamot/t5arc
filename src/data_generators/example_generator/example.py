@@ -104,12 +104,12 @@ class Example:
             background_object = Random(size=test_canvas_size, occupancy_prob=np.random.gamma(1, 0.05) + 0.1)
             self.test_input_canvas.create_background_from_object(background_object)
 
-    def create_object(self, obj_probs: np.ndarray | None = None, max_size_of_obj: int = 15,
+    def create_object(self, obj_probs: np.ndarray | None = None, max_size_of_obj: Dimension2D = Dimension2D(15, 15),
                       overlap_prob: float = 0.8, far_away_prob: float = 0.1, debug: bool = False) -> Primitive:
         """
         Create a new Primitive.
         :param obj_probs: The probabilities of the type of Primitive
-        :param max_size_of_obj: The maximum size (both x and y) of the Primitive
+        :param max_size_of_obj: The maximum size of the Primitive
         :param overlap_prob: The probability that the Primitive's required_dist_to_others property will be negative
         allowing it to overlap with other Primitives
         :param far_away_prob: The probability the Primitive's required_dist_to_others property will be large keeping
@@ -131,8 +131,8 @@ class Example:
         self.ids.append(id)
         self.actual_pixel_ids.append(actual_pixels_id)
 
-        if obj_type.name == 'InverseCross' or obj_type.name == 'Steps' or obj_type.name == 'Pyramid':  # These objects have height not size
-            args['height'] = np.random.randint(2, max_size_of_obj)
+        if obj_type.name in ['InverseCross', 'Steps', 'Pyramid', 'Diagonal']:  # These objects have height not size
+            args['height'] = np.random.randint(2, np.min(max_size_of_obj.to_numpy()))
             if obj_type.name == 'InverseCross' and args['height'] % 2 == 0:  # Inverted Crosses need odd height
                 args['height'] += 1
 
@@ -143,15 +143,12 @@ class Example:
             if args['fill_height'] % 2 == 0:  # Inverted Crosses need odd fill_height
                 args['fill_height'] += 1
 
-        if obj_type.name == 'Diagonal':  # Diagonal has length, not size
-            args['length'] = np.random.randint(2, max_size_of_obj)
-
         if obj_type.name == 'Steps':  # Steps also has depth
             args['depth'] = np.random.randint(1, args['height'])
 
         if not np.any(np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie'])
                       == obj_type.name):
-            size = Dimension2D(np.random.randint(2, max_size_of_obj), np.random.randint(2, max_size_of_obj))
+            size = Dimension2D(np.random.randint(2, max_size_of_obj.dx), np.random.randint(2, max_size_of_obj.dy))
             if np.any(np.array(['Cross', 'InvertedCross']) == obj_type.name):   # Crosses need odd size
                 if size.dx % 2 == 0:
                     size.dx += 1
@@ -367,9 +364,10 @@ class Example:
 
         return unique_objects, actual_pixels_array
 
-    def show(self, canvas_index: int | str = 'all'):
+    def show(self, canvas_index: int | str = 'all', save_as: str | None = None):
         """
         Shows some (canvas_index is int or 'test') or all (canvas_index = 'all') the Canvases of the Experiment
+        :param save_as: If not None then save the figure generated as save_as file (but do not show it).
         :param canvas_index: Which Canvases to show (int, 'test' or 'all')
         :return:
         """
@@ -378,7 +376,7 @@ class Example:
                 canvas = self.input_canvases[canvas_index // 2]
             else:
                 canvas = self.output_canvases[canvas_index // 2]
-            canvas.show()
+            canvas.show(save_as=save_as)
 
         elif canvas_index == 'test':
             self.test_input_canvas.show()
