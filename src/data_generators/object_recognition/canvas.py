@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Dict
 import matplotlib.pyplot as plt
-import numpy as np
 
 from utils import *
 from data.utils import *
@@ -175,8 +175,9 @@ class Canvas:
         self.objects.remove(obj)
         self.embed_objects()
 
-    def split_object_by_colour(self, obj: Object):
+    def split_object_by_colour(self, obj: Object) -> Dict:
 
+        resulting_ids = {'id': [], 'actual_pixels_id': [], 'index': []}
         object_id = np.max([obj.id for obj in self.objects])
         actual_pixels_id = np.max([obj.actual_pixels_id for obj in self.objects])
 
@@ -203,10 +204,15 @@ class Canvas:
                                        _id=object_id, actual_pixels_id=actual_pixels_id)
                 new_primitive.set_colour_to_most_common()
                 new_primitive.actual_pixels[:, :] = new_pixels[:, :]
-
+            resulting_ids['id'].append(object_id)
+            resulting_ids['actual_pixels_id'].append(actual_pixels_id)
             self.add_new_object(new_primitive)
+            resulting_ids['index'].append(len(self.objects) - 1)
 
         self.remove_object(obj)
+        resulting_ids['index'] = np.array(resulting_ids['index']) - 1
+
+        return resulting_ids
 
     def create_background_from_object(self, obj: Object):
         xmin = int(obj.canvas_pos.x)
