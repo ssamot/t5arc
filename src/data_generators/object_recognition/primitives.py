@@ -6,10 +6,10 @@ import json
 from json import JSONEncoder
 
 import numpy as np
-from src import constants as const
+from data_generators.example_generator import constants as const
 from typing import List
 from enum import Enum
-from data_generators.object_recognition.object import Object, Transformations
+from data_generators.object_recognition.object import Object
 from data_generators.object_recognition.basic_geometry import Point, Bbox, Dimension2D, Orientation, Surround, Vector
 
 MAX_PAD_SIZE = const.MAX_PAD_SIZE

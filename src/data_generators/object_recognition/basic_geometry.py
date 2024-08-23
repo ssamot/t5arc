@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import numpy as np
-from src import constants as const
+from data_generators.example_generator import constants as const
 from typing import Union, List
 from copy import copy
 from enum import Enum

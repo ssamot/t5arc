@@ -5,7 +5,8 @@ import tqdm
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from models.tokenizer import CharacterTokenizer
-from data_generators.example_generator.random_objects_example import RandomObjectsExample
+from data_generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
+
 import numpy as np
 from data.utils import load_data
 from models.tokens import token_list
@@ -24,11 +25,14 @@ def main(output_filepath, repetitions):
     model_max_length = 20000000
     for _ in tqdm.tqdm(range(repetitions)):
         # Create an Example
-        e = RandomObjectsExample()
-        e.randomly_populate_canvases()
-        arc_style_input = e.create_canvas_arrays_input()
-        unique_objects, actual_pixels_array = e.create_output()
-        json_data_list.append(arc_style_input)
+        e = AutoEncoderDataExample(100)
+        array = e.get_canvases_as_numpy_array()
+        string = e.get_canvasses_as_string()
+
+        print(array)
+        print(string)
+        exit()
+        json_data_list.append(string)
 
         clean_object = str(unique_objects).replace(" ", "")
         #tokenizer = CharacterTokenizer(token_list, model_max_length)
@@ -50,9 +54,6 @@ def main(output_filepath, repetitions):
 
         objects.append(clean_object)
         object_pixels.append(actual_pixels_array)
-
-    train, test = load_data(json_data_list)
-
 
     print(train.shape)
     ##print(objects[-1])

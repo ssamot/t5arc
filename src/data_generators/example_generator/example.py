@@ -8,11 +8,10 @@ import numpy as np
 from copy import copy
 
 from data_generators.object_recognition.canvas import Canvas
-from data_generators.object_recognition.primitives import Primitive, ObjectType, Random,  Parallelogram, Cross, Hole, \
-     Pi, InverseCross, Dot, Angle, Diagonal, Steps, Fish, Bolt, Spiral, Tie, Pyramid
+from data_generators.object_recognition.primitives import Primitive, ObjectType, Random
 from data_generators.object_recognition.basic_geometry import Point, Dimension2D, Surround
 from data_generators.object_recognition.object import Transformations
-from src import constants as const
+from data_generators.example_generator import constants as const
 
 
 class Example:

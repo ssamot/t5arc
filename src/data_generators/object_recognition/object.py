@@ -1,7 +1,6 @@
 
 from __future__ import annotations
 
-import matplotlib.pyplot as plt
 from enum import Enum
 from typing import List, Union
 from copy import copy, deepcopy
@@ -11,10 +10,10 @@ import numpy as np
 from scipy import ndimage as ndi
 import skimage
 from visualization import visualize_data as vis
-from data_generators.object_recognition.basic_geometry import Point, Vector, Orientation, Surround, OrientationZ, Bbox, \
+from data_generators.object_recognition.basic_geometry import Point, Vector, Orientation, Surround, Bbox, \
     Dimension2D, RelativePoint
 
-from src import constants as const
+from data_generators.example_generator import constants as const
 
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 

@@ -5,10 +5,10 @@ import logging
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from data.data_generator import CanvasDataGenerator
-from models.utils import TransformerDecoder, ConcatenateRNN
+from models.transformers import TransformerDecoder
 
 
-def categorical_accuracy_per_sequence(y_true, y_pred):
+def acc_seq(y_true, y_pred):
     return keras.ops.mean(keras.ops.min(keras.ops.equal(keras.ops.argmax(y_true, axis=-1),
                   keras.ops.argmax(y_pred, axis=-1)), axis=-1))
 
@@ -37,7 +37,12 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     x = keras.layers.Flatten()(x)
 
     encoder_states = keras.layers.Dense(latent_dim, activation="relu")(x)
-    encoder_states = keras.ops.expand_dims(encoder_states, 1)
+
+    encoder_model = keras.models.Model( encoder_inputs,encoder_states)
+
+
+
+
 
     decoder_inputs = keras.layers.Input(shape=(None,))  # (batch_size, sequence_length)
     dec_embedding = keras.layers.Embedding(input_dim=num_decoder_tokens,
@@ -46,10 +51,13 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
 
 
     lstm_out = TransformerDecoder(
-        intermediate_dim=latent_dim, num_heads=8)(dec_embedding, encoder_states)
+        intermediate_dim=latent_dim, num_heads=8)(dec_embedding, keras.ops.expand_dims(encoder_states, 1))
 
     decoder_outputs = keras.layers.TimeDistributed(keras.layers.Dense(num_decoder_tokens, activation='softmax'))(
         lstm_out)
+    decoder_encoder_inputs = keras.layers.Input(shape=input_shape)
+    decoder_model = keras.models.Model( [decoder_encoder_inputs, decoder_inputs], decoder_outputs)
+
 
     model = keras.models.Model( [encoder_inputs, decoder_inputs], decoder_outputs)
     optimizer = keras.optimizers.AdamW(learning_rate=0.001)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Dict
 import matplotlib.pyplot as plt
 
-from utils import *
+from data_generators.example_generator.utils import *
 from data.utils import *
 from visualization import visualize_data as vis
 from data_generators.object_recognition.primitives import Primitive
