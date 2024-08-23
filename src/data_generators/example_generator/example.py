@@ -12,7 +12,7 @@ from data_generators.object_recognition.primitives import Primitive, ObjectType,
      Pi, InverseCross, Dot, Angle, Diagonal, Steps, Fish, Bolt, Spiral, Tie, Pyramid
 from data_generators.object_recognition.basic_geometry import Point, Dimension2D, Surround
 from data_generators.object_recognition.object import Transformations
-from src import constants as const
+from src.constants import constants as const
 
 
 class Example:

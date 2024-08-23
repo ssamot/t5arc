@@ -6,7 +6,7 @@ import json
 from json import JSONEncoder
 
 import numpy as np
-from src import constants as const
+from src.constants import constants as const
 from typing import List
 from enum import Enum
 from data_generators.object_recognition.object import Object, Transformations

@@ -5,9 +5,7 @@ import json
 
 from random import seed as set_seed
 
-from src.dsls.hodel_arc_dsl.dsl import *
-
-import utils
+from data_generators.object_recognition import utils
 from src.dsls.hodel_arc_dsl.utils import *
 from src.dsls.hodel_arc_dsl.constants import *
 

@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Dict
+from copy import copy
+from typing import Dict, List
 import matplotlib.pyplot as plt
+import numpy as np
 
-from utils import *
-from data.utils import *
+from data.utils import do_two_objects_overlap
+from data_generators.object_recognition.object import Object
+from data_generators.object_recognition.utils import union2d
+from src.constants import constants as const
 from visualization import visualize_data as vis
-from data_generators.object_recognition.primitives import Primitive
+from data_generators.object_recognition.primitives import Primitive, Random, Dot
 from data_generators.object_recognition.basic_geometry import Point, Dimension2D
 
 MAX_PAD_SIZE = const.MAX_PAD_SIZE

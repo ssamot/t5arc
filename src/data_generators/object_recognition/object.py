@@ -14,7 +14,7 @@ from visualization import visualize_data as vis
 from data_generators.object_recognition.basic_geometry import Point, Vector, Orientation, Surround, OrientationZ, Bbox, \
     Dimension2D, RelativePoint
 
-from src import constants as const
+from src.constants import constants as const
 
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 

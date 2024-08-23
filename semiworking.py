@@ -1,15 +1,11 @@
 import keras
 import click
-import os
 import logging
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
-from functools import partial
-from data.utils import load_data_for_generator, pad_array_with_random_position
 import keras_nlp
 from data.data_generator import CanvasDataGenerator
-import constants as consts
-from models.utils import SequenceAccuracy
+
 
 def categorical_accuracy_per_sequence(y_true, y_pred):
     return keras.ops.mean(keras.ops.min(keras.ops.equal(keras.ops.argmax(y_true, axis=-1),
