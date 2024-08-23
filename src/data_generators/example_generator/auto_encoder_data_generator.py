@@ -9,7 +9,7 @@ from data_generators.example_generator.example import Example
 from data_generators.object_recognition.basic_geometry import Dimension2D
 from data_generators.object_recognition.canvas import Canvas
 from data_generators.object_recognition.primitives import Primitive, Parallelogram, Random
-from data_generators.example_generator import constants as const
+from constants import constants as const
 from data_generators.object_recognition.object import Transformations
 
 MIN_PAD_SIZE = 3

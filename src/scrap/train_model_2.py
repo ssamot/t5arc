@@ -5,7 +5,7 @@ from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from tokenizer import CharacterTokenizer
 import numpy as np
-from data_generators.example_generator.utils import load_data
+from data_generators.object_recognition.utils import load_data
 
 
 def build_model(input_shape, num_decoder_tokens, latent_dim):
