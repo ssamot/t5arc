@@ -21,8 +21,8 @@ activation = "relu"
 def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     total_features = input_shape[0] * input_shape[1] * input_shape[2]
 
-    conv_input = keras.layers.Input(shape=input_shape)
-    x = conv_input
+    encoder_inputs = keras.layers.Input(shape=input_shape)
+    x = encoder_inputs
     x = keras.layers.Reshape(input_shape, input_shape=total_features)(x)
     x = keras.layers.Embedding(input_dim=16, output_dim=2, input_length=total_features)(x)
     x = keras.layers.Flatten()(x)
@@ -43,24 +43,10 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     x = keras.layers.Flatten()(x)
     #x = keras.layers.Dense(latent_dim, activation= activation)(x)
    # print(x.shape)
-    conv_model = keras.models.Model(conv_input, x)
 
-    # Inputs
-    encoder_input = keras.layers.Input(shape=[20] + list(input_shape))
-    # Apply the convolutional base to each input
-    conv_outputs = keras.layers.TimeDistributed(conv_model)(encoder_input)
 
-    # differences = []
-    # for i in range(1, len(conv_outputs), 2):
-    #     diff = keras.layers.concatenate([conv_outputs[i], conv_outputs[i - 1]])
-    #     #print(diff.shape)
-    #     differences.append(diff)
-    #exit()
 
-    encoder_states = keras.layers.Flatten()(conv_outputs)
-    print(encoder_states.shape)
-
-    encoder_states = keras.layers.Dense(latent_dim, activation="relu")(encoder_states)
+    encoder_states = keras.layers.Dense(latent_dim, activation="relu")(x)
     encoder_states = keras.ops.expand_dims(encoder_states, 1)
 
     decoder_inputs = keras.layers.Input(shape=(None,))  # (batch_size, sequence_length)
@@ -78,7 +64,7 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     decoder_outputs = keras.layers.TimeDistributed(keras.layers.Dense(num_decoder_tokens, activation='softmax'))(
         lstm_out)
 
-    model = keras.models.Model( [encoder_input, decoder_inputs], decoder_outputs)
+    model = keras.models.Model( [encoder_inputs, decoder_inputs], decoder_outputs)
     optimizer = keras.optimizers.AdamW(learning_rate=0.001)
     model.compile(optimizer=optimizer,
                   loss="categorical_crossentropy",
