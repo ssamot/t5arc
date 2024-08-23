@@ -203,6 +203,8 @@ class AutoEncoderDataExample(Example):
                 for x in range(array.shape[2]):
                     result += str(int(array[c, y, x]))
 
+        return result
+
     def show(self, canvas_index: int | str = 'all', save_as: str | None = None):
         """
         Shows some (canvas_index is int or 'test') or all (canvas_index = 'all') the Canvases of the Experiment
