@@ -18,23 +18,21 @@ import secrets
 def main(output_filepath, repetitions):
     # build_model()
     # Initialize a list to store the contents of the JSON files
-    json_data_list = []
-    objects = []
-    object_pixels = []
+    arrays = []
+    strings = []
 
+    repetitions = 3
     model_max_length = 20000000
     for _ in tqdm.tqdm(range(repetitions)):
         # Create an Example
         e = AutoEncoderDataExample(100)
-        array = e.get_canvases_as_numpy_array()
-        string = e.get_canvasses_as_string()
+        array_reps = e.get_canvases_as_numpy_array()
+        str_reps = e.get_canvasses_as_string()
 
-        print(array)
-        print(string)
-        exit()
-        json_data_list.append(string)
 
-        clean_object = str(unique_objects).replace(" ", "")
+        #strings.extend([str(str_rep).replace(" ", "") for str_rep in str_reps])
+        strings.extend(str_reps)
+        arrays.append(array_reps)
         #tokenizer = CharacterTokenizer(token_list, model_max_length)
 
         # try:
@@ -51,17 +49,13 @@ def main(output_filepath, repetitions):
         #     print(e)
 
 
-
-        objects.append(clean_object)
-        object_pixels.append(actual_pixels_array)
-
-    print(train.shape)
-    ##print(objects[-1])
+    arrays = np.concatenate(arrays)
+    print(arrays.shape)
 
 
     tokenizer = CharacterTokenizer(token_list, model_max_length)
     tokenized_inputs = tokenizer(
-        objects,
+        strings,
         padding="longest",
         truncation=True,
         return_tensors="np",
@@ -69,7 +63,7 @@ def main(output_filepath, repetitions):
 
     object_ids = tokenized_inputs.input_ids
     print(object_ids.shape)
-    print(train.shape)
+    print(arrays.shape)
     #exit()
 
     hex = secrets.token_hex(nbytes=16)

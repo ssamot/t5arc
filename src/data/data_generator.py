@@ -1,8 +1,8 @@
 import keras
 import numpy as np
 
-from data.utils import load_data
-from data_generators.example_generator.random_objects_example import RandomObjectsExample
+
+from data_generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
 from models.tokenizer import CharacterTokenizer
 from models.tokens import token_list
 
@@ -42,43 +42,22 @@ class CanvasDataGenerator(keras.utils.PyDataset):
     def __data_generation(self):
         """Generates data containing batch_size images."""
 
-        json_data_list = []
-        objects = []
-        object_pixels = []
-        for _ in (range(self.batch_size)):
-            # Create an Example
-            e = RandomObjectsExample()
-            e.randomly_populate_canvases()
-            arc_style_input = e.create_canvas_arrays_input()
-            unique_objects, actual_pixels_array = e.create_output()
-            json_data_list.append(arc_style_input)
-            objects.append(str(unique_objects).replace(" ", ""))
-            object_pixels.append(actual_pixels_array)
-
-        batch_inputs, test = load_data(json_data_list)
-        # print(objects)
+        e = AutoEncoderDataExample(self.batch_size)
+        array_reps = e.get_canvases_as_numpy_array()
+        str_reps = e.get_canvasses_as_string()
 
         # print(train.shape)
         # print(objects[-1])
 
         tokenized_inputs = self.tokenizer(
-            objects,
+            str_reps,
             padding="longest",
             truncation=True,
             return_tensors="np",
         )
 
         batch_targets = tokenized_inputs.input_ids
-        #batch_inputs = np.transpose(batch_inputs, (1, 0, 2, 3, 4))
 
-        # print(batch_inputs.shape)
-        # print(batch_targets.shape)
-        # exit()
-
-       # batch_inputs = [np.array(b, dtype="int") for b in batch_inputs]
-        # for b in batch_inputs:
-        #     print(np.max(b), np.min(b))
-        # exit()
 
         one_hot_encoded = np.zeros(
             (batch_targets.shape[0], batch_targets.shape[1], self.tokenizer.num_decoder_tokens + 1))
@@ -92,4 +71,4 @@ class CanvasDataGenerator(keras.utils.PyDataset):
         targets_one_hot_encoded = one_hot_encoded[:, 1:, :]
         targets_inputs = batch_targets[:, :-1]
 
-        return  [batch_inputs,targets_inputs], targets_one_hot_encoded
+        return [array_reps,targets_inputs], targets_one_hot_encoded

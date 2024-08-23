@@ -49,7 +49,7 @@ train:
 #	KERAS_BACKEND="torch" CUDA_VISIBLE_DEVICES=0 torchrun --standalone --nproc_per_node=1 src/models/train_model.py data/processed/train.npz models/ False
 
 train_generator:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_generator.py data/raw/arc_original/training data/processed/train 300 models/
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_generator.py models/
 
 data:
 	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py  data/processed/ 1000

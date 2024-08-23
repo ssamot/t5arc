@@ -5,7 +5,7 @@ import logging
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from data.data_generator import CanvasDataGenerator
-from models.transformers import TransformerDecoder
+from models.decoder import TransformerDecoder
 
 
 def acc_seq(y_true, y_pred):
@@ -63,7 +63,7 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
     optimizer = keras.optimizers.AdamW(learning_rate=0.001)
     model.compile(optimizer=optimizer,
                   loss="categorical_crossentropy",
-                  metrics=["accuracy", categorical_accuracy_per_sequence ])
+                  metrics=["accuracy", acc_seq ])
 
     # encoder_model.compile()
 
@@ -71,11 +71,8 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
 
 
 @click.command()
-@click.argument('json_files', type=click.Path(exists=True))
-@click.argument('programme_files', type=click.Path(exists=True))
-@click.argument('max_token_length', type=click.INT)
 @click.argument('output_filepath', type=click.Path())
-def main(json_files, programme_files, max_token_length, output_filepath):
+def main(output_filepath):
     # build_model()
     # Initialize a list to store the contents of the JSON files
 
