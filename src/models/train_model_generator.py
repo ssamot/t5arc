@@ -4,11 +4,7 @@ import os
 import logging
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
-from functools import partial
-from data.utils import load_data_for_generator, pad_array_with_random_position
-import keras_nlp
 from data.data_generator import CanvasDataGenerator
-import constants as consts
 from models.utils import TransformerDecoder, ConcatenateRNN
 
 
@@ -38,13 +34,7 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
         xs.append(x_new)
         x = keras.layers.add(xs)
 
-
-    #x = keras.layers.MaxPool2D(x)
     x = keras.layers.Flatten()(x)
-    #x = keras.layers.Dense(latent_dim, activation= activation)(x)
-   # print(x.shape)
-
-
 
     encoder_states = keras.layers.Dense(latent_dim, activation="relu")(x)
     encoder_states = keras.ops.expand_dims(encoder_states, 1)
@@ -57,9 +47,6 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
 
     lstm_out = TransformerDecoder(
         intermediate_dim=latent_dim, num_heads=8)(dec_embedding, encoder_states)
-
-    # lstm_out = keras.layers.LSTM(latent_dim, return_sequences=True)(dec_embedding,
-    #                                                                 initial_state=[encoder_states, encoder_states])
 
     decoder_outputs = keras.layers.TimeDistributed(keras.layers.Dense(num_decoder_tokens, activation='softmax'))(
         lstm_out)
