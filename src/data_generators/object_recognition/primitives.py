@@ -143,7 +143,7 @@ class Primitive(Object):
     def json_output(self):
         args = self.__dict__.copy()
         for arg in ['border_size', '_canvas_pos', 'rotation_axis', 'number_of_coloured_pixels', 'actual_pixels',
-                    'required_dist_to_others', 'canvas_id', '_holes', '_center_on']:
+                    'required_dist_to_others', 'canvas_id', '_holes', '_center_on', '_relative_points']:
             args.pop(arg, None)
         if 'size' in args:
             args.pop('size', None)
@@ -176,7 +176,7 @@ class Primitive(Object):
         args = self.__dict__.copy()
         for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'actual_pixels_id', 'rotation_axis',
                     'dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox', '_holes',
-                    '_center_on']:
+                    '_center_on', '_relative_points']:
             args.pop(arg, None)
         args['_id'] = self.id
         args['actual_pixels_id'] = self.actual_pixels_id

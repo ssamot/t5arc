@@ -53,6 +53,32 @@ class OrientationZ(Enum):
     Away: int = -1
     Towards: int = 1
 
+class RelativePoint(Enum):
+    Top_Left: int = 0
+    Top_Center: int = 1
+    Top_Right: int = 2
+    Middle_Left: int = 3
+    Middle_Center: int = 4
+    Middle_Right: int = 5
+    Bottom_Left: int = 6
+    Bottom_Center: int = 7
+    Bottom_Right: int = 8
+
+@dataclass
+class RelativePoints:
+    def __init__(self, a_point: Point, which_point: RelativePoint, dimensions: Dimension2D):
+        if which_point == RelativePoint.Top_Left: self.Top_Left = a_point
+        if which_point == RelativePoint.Top_Center: self.Top_Center = a_point
+        if which_point == RelativePoint.Top_Right: self.Top_Right = a_point
+        if which_point == RelativePoint.Middle_Left: self.Middle_Left = a_point
+        if which_point == RelativePoint.Middle_Center: self.Middle_Center = a_point
+        if which_point == RelativePoint.Middle_Right: self.Middle_Right = a_point
+        if which_point == RelativePoint.Bottom_Left: self.Bottom_Left = a_point
+        if which_point == RelativePoint.Bottom_Center: self.Bottom_Center = a_point
+        if which_point == RelativePoint.Bottom_Right: self.Bottom_Right = a_point
+
+
+
 
 @dataclass
 class Surround:
