@@ -10,10 +10,10 @@ import numpy as np
 from scipy import ndimage as ndi
 import skimage
 from visualization import visualize_data as vis
-from data_generators.object_recognition.basic_geometry import Point, Vector, Orientation, Surround, OrientationZ, Bbox,\
-                                                              Dimension2D
+from data_generators.object_recognition.basic_geometry import Point, Vector, Orientation, Surround, OrientationZ, Bbox, \
+    Dimension2D, RelativePoint
 
-import constants as const
+from src import constants as const
 
 #np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -109,6 +109,7 @@ class Object:
 
         self.transformations: List = []
 
+        self._relative_points = {}
         self.reset_dimensions()
 
     @property
@@ -130,6 +131,39 @@ class Object:
             return None
         self._holes = holes
         return self._holes
+
+    @property
+    def relative_points(self):
+        """
+        Generates the _relative_points for the Object
+        :return: the self._relative_points
+        """
+        self._relative_points[RelativePoint.Bottom_Left] = self.canvas_pos
+        self._relative_points[RelativePoint.Bottom_Right] = Point(self.canvas_pos.x + self.dimensions.dx,
+                                                                  self.canvas_pos.y)
+        self._relative_points[RelativePoint.Top_Left] = self.bbox.top_left
+        self._relative_points[RelativePoint.Top_Right] = Point(self.bbox.bottom_right.x, self.bbox.top_left.y)
+
+        self._relative_points[RelativePoint.Top_Center] = None
+        self._relative_points[RelativePoint.Bottom_Center] = None
+        self._relative_points[RelativePoint.Middle_Left] = None
+        self._relative_points[RelativePoint.Middle_Right] = None
+        self._relative_points[RelativePoint.Middle_Center] = None
+        if self.dimensions.dx % 2 == 1:
+            self._relative_points[RelativePoint.Top_Center] = Point(self.canvas_pos.x + self.dimensions.dx // 2,
+                                                                    self.bbox.top_left.y)
+            self._relative_points[RelativePoint.Bottom_Center] = Point(self.canvas_pos.x + self.dimensions.dx // 2,
+                                                                       self.canvas_pos.y)
+        if self.dimensions.dy % 2 == 1:
+            self._relative_points[RelativePoint.Middle_Left] = Point(self.canvas_pos.x,
+                                                                     self.canvas_pos.y + self.dimensions.dy // 2)
+            self._relative_points[RelativePoint.Middle_Right] = Point(self.bbox.bottom_right.x,
+                                                                      self.canvas_pos.y + self.dimensions.dy // 2)
+        if self.dimensions.dx % 2 == 1 and self.dimensions.dy % 2 == 1:
+            self._relative_points[RelativePoint.Middle_Center] = Point(self.canvas_pos.x + self.dimensions.dx // 2,
+                                                                       self.canvas_pos.y + self.dimensions.dy // 2)
+
+        return self._relative_points
 
     # Transformation methods
     def scale(self, factor: int):
@@ -318,19 +352,70 @@ class Object:
 
         self.transformations.append([Transformations.mirror, {'axis': axis}])
 
-    def flip(self, axis: Orientation):
+    def flip(self, axis: Orientation, translate: bool = False):
         """
-        Flips the object along an axis and possibly copies it
+        Flips the object along an axis. If the Orientation is diagonal it will flip twice
         :param axis: The direction to flip towards. The edge of the bbox toward that direction becomes the axis of the flip.
         :return: Nothing
         """
 
         if axis == Orientation.Up or axis == Orientation.Down:
             self.actual_pixels = np.flipud(self.actual_pixels)
+            if translate:
+                self.canvas_pos.y = self.canvas_pos.y + self.dimensions.dy if axis == Orientation.Up else \
+                    self.canvas_pos.y - self.dimensions.dy
         elif axis == Orientation.Left or axis == Orientation.Right:
             self.actual_pixels = np.fliplr(self.actual_pixels)
+            if translate:
+                self.canvas_pos.x = self.canvas_pos.x + self.dimensions.dx if axis == Orientation.Right else \
+                    self.canvas_pos.x - self.dimensions.dx
+        else:
+            self.actual_pixels = np.flipud(self.actual_pixels)
+            self.actual_pixels = np.fliplr(self.actual_pixels)
+            if translate:
+                if axis in [Orientation.Up_Right, Orientation.Up_Left]:
+                    self.canvas_pos.y += self.dimensions.dy
+                elif axis in [Orientation.Down_Right, Orientation.Down_Left]:
+                    self.canvas_pos.y -= self.dimensions.dy
+                if axis in [Orientation.Up_Right, Orientation.Down_Right]:
+                    self.canvas_pos.x += self.dimensions.dx
+                elif axis in [Orientation.Up_Left, Orientation.Down_Left]:
+                    self.canvas_pos.x -= self.dimensions.dx
 
         self.transformations.append([Transformations.flip, {'axis': axis}])
+
+    def translate_along_direction(self, direction: Vector):
+        """
+        Translate the Object along a given Vector
+        :param direction: The Vector to translate along
+        :return:
+        """
+        orient = direction.orientation
+        if orient in [Orientation.Up, Orientation.Up_Left, Orientation.Up_Right]:
+            self.canvas_pos.y += direction.length
+        if orient in [Orientation.Down, Orientation.Down_Left, Orientation.Down_Right]:
+            self.canvas_pos.y -= direction.length
+        if orient in [Orientation.Left, Orientation.Up_Left, Orientation.Down_Left]:
+            self.canvas_pos.x -= direction.length
+        if orient in [Orientation.Right, Orientation.Up_Right, Orientation.Down_Right]:
+            self.canvas_pos.x += direction.length
+
+        self.reset_dimensions()
+
+    def translate_relative_point_to_point(self, relative_point: RelativePoint, other_point: Point):
+        """
+        Translate the Object so that its relative point with key RelativePoint ends up on other_point.
+        :param relative_point: The RelativePoint
+        :param other_point: The target point
+        :return:
+        """
+
+        this_point = self.relative_points[relative_point]
+        if this_point is not None:
+            difference = other_point - this_point
+            self.canvas_pos += difference
+
+        self.reset_dimensions()
 
     def randomise_colour(self, ratio: int = 10, colour: str = 'random'):
         """
@@ -473,12 +558,65 @@ class Object:
 
     def __sub__(self, other: object):
         pass
+    
+    def distance_to_object(self, other: Object, dist_type: str = 'min') -> Vector:
+        """
+        Calculates the Vector that defines the distance (in pixels) between this and the obj Object. The exact 
+        calculation depends on the type asked for. If type is 'min' then this is the distance between the two nearest 
+        pixels of the Objects. If it is 'max' it is between the two furthest. If it is 'canvas_pos' then it is the 
+        distance between the two canvas positions of the Objects.
+        If the two Points that are being compared lie along a Direction then the returned Vector also has this Direction.
+        If more than two pairs of points qualify to calculate the distance then one with a Direction is chosen (with
+        a preference to Directions Up, Down, Left and Right).
+        :param obj: The other Object
+        :param dist_type: str. Can be 'max', 'min' or 'canvas_pos'
+        :return: A Vector whose length is the distance calculated, whose origin in the Point in this Object used to 
+        calculate the distance and whose orientation is the Orientation between the two Points used if it exists 
+        (otherwise it is None).
+        """
+        if dist_type == 'min' or dist_type == 'max':
+            all_self_colour_points = [Point(pos[1], pos[0]) for pos in self.get_coloured_pixels_positions()]
+            all_other_colour_points = [Point(pos[1], pos[0]) for pos in other.get_coloured_pixels_positions()]
+
+            all_distances = []
+            all_distance_lengths = []
+            for sp in all_self_colour_points:
+                for op in all_other_colour_points:
+                    all_distances.append(sp.euclidean_distance(op))
+                    all_distance_lengths.append(all_distances[-1].length)
+
+            if dist_type == 'max':
+                indices = np.argwhere(np.array(all_distance_lengths) == np.amax(all_distance_lengths)).squeeze()
+            elif dist_type == 'min':
+                indices = np.argwhere(np.array(all_distance_lengths) == np.amin(all_distance_lengths)).squeeze()
+            distances = np.take(all_distances, indices)
+
+            if type(distances) != np.ndarray:
+                distances = [distances]
+
+            distances_with_ori = [dist for dist in distances if dist.orientation is not None]
+            if len(distances_with_ori) > 0:
+                distances_with_good_ori = [dist for dist in distances_with_ori if (dist.orientation == Orientation.Up
+                                                                                   or dist.orientation == Orientation.Down
+                                                                                   or dist.orientation == Orientation.Right
+                                                                                   or dist.orientation == Orientation.Left)]
+                distance = distances_with_good_ori[0] if len(distances_with_good_ori) > 0 else distances_with_ori[0]
+            else:
+                distance = distances[0]
+
+        if dist_type == 'canvas_pos':
+            distance = self.canvas_pos.euclidean_distance(other.canvas_pos)
+
+        return distance
 
     def superimpose(self, other: Object, z_order: int = 1):
         pass
 
-    def get_coloured_pixels_positions(self) -> np.ndarray:
-        result = np.argwhere(self.actual_pixels > 1).astype(int)
+    def get_coloured_pixels_positions(self, col: int | None = None) -> np.ndarray:
+        if col is None:
+            result = np.argwhere(self.actual_pixels > 1).astype(int)
+        else:
+            result = np.argwhere(self.actual_pixels == col).astype(int)
         canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
         return canv_pos + result
 
@@ -490,6 +628,14 @@ class Object:
         canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
         coloured_pos -= canv_pos
         return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
+
+    def get_colour_groups(self):
+        result = {}
+        colours = self.get_used_colours()
+        for col in colours:
+            positions = self.get_coloured_pixels_positions(col)
+            result[col] = positions
+        return result
 
     def set_colour_to_most_common(self):
         colours = self.actual_pixels[np.where(self.actual_pixels > 1)]

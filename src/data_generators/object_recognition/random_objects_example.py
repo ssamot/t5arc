@@ -5,7 +5,7 @@ from copy import copy
 
 from data_generators.example_generator.example import Example
 from data_generators.object_recognition.primitives import Primitive, Parallelogram
-import constants as const
+from src import constants as const
 from data_generators.object_recognition.object import Transformations
 
 MAX_EXAMPLE_PAIRS = const.MAX_EXAMPLE_PAIRS

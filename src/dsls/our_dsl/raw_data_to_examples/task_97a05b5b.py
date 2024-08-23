@@ -96,7 +96,6 @@ example.reset_object_colours()
 #canvas_in = example.input_canvases[2]
 canvas_in = example.test_input_canvas
 
-
 canvas_out = sols.solution_97a05b5b(canvas_in)
 
 canvas_out.show()

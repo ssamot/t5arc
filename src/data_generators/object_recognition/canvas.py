@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Dict
 import matplotlib.pyplot as plt
-import numpy as np
 
 from utils import *
 from data.utils import *
@@ -174,6 +174,45 @@ class Canvas:
     def remove_object(self, obj: Object):
         self.objects.remove(obj)
         self.embed_objects()
+
+    def split_object_by_colour(self, obj: Object) -> Dict:
+
+        resulting_ids = {'id': [], 'actual_pixels_id': [], 'index': []}
+        object_id = np.max([obj.id for obj in self.objects])
+        actual_pixels_id = np.max([obj.actual_pixels_id for obj in self.objects])
+
+        colours_in_places = obj.get_colour_groups()
+        for col in colours_in_places:
+            object_id += 1
+            actual_pixels_id += 1
+            canvas_pos = Point(colours_in_places[col][:, 1].min(), colours_in_places[col][:, 0].min())
+            new_pixels_index = colours_in_places[col] - np.array([colours_in_places[col][:, 0].min(), colours_in_places[col][:, 1].min()])
+            actual_pixels_index = colours_in_places[col] - np.array([obj.canvas_pos.y, obj.canvas_pos.x])
+
+            size = Dimension2D(colours_in_places[col][:, 1].max() - colours_in_places[col][:, 1].min() + 1,
+                               colours_in_places[col][:, 0].max() - colours_in_places[col][:, 0].min() + 1)
+
+            if colours_in_places[col].shape[0] == 1:
+                new_primitive = Dot(colour=col, canvas_pos=canvas_pos,
+                                    _id=object_id, actual_pixels_id=actual_pixels_id)
+            else:
+                new_pixels = np.ones((size.dy, size.dx))
+                new_pixels[new_pixels_index[:, 0], new_pixels_index[:, 1]] = \
+                    obj.actual_pixels[actual_pixels_index[:, 0], actual_pixels_index[:, 1]]
+
+                new_primitive = Random(size=Dimension2D(new_pixels.shape[1], new_pixels.shape[0]), canvas_pos=canvas_pos,
+                                       _id=object_id, actual_pixels_id=actual_pixels_id)
+                new_primitive.set_colour_to_most_common()
+                new_primitive.actual_pixels[:, :] = new_pixels[:, :]
+            resulting_ids['id'].append(object_id)
+            resulting_ids['actual_pixels_id'].append(actual_pixels_id)
+            self.add_new_object(new_primitive)
+            resulting_ids['index'].append(len(self.objects) - 1)
+
+        self.remove_object(obj)
+        resulting_ids['index'] = np.array(resulting_ids['index']) - 1
+
+        return resulting_ids
 
     def create_background_from_object(self, obj: Object):
         xmin = int(obj.canvas_pos.x)

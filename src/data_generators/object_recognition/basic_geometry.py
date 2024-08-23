@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import numpy as np
-import constants as const
+from src import constants as const
 from typing import Union, List
 from copy import copy
 from enum import Enum
 from dataclasses import dataclass
+
 
 #np.random.seed(const.RANDOM_SEED_FOR_NUMPY)
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
@@ -51,6 +52,32 @@ class Orientation(Enum):
 class OrientationZ(Enum):
     Away: int = -1
     Towards: int = 1
+
+class RelativePoint(Enum):
+    Top_Left: int = 0
+    Top_Center: int = 1
+    Top_Right: int = 2
+    Middle_Left: int = 3
+    Middle_Center: int = 4
+    Middle_Right: int = 5
+    Bottom_Left: int = 6
+    Bottom_Center: int = 7
+    Bottom_Right: int = 8
+
+@dataclass
+class RelativePoints:
+    def __init__(self, a_point: Point, which_point: RelativePoint, dimensions: Dimension2D):
+        if which_point == RelativePoint.Top_Left: self.Top_Left = a_point
+        if which_point == RelativePoint.Top_Center: self.Top_Center = a_point
+        if which_point == RelativePoint.Top_Right: self.Top_Right = a_point
+        if which_point == RelativePoint.Middle_Left: self.Middle_Left = a_point
+        if which_point == RelativePoint.Middle_Center: self.Middle_Center = a_point
+        if which_point == RelativePoint.Middle_Right: self.Middle_Right = a_point
+        if which_point == RelativePoint.Bottom_Left: self.Bottom_Left = a_point
+        if which_point == RelativePoint.Bottom_Center: self.Bottom_Center = a_point
+        if which_point == RelativePoint.Bottom_Right: self.Bottom_Right = a_point
+
+
 
 
 @dataclass
@@ -208,13 +235,13 @@ class Point:
     def manhattan_distance(self, other: Point) -> int:
         return np.abs(self.x - other.x) + np.abs(self.y - other.y)
 
-    def manhattan_direction(self, other: Point) -> Vector | None:
+    def euclidean_distance(self, other: Point) -> Vector | None:
         """
-        Calculates the Manhattan distance on the x,y plane of this Point and another Point as long as the two Points
-        lie along one of the 8 directions defined in the Direction class and return the Vector that defines this
-        distance.
-        :param other: The other Point
-        :return: The Vector specifying the Manhattan distance or None if the two Points do not align along a Direction
+        Calculates the Euclidean distance (using the pixels as the smallest unit) on the x,y plane between this Point
+        and another Point as long as the two Points lie along one of the 8 directions defined in the Direction class
+        and return the Vector that defines this distance.
+        :param other: The other Point.
+        :return: The Vector specifying the Euclidean distance or None if the two Points do not align along a Direction
         """
         origin = copy(self)
         length = None
@@ -226,15 +253,15 @@ class Point:
             orientation = Orientation.Up if self.y < other.y else Orientation.Down
             length = np.abs(self.y - other.y)
         elif np.sign(self.x - other.x) == np.sign(self.y - other.y):
+            length = np.abs(self.x - other.x)
             if np.abs(self.x - other.x) == np.abs(self.y - other.y):
                 orientation = Orientation.Up_Right if self.x < other.x else Orientation.Down_Left
-                length = np.abs(self.x - other.x)
             else:
                 orientation = None
         elif np.sign(self.x - other.x) != np.sign(self.y - other.y):
+            length = np.abs(self.x - other.x)
             if np.abs(self.x - other.x) == np.abs(self.y - other.y):
                 orientation = Orientation.Down_Right if self.x < other.x else Orientation.Up_Left
-                length = np.abs(self.x - other.x)
             else:
                 orientation = None
 
