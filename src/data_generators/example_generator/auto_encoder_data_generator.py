@@ -189,6 +189,20 @@ class AutoEncoderDataExample(Example):
 
         return result
 
+    def get_canvasses_as_string(self):
+        array = self.get_canvases_as_numpy_array()
+        start_of_line = '^'
+        start_of_canvas = '>'
+
+        result = ''
+
+        for c in range(array.shape[0]):
+            result += start_of_canvas
+            for y in range(array.shape[1]):
+                result += start_of_line
+                for x in range(array.shape[2]):
+                    result += str(int(array[c, y, x]))
+
     def show(self, canvas_index: int | str = 'all', save_as: str | None = None):
         """
         Shows some (canvas_index is int or 'test') or all (canvas_index = 'all') the Canvases of the Experiment
