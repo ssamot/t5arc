@@ -48,6 +48,26 @@ def solution_97a05b5b(canvas: Canvas) -> Canvas:
 
     return canvas_out
 
+
 def solution_b775ac94(canvas: Canvas) -> Canvas:
-    pass
+    initial_list_of_objects = copy(canvas.objects)
+    out_canvas = Canvas(size=canvas.size)
+
+    for obj in initial_list_of_objects:
+        temp_canvas = Canvas(size=canvas.size, objects=[obj])
+        _ = temp_canvas.split_object_by_colour(obj)
+
+        largest_object = dsl.largest_object_by_area(temp_canvas)
+        other_objects = dsl.rest_of_the_objects(temp_canvas, largest_object)
+
+        out_canvas.objects.append(largest_object)
+
+        for oo in other_objects:
+            distance = largest_object.distance_to_object(oo, dist_type='min')
+            lo = copy(largest_object)
+            lo.flip(axis=distance.orientation, translate=True)
+            lo.set_new_colour(oo.colour)
+            out_canvas.add_new_object(lo)
+
+    return out_canvas
 
