@@ -194,14 +194,15 @@ class AutoEncoderDataExample(Example):
         start_of_line = '^'
         start_of_canvas = '>'
 
-        result = ''
+        result = []
 
         for c in range(array.shape[0]):
-            result += start_of_canvas
+            string = ''
             for y in range(array.shape[1]):
-                result += start_of_line
+                string += start_of_line
                 for x in range(array.shape[2]):
-                    result += str(int(array[c, y, x]))
+                    string += str(int(array[c, y, x])) if int(array[c, y, x]) != 10 else 'a'
+            result.append(string)
 
         return result
 
