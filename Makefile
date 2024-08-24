@@ -56,7 +56,7 @@ data:
 
 
 predict:
-	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/predict_model.py data/processed/ models/full_data_model.hf data/processed/eval/spider dev
+	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/predict_model.py data/processed/ models/ data/processed/eval/spider dev
 
 create_solver_files:
 	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_solver_files.py data/raw/solvers.py data/processed/train

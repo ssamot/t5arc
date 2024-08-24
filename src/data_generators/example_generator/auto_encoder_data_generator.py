@@ -35,6 +35,7 @@ MAX_NUMBER_OF_MIRRORS = 6
 
 
 class AutoEncoderDataExample(Example):
+
     def __init__(self, number_of_canvases):
         super().__init__(min_canvas_size_for_background_object=MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
                          prob_of_background_object=PROB_OF_BACKGROUND_OBJ)
@@ -44,6 +45,7 @@ class AutoEncoderDataExample(Example):
         self.input_canvases = []
         self.generate_canvasses()
         self.randomly_populate_canvases()
+
 
     def generate_canvasses(self):
         """
@@ -108,6 +110,7 @@ class AutoEncoderDataExample(Example):
 
         return False
 
+
     def place_new_object_on_canvas(self, canvas: Canvas):
         """
         Create a new object and put it on different canvases. The process is as follows.
@@ -163,6 +166,7 @@ class AutoEncoderDataExample(Example):
 
         if (not success) and (len(canvas.objects) == 0):
             self.place_new_object_on_canvas(canvas=canvas)
+
 
     def randomly_populate_canvases(self):
         """
