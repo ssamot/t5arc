@@ -1,22 +1,19 @@
 import keras
 import click
-import os
 import logging
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from data.data_generator import CanvasDataGenerator
-from models.decoder import TransformerDecoder
 from keras import layers
-from utils import CustomModelCheckpoint
+from utils import CustomModelCheckpoint, acc_seq
 
 
-def acc_seq(y_true, y_pred):
-    return keras.ops.mean(keras.ops.min(keras.ops.equal(keras.ops.argmax(y_true, axis=-1),
-                  keras.ops.argmax(y_pred, axis=-1)), axis=-1))
+
+
 
 activation = "relu"
 
-def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
+def build_model(input_shape, num_decoder_tokens):
     total_features = input_shape[0] * input_shape[1] * input_shape[2]
 
 
@@ -27,12 +24,12 @@ def build_model(input_shape, num_decoder_tokens, latent_dim, max_num):
 
     n_neurons = 128
     x = keras.layers.Dense(n_neurons, activation=activation)(x)
-    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.LayerNormalization()(x)
     xs = [x]
     for i in range(3):
         # skip connections
         x_new = keras.layers.Dense(n_neurons, activation=activation)(x)
-        x_new = keras.layers.BatchNormalization()(x_new)
+        x_new = keras.layers.LayerNormalization()(x_new)
         xs.append(x_new)
         x = keras.layers.add(xs)
 
@@ -66,14 +63,13 @@ def main(output_filepath):
     # Initialize a list to store the contents of the JSON files
 
     max_pad_size = 32
-    max_examples = 20
 
 
     training_generator = CanvasDataGenerator(batch_size = 64,  len = 100,
                                              use_multiprocessing=True, workers=50, max_queue_size=1000)
 
     num_decoder_tokens = 11
-    model, encoder, decoder = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens), 256, max_examples)
+    model, encoder, decoder = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens),)
 
     model.summary()
     models = {"encoder": encoder, "decoder": decoder}
