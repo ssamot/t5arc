@@ -3,8 +3,9 @@ import numpy as np
 
 
 from data_generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
-from models.tokenizer import CharacterTokenizer
-from models.tokens import token_list
+from data_generators.example_generator.arc_data_generator import get_all_arc_data
+
+
 
 
 class CanvasDataGenerator(keras.utils.PyDataset):
@@ -20,6 +21,9 @@ class CanvasDataGenerator(keras.utils.PyDataset):
 
         self.batch_size = batch_size
         self.len = len
+        self.arc_array = get_all_arc_data(group='train')
+        #print(self.arc_array.shape)
+        #exit()
 
         self.on_epoch_end()
 
@@ -41,8 +45,10 @@ class CanvasDataGenerator(keras.utils.PyDataset):
     def __data_generation(self):
         """Generates data containing batch_size images."""
 
-        e = AutoEncoderDataExample(self.batch_size)
+        e = AutoEncoderDataExample(self.batch_size, percentage_of_arc_canvases=0.0)
         batch_targets = e.get_canvases_as_numpy_array()
+        batch_targets = np.concatenate([batch_targets, self.arc_array])
+
 
         one_hot_encoded = np.eye(11)[np.array(batch_targets, dtype=np.int32)]
 

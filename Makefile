@@ -45,8 +45,7 @@ clean:
 
 
 train:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model.py data/processed/train.npz models/ False
-#	KERAS_BACKEND="torch" CUDA_VISIBLE_DEVICES=0 torchrun --standalone --nproc_per_node=1 src/models/train_model.py data/processed/train.npz models/ False
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model.py models/
 
 train_generator:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_generator.py models/
@@ -56,7 +55,7 @@ data:
 
 
 predict:
-	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/predict_model.py data/processed/ models/ data/processed/eval/spider dev
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/predict_model.py data/processed/ models/ data/processed/eval/spider dev
 
 create_solver_files:
 	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_solver_files.py data/raw/solvers.py data/processed/train

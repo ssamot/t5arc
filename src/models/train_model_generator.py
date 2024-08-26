@@ -5,59 +5,11 @@ from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from data.data_generator import CanvasDataGenerator
 from keras import layers
-from utils import CustomModelCheckpoint, acc_seq
+from utils import CustomModelCheckpoint, build_model
 
 
 
 
-
-activation = "relu"
-
-def build_model(input_shape, num_decoder_tokens, encoder_units):
-    total_features = input_shape[0] * input_shape[1] * input_shape[2]
-
-
-
-    input_img = keras.Input(shape=input_shape)
-
-    x = keras.layers.Flatten()(input_img)
-
-    n_neurons = 128
-    x = keras.layers.Dense(n_neurons, activation=activation)(x)
-    x = keras.layers.LayerNormalization()(x)
-    xs = [x]
-    for i in range(3):
-        # skip connections
-        x_new = keras.layers.Dense(n_neurons, activation=activation)(x)
-        x_new = keras.layers.LayerNormalization()(x_new)
-        xs.append(x_new)
-        x = keras.layers.add(xs)
-
-    #encoded = layers.Reshape([4,4,8])(x)
-
-
-    encoded = keras.layers.LayerNormalization()(
-        layers.Dense(encoder_units, activation="tanh")(x))
-
-    decoded = layers.Dense(total_features*num_decoder_tokens)(encoded)
-    decoded = layers.Reshape([input_shape[0],input_shape[1],num_decoder_tokens])(decoded)
-    decoded = layers.Activation("softmax")(decoded)
-
-
-    encoder = keras.Model(input_img, encoded)
-    decoder = keras.Model(keras.Input(shape=(encoder_units,)), decoded)
-
-
-
-    autoencoder = keras.Model(input_img, decoded)
-    #optimizer = keras.optimizers.SGD(momentum=0.3, weight_decay=0.01, nesterov=True, learning_rate=0.1)
-    optimizer = keras.optimizers.AdamW()
-    autoencoder.compile(optimizer=optimizer,
-
-                        loss='categorical_crossentropy',
-                        metrics=["acc",acc_seq])
-
-    return autoencoder, encoder, decoder
 
 
 @click.command()
@@ -71,7 +23,8 @@ def main(output_filepath):
 
 
     training_generator = CanvasDataGenerator(batch_size = 64,  len = 100,
-                                             use_multiprocessing=True, workers=50, max_queue_size=1000)
+                                             use_multiprocessing=True, workers=50,
+                                             max_queue_size=1000)
 
     num_decoder_tokens = 11
     model, encoder, decoder = build_model((max_pad_size, max_pad_size, 1),

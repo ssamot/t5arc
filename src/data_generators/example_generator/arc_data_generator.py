@@ -31,5 +31,5 @@ def get_all_arc_data(group: str = 'train') -> np.ndarray:
 
         canvas = Canvas(actual_pixels=data, _id=index)
         result.append(canvas.full_canvas)
-
+    result = np.array(result)
     return result
