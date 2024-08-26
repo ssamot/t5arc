@@ -13,7 +13,7 @@ from utils import CustomModelCheckpoint, acc_seq
 
 activation = "relu"
 
-def build_model(input_shape, num_decoder_tokens):
+def build_model(input_shape, num_decoder_tokens, encoder_units):
     total_features = input_shape[0] * input_shape[1] * input_shape[2]
 
 
@@ -35,9 +35,10 @@ def build_model(input_shape, num_decoder_tokens):
 
     #encoded = layers.Reshape([4,4,8])(x)
 
-    encoder_units = 64
 
-    encoded = layers.Dense(encoder_units, activation="tanh")(x)
+    encoded = keras.layers.LayerNormalization()(
+        layers.Dense(encoder_units, activation="tanh")(x))
+
     decoded = layers.Dense(total_features*num_decoder_tokens)(encoded)
     decoded = layers.Reshape([input_shape[0],input_shape[1],num_decoder_tokens])(decoded)
     decoded = layers.Activation("softmax")(decoded)
@@ -49,7 +50,10 @@ def build_model(input_shape, num_decoder_tokens):
 
 
     autoencoder = keras.Model(input_img, decoded)
-    autoencoder.compile(optimizer='adam',
+    #optimizer = keras.optimizers.SGD(momentum=0.3, weight_decay=0.01, nesterov=True, learning_rate=0.1)
+    optimizer = keras.optimizers.AdamW()
+    autoencoder.compile(optimizer=optimizer,
+
                         loss='categorical_crossentropy',
                         metrics=["acc",acc_seq])
 
@@ -63,16 +67,19 @@ def main(output_filepath):
     # Initialize a list to store the contents of the JSON files
 
     max_pad_size = 32
+    encoder_units = 16
 
 
     training_generator = CanvasDataGenerator(batch_size = 64,  len = 100,
                                              use_multiprocessing=True, workers=50, max_queue_size=1000)
 
     num_decoder_tokens = 11
-    model, encoder, decoder = build_model((max_pad_size, max_pad_size, 1), int(num_decoder_tokens),)
+    model, encoder, decoder = build_model((max_pad_size, max_pad_size, 1),
+                                          int(num_decoder_tokens),
+                                          encoder_units)
 
     model.summary()
-    models = {"encoder": encoder, "decoder": decoder}
+    models = {f"encoder_{encoder_units}": encoder, f"decoder_{encoder_units}": decoder}
 
     model.fit(x=training_generator, epochs=10000,
               callbacks=CustomModelCheckpoint(models,"./models", 100))
