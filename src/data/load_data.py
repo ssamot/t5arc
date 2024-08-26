@@ -4,12 +4,11 @@ import json
 from typing import List
 import platform
 
-path = dirname(relpath(__file__))
 if platform.system() == 'Linux':
-    path = '/Users/ssamot/projects/t5arc/src/'
+    path = '/Users/ssamot/projects/t5arc/'
 elif platform.system() == 'Windows':
-    path = r'E:\Code\Competitions\ARC2024\t5arc\src'
-raw_data_path = join(path, 'data', 'raw_data')
+    path = r'E:\Code\Competitions\ARC2024\t5arc'
+raw_data_path = join(path, 'data', 'raw')
 
 train_challenges_path = join(raw_data_path, 'arc-agi_training_challenges.json')
 train_solutions_path = join(raw_data_path, 'arc-agi_training_solutions.json')

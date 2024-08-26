@@ -9,6 +9,7 @@ from data_generators.example_generator.example import Example
 from data_generators.object_recognition.basic_geometry import Dimension2D
 from data_generators.object_recognition.canvas import Canvas
 from data_generators.object_recognition.primitives import Primitive, Parallelogram, Random
+from data import load_data as ld
 from constants import constants as const
 from data_generators.object_recognition.object import Transformations
 
@@ -35,17 +36,25 @@ MAX_NUMBER_OF_MIRRORS = 6
 
 
 class AutoEncoderDataExample(Example):
+    """
+    The Example subclass that generates canvasses for the auto-encoder training.
 
-    def __init__(self, number_of_canvases):
+    :param number_of_canvases: The number of Canvasses to generate. The same as Batch.
+    :param percentage_of_arc_canvases: The percentage of canvasses that will be drawn from the actual ARC data.
+    :param train_or_eval_arc: If percentage_of_arc_canvases > 0 then which data set will the ARC data be drawn. Can be 'train', 'eval' or 'both'
+    """
+    def __init__(self, number_of_canvases, percentage_of_arc_canvases=1, train_or_eval_arc='train'):
         super().__init__(min_canvas_size_for_background_object=MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
                          prob_of_background_object=PROB_OF_BACKGROUND_OBJ)
+
+        self.percentage_of_arc_canvases = percentage_of_arc_canvases
+        self.train_or_eval_arc = train_or_eval_arc
         self.number_of_io_pairs = number_of_canvases
         self.number_of_canvasses = number_of_canvases
 
         self.input_canvases = []
         self.generate_canvasses()
         self.randomly_populate_canvases()
-
 
     def generate_canvasses(self):
         """
@@ -110,7 +119,6 @@ class AutoEncoderDataExample(Example):
 
         return False
 
-
     def place_new_object_on_canvas(self, canvas: Canvas):
         """
         Create a new object and put it on different canvases. The process is as follows.
@@ -167,21 +175,41 @@ class AutoEncoderDataExample(Example):
         if (not success) and (len(canvas.objects) == 0):
             self.place_new_object_on_canvas(canvas=canvas)
 
-
     def randomly_populate_canvases(self):
         """
         This is the main function to call to generate the Random Experiment.
         It generates a random number of objects (if experiment_type is 'Object') or just one object (if type is
-        'Symmetry') and then places their transformations on all the canvases (in allowed positions)
+        'Symmetry') and then places their transformations on all the canvases (in allowed positions).
         :return:
         """
+        canvases_indices = np.arange(len(self.input_canvases))
+        arc_indices = []
+        if self.percentage_of_arc_canvases > 0:
+            arc_indices = np.random.choice(canvases_indices, replace=False,
+                                           size=int(self.percentage_of_arc_canvases * len(self.input_canvases)))
+        for c, canvas in enumerate(self.input_canvases):
+            if c not in arc_indices:
+                num_of_objects = 1
+                if self.experiment_type == 'Object':
+                    num_of_objects = np.random.randint(1, MAX_NUM_OF_DIFFERENT_PRIMITIVES)
+                for _ in range(num_of_objects):
+                    self.place_new_object_on_canvas(canvas=canvas)
+            else:
+                group = self.train_or_eval_arc
+                if self.train_or_eval_arc == 'both':
+                    group = np.random.choice(np.array(['train', 'evan']), 1)
+                index = np.random.randint(0, 400)
+                challenges_names, challenges_tasks, solutions_tasks = ld.from_json(group)
+                task = challenges_tasks[index]
+                test_or_train = 'train' if np.random.random() < 0.8 else 'test'
+                in_or_out = 'input'
+                pair = 0
+                if test_or_train == 'train':
+                    in_or_out = 'input' if np.random.random() < 0.5 else 'output'
+                    pair = np.random.randint(0, len(task['train']))
+                data = np.flipud(np.array(task[test_or_train][pair][in_or_out])) + 1
 
-        for canvas in self.input_canvases:
-            num_of_objects = 1
-            if self.experiment_type == 'Object':
-                num_of_objects = np.random.randint(1, MAX_NUM_OF_DIFFERENT_PRIMITIVES)
-            for _ in range(num_of_objects):
-                self.place_new_object_on_canvas(canvas=canvas)
+                self.input_canvases[c] = Canvas(actual_pixels=data, _id=c)
 
     def get_canvases_as_numpy_array(self):
         result = np.zeros((self.number_of_canvasses,

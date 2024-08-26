@@ -1,7 +1,10 @@
 
 from data_generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
+from data_generators.example_generator.arc_data_generator import get_all_arc_data
+from data_generators.example_generator.ttt_data_generator import ArcExampleData
 
-e = AutoEncoderDataExample(number_of_canvases=20)
+# Usage of Random Data Generation for the auto-encoder training
+e = AutoEncoderDataExample(number_of_canvases=20, percentage_of_arc_canvases=1, train_or_eval_arc='train')
 array = e.get_canvases_as_numpy_array()
 string = e.get_canvasses_as_string()
 
@@ -16,3 +19,13 @@ e.show()
 
 #  Or show just one Canvas
 e.show(canvas_index=1)
+
+
+# Usage of the ARC data generation for the auto-encoder training
+arc_array = get_all_arc_data(group='train')  # group can be 'train' or 'eval'
+
+# Usage of using the ARC data iterator
+it = ArcExampleData('train')
+result=[]
+for c in it:
+    result.append(c)

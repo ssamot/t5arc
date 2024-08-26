@@ -16,7 +16,8 @@ from constants import constants as const
 
 
 class Example:
-    def __init__(self, min_canvas_size_for_background_object: int = 10, prob_of_background_object: float = 0.1):
+    def __init__(self, min_canvas_size_for_background_object: int = 10, prob_of_background_object: float = 0.1,
+                 run_generate_canvasses: bool = True):
 
         self.min_canvas_size_for_background_object = min_canvas_size_for_background_object
         self.prob_of_background_object = prob_of_background_object
@@ -36,7 +37,8 @@ class Example:
         self.objects = []
         self.temp_objects = []
 
-        self.generate_canvasses()
+        if run_generate_canvasses:
+            self.generate_canvasses()
 
     @staticmethod
     def get_random_colour(other_colour: int | None = None):

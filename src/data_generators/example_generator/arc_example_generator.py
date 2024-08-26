@@ -10,17 +10,24 @@ from data_generators.object_recognition.canvas import Canvas
 
 class ARCExample(Example):
 
-    def __init__(self, arc_name: str | None = None, arc_group_and_index: List | None = None):
-
-        assert not(arc_name is None and arc_group_and_index is None), print(f'Making ARC Example. Both arc_name and '
-                                                                            f'arc_group_and_index cannot be None!')
+    def __init__(self, arc_name: str | None = None, arc_group_and_index: List | None = None,
+                 arc_data: List | None = None):
+        """
+        Generates an Example using specific data from an ARC task
+        :param arc_name: The name of the task to be loaded
+        :param arc_group_and_index: OR the group ('train' or 'eval') and the index of the task in that group
+        :param arc_data: OR the actual data sets (a List of [name, task_data, solution_data] as returned from ld.from_json()
+        """
+        assert not(arc_name is None and arc_group_and_index is None and arc_data is None), \
+            print(f'Making ARC Example. arc_name, arc_group_and_index and arc_data cannot all be None!')
 
         if arc_group_and_index is not None:
             group = arc_group_and_index[0]
             index = arc_group_and_index[1]
             challenges_names, challenges_tasks, solutions_tasks = ld.from_json(group)
-            solution = solutions_tasks[index]
-            task = challenges_tasks[index]
+            self.name = challenges_names[index]
+            self.solution_data = solutions_tasks[index]
+            self.task_data = challenges_tasks[index]
 
         if arc_name is not None:
             train_challenges_names, train_challenges_tasks, train_solutions_tasks = ld.from_json('train')
@@ -32,14 +39,18 @@ class ARCExample(Example):
                     task = [train_challenges_tasks, eval_challenges_tasks][i][index]
                     solution = [train_solutions_tasks, eval_solutions_tasks][i][index]
 
-        self.task_data = task
-        self.solution_data = solution
+            self.name = arc_name
+            self.task_data = task
+            self.solution_data = solution
 
-        super().__init__()
+        if arc_data is not None:
+            self.name = arc_data[0]
+            self.task_data = arc_data[1]
+            self.solution_data = arc_data[2]
+
+        super().__init__(run_generate_canvasses=False)
 
         self.experiment_type = 'ARC'
-
-        self.test_output_canvas = None
 
     def generate_canvasses(self, empty: bool = True):
         self.number_of_io_pairs = len(self.task_data['train'])
@@ -56,7 +67,7 @@ class ARCExample(Example):
                 self.output_canvases.append(Canvas(size=Dimension2D(output_date.shape[1], output_date.shape[0]), _id=pair * 2 + 1))
 
         test_input_date = np.flipud(np.array(self.task_data['test'][0]['input']) + 1)
-        test_output_data = np.flipud(np.array(self.solution_data[0]) + 1)  # TODO: Fix this!
+        test_output_data = np.flipud(np.array(self.solution_data[0]) + 1)
         if not empty:
             self.test_input_canvas = Canvas(actual_pixels=test_input_date, _id=2 * self.number_of_io_pairs)
             self.test_output_canvas = Canvas(actual_pixels=test_output_data, _id=2 * self.number_of_io_pairs + 1)
