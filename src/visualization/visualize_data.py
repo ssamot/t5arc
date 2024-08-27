@@ -14,18 +14,21 @@ def data_to_colour(pixels):
     return result
 
 
-def add_vhlines_to_plot(axis, data, extent):
+def add_vhlines_to_plot(axis, data, extent, thin_lines: bool = False):
     data = np.array(data)
     num_y = data.shape[0]
     num_x = data.shape[1]
-    linewidths = 0.5 if np.max([num_y, num_x]) > 6 else 1.5
+    if not thin_lines:
+        linewidths = 0.5 if np.max([num_y, num_x]) > 6 else 1.5
+    else:
+        linewidths = 0.1
     axis.vlines(np.arange(extent[0], extent[1]), ymin=extent[2], ymax=extent[3], colors='#BFBFBF', linewidths=linewidths)
     axis.hlines(np.arange(extent[2], extent[3]), xmin=extent[0], xmax=extent[1], colors='#BFBFBF', linewidths=linewidths)
 
     return axis
 
 
-def plot_data(pixels, extent, axis: plt.Axes | None = None):
+def plot_data(pixels, extent, axis: plt.Axes | None = None, thin_lines: bool = False):
     if axis is None:
         fig = plt.figure()
         ax = fig.add_subplot()
@@ -33,7 +36,11 @@ def plot_data(pixels, extent, axis: plt.Axes | None = None):
         ax = axis
     pixels_for_visualisation = data_to_colour(pixels)
     ax.imshow(pixels_for_visualisation, origin='lower', extent=extent, interpolation='None', aspect='equal')
-    ax = add_vhlines_to_plot(ax, pixels, extent)
+    if thin_lines:
+        for axis in ['top', 'bottom', 'left', 'right']:
+            ax.spines[axis].set_linewidth(0.1)
+        ax.tick_params(axis='both', labelsize=2, grid_linewidth=0.1)
+    ax = add_vhlines_to_plot(ax, pixels, extent, thin_lines)
 
     if axis is not None:
         return ax

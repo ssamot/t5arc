@@ -250,7 +250,7 @@ class Canvas:
         self.embed_objects()
 
     def show(self, full_canvas=True, fig_to_add: None | plt.Figure = None, nrows: int = 0, ncoloumns: int = 0,
-             index: int = 1, save_as: str | None = None):
+             index: int = 1, save_as: str | None = None, thin_lines: bool = False):
 
         if full_canvas:
             xmin = - 0.5
@@ -259,10 +259,10 @@ class Canvas:
             ymax = self.full_canvas.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
             if fig_to_add is None:
-                fig, _ = vis.plot_data(self.full_canvas, extent=extent)
+                fig, _ = vis.plot_data(self.full_canvas, extent=extent, thin_lines=thin_lines)
             else:
                 ax = fig_to_add.add_subplot(nrows, ncoloumns, index)
-                _ = vis.plot_data(self.full_canvas, extent=extent, axis=ax)
+                _ = vis.plot_data(self.full_canvas, extent=extent, axis=ax, thin_lines=thin_lines)
         else:
             xmin = - 0.5
             xmax = self.actual_pixels.shape[1] - 0.5
@@ -270,10 +270,10 @@ class Canvas:
             ymax = self.actual_pixels.shape[0] - 0.5
             extent = [xmin, xmax, ymin, ymax]
             if fig_to_add is None:
-                fig, _ = vis.plot_data(self.actual_pixels, extent=extent)
+                fig, _ = vis.plot_data(self.actual_pixels, extent=extent, thin_lines=thin_lines)
             else:
                 ax = fig_to_add.add_subplot(nrows, ncoloumns, index)
-                _ = vis.plot_data(self.actual_pixels, extent=extent, axis=ax)
+                _ = vis.plot_data(self.actual_pixels, extent=extent, axis=ax, thin_lines=thin_lines)
 
         if fig_to_add is None and save_as is not None:
             fig.savefig(save_as)
