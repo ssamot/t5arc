@@ -10,6 +10,7 @@ from utils import CustomModelCheckpoint, build_model
 
 from data_generators.example_generator.arc_data_generator import get_all_arc_data
 import numpy as np
+from tqdm.keras import TqdmCallback
 
 
 
@@ -20,7 +21,7 @@ def main(output_filepath):
     # Initialize a list to store the contents of the JSON files
 
     max_pad_size = 32
-    encoder_units = 128
+    encoder_units = 64
 
 
     num_decoder_tokens = 11
@@ -47,8 +48,9 @@ def main(output_filepath):
     model.fit(x=X_train, y = y_train,
               validation_data=(X_validation, y_validation),
               batch_size=128,validation_batch_size=128,
-              epochs=10000,
-              callbacks=CustomModelCheckpoint(models,"./models", 100))
+              epochs=10000,verbose = 0,
+              callbacks=[CustomModelCheckpoint(models,"./models", 100),
+              TqdmCallback(verbose=0)])
 
 
 if __name__ == '__main__':

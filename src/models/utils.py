@@ -20,13 +20,17 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     #x = keras.layers.Flatten()(input_img)
 
     n_neurons = 256
-    x = keras.layers.Dense(n_neurons, activation=activation)(x)
+    x = keras.layers.Dense(n_neurons, activation=activation,
+                                   kernel_constraint="max_norm")(x)
     x = keras.layers.LayerNormalization()(x)
+    x = keras.layers.Dropout(0.1)(x)
     xs = [x]
     for i in range(3):
         # skip connections
-        x_new = keras.layers.Dense(n_neurons, activation=activation)(x)
+        x_new = keras.layers.Dense(n_neurons, activation=activation,
+                                   kernel_constraint="max_norm")(x)
         x_new = keras.layers.LayerNormalization()(x_new)
+        #x_new = keras.layers.Dropout(0.1)(x_new)
         xs.append(x_new)
         x = keras.layers.add(xs)
 
@@ -34,7 +38,8 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
 
 
     x = keras.layers.LayerNormalization()(
-        layers.Dense(encoder_units, activation="linear")(x))
+        layers.Dense(encoder_units, activation="linear",
+                                   kernel_constraint="max_norm")(x))
 
     encoded = keras.layers.Activation("tanh")(x)
 
@@ -52,12 +57,13 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
                                kernel_constraint=keras.constraints.UnitNorm())
            (ttt_input))
 
+
+
+
+
     ttt_model = keras.models.Model(ttt_input, ttt, name = "ttt")
-    #
-    # decoded = keras.layers.LayerNormalization()(
-    #     layers.Dense(encoder_units, activation="relu")(ortho_layer))
-    # decoded = keras.layers.LayerNormalization()(
-    #     layers.Dense(encoder_units, activation="relu")(decoded))
+
+
     decoded = layers.Dense(total_features*num_decoder_tokens)(decoded_inputs)
     decoded = layers.Reshape([input_shape[0],input_shape[1],num_decoder_tokens])(decoded)
     decoded = layers.Activation("softmax")(decoded)
@@ -81,7 +87,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     autoencoder.compile(optimizer=optimizer,
 
                         loss='categorical_crossentropy',
-                        metrics=["acc",batch_acc])
+                        metrics=["acc", b_acc])
 
     return autoencoder, encoder, decoder, ttt_model
 
@@ -96,7 +102,7 @@ class CustomModelCheckpoint(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # logs is a dictionary
         if(epoch % self.save_freq == 0):
-            print(f"Saving epoch: {epoch}, train_acc: {logs['acc']}, : {logs['batch_acc']}")
+            #print(f"Saving epoch: {epoch}, train_acc: {logs['acc']}, : {logs['batch_acc']}")
             for name in self.models:
                 model = self.models[name]
                 model.save(f"{self.path}/{name}.keras", overwrite=True)
@@ -134,7 +140,7 @@ def acc_seq(y_true, y_pred):
                   keras.ops.argmax(y_pred, axis=-1)), axis=-1))
 
 
-def batch_acc(y_true, y_pred):
+def b_acc(y_true, y_pred):
     # Get the predicted class by taking the argmax along the last dimension (the class dimension)
     pred_classes = keras.ops.argmax(y_pred, axis=-1)
 

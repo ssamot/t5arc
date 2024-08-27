@@ -1,3 +1,19 @@
+import logging
+import warnings
+
+
+# Suppress all logger messages
+logging.getLogger("jax._src.xla_bridge").setLevel(logging.CRITICAL)
+logging.getLogger("matplotlib.image").setLevel(logging.CRITICAL)
+
+# Suppress all warnings
+warnings.filterwarnings("ignore")
+
+
+
+
+
+
 import click
 
 import logging
@@ -7,11 +23,15 @@ from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from tqdm import tqdm
 import keras
-from utils import acc_seq, batch_acc, AddMultiplyLayer
+from utils import acc_seq, b_acc, AddMultiplyLayer
 
 from data_generators.example_generator.arc_data_generator import get_all_arc_data
 from data_generators.example_generator.ttt_data_generator import ArcExampleData
 from visualization.visualse_training_data_sets import visualise_training_data
+from tqdm.keras import TqdmCallback
+
+
+
 
 
 # def build_model(encoder, decoder, n_neurons):
@@ -59,7 +79,7 @@ from visualization.visualse_training_data_sets import visualise_training_data
 @click.argument('data_type', type=click.Path())
 def main(data_filepath, model_filepath, output_filepath, data_type):
 
-    n_neurons = 128
+    n_neurons = 64
 
     logging.info("Loading models")
     encoder = keras.models.load_model(f"{model_filepath}/encoder_{n_neurons}.keras")
@@ -70,19 +90,13 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
     # Freeze the weights
     encoder.trainable = False
     decoder.trainable = False
-    ttt.trainable = False
+    ttt.trainable = True
 
     it = ArcExampleData('train')
 
     for r in tqdm(it):
-        #print(r["name"])
-        #print(r["input"].shape)
-        #print(r["output"].shape)
-        #exit()
 
         visualise_training_data(r, f"./plots/{r['name']}.pdf",)
-        #exit()
-
 
         train_x = np.array(r["input"][:-1], dtype=np.int32)
         test_x = np.array(r["input"][-1:], dtype=np.int32)
@@ -90,14 +104,8 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         train_y = r["output"][:-1]
         test_y = r["output"][-1:]
 
-        train_y_one_hot = np.eye(11)[np.array(train_x, dtype=np.int32)]
-        test_y_one_hot = np.eye(11)[np.array(test_x, dtype=np.int32)]
-        #print(train_x.shape, train_y.shape, test_x.shape, test_y.shape)
-
-        #ttt_autoencoder, autoencoder, ttx_model = build_model(encoder, decoder, n_neurons)
-
-        #print(encoder(train_x))
-        #exit()
+        train_y_one_hot = np.eye(11)[np.array(train_y, dtype=np.int32)]
+        test_y_one_hot = np.eye(11)[np.array(test_y, dtype=np.int32)]
 
         # ttt_x = encoder.predict(train_x)
         # ttt_y = encoder.predict(train_y)
@@ -113,21 +121,17 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         ttt_autoencoder = keras.models.Model(input, decoder(ttt(encoder(input))))
         ttt_autoencoder.compile(optimizer="AdamW",
                                 loss='categorical_crossentropy',
-                                metrics=["acc", batch_acc])
+                                metrics=["acc", b_acc])
         ttt_autoencoder.fit(x=train_x, y = train_y_one_hot,
                             validation_data=(test_x, test_y_one_hot), batch_size=256,
-                            verbose=True, epochs=10000,
+                            verbose=0, epochs=10000,callbacks=[TqdmCallback(verbose=0)]
                             )
 
-        #p = ttt_autoencoder.predict(r["input"]).argmax(axis=-1)
-        #print(p)
-        #exit()
-        #print(r["output"].shape)
-        r["output"] = ttt_autoencoder.predict(r["input"]).argmax(axis = -1)
+        r["output"] = ttt_autoencoder.predict(r["input"], verbose=False).argmax(axis = -1)
         #print(r["output"].shape)
         visualise_training_data(r, f"./plots/{r['name']}_predicted.pdf", )
 
-        exit()
+        #exit()
 
 
         #print(train_x.shape, train_y.shape, test_x.shape, test_y.shape)
