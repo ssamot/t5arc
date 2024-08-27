@@ -20,16 +20,19 @@ def main(output_filepath):
     # Initialize a list to store the contents of the JSON files
 
     max_pad_size = 32
-    encoder_units = 64
+    encoder_units = 128
 
 
     num_decoder_tokens = 11
-    model, encoder, decoder = build_model((max_pad_size, max_pad_size),
+    model, encoder, decoder, ttt = build_model((max_pad_size, max_pad_size),
                                           int(num_decoder_tokens),
                                           encoder_units)
 
     model.summary()
-    models = {f"encoder_{encoder_units}": encoder, f"decoder_{encoder_units}": decoder}
+    models = {f"encoder_{encoder_units}": encoder,
+              f"decoder_{encoder_units}": decoder,
+              f"ttt_{encoder_units}": ttt
+              }
 
     X_train  = get_all_arc_data(group='train')
     y_train  = np.eye(11)[np.array(X_train, dtype=np.int32)]

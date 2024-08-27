@@ -14,26 +14,26 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
 
 
     x = keras.layers.Reshape(input_shape, input_shape=total_features)(input_img)
-    x = keras.layers.Embedding(input_dim=11, output_dim=4, input_length=total_features)(x)
+    x = keras.layers.Embedding(input_dim=11, output_dim=8, input_length=total_features)(x)
     x = keras.layers.Flatten()(x)
 
     #x = keras.layers.Flatten()(input_img)
 
-    n_neurons = 128
+    n_neurons = 256
     x = keras.layers.Dense(n_neurons, activation=activation)(x)
-    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.LayerNormalization()(x)
     xs = [x]
     for i in range(3):
         # skip connections
         x_new = keras.layers.Dense(n_neurons, activation=activation)(x)
-        x_new = keras.layers.BatchNormalization()(x_new)
+        x_new = keras.layers.LayerNormalization()(x_new)
         xs.append(x_new)
         x = keras.layers.add(xs)
 
     #encoded = layers.Reshape([4,4,8])(x)
 
 
-    x = keras.layers.BatchNormalization()(
+    x = keras.layers.LayerNormalization()(
         layers.Dense(encoder_units, activation="linear")(x))
 
     encoded = keras.layers.Activation("tanh")(x)
@@ -45,25 +45,45 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     # decoded = keras.layers.LayerNormalization()(
     #     layers.Dense(n_neurons,activation="relu")(decoded_inputs))
 
+    ttt_input = keras.Input(shape=(encoder_units,))
+
+    ttt = (layers.Dense(encoder_units,name = "ttt_layer",
+                               use_bias=False,
+                               kernel_constraint=keras.constraints.UnitNorm())
+           (ttt_input))
+
+    ttt_model = keras.models.Model(ttt_input, ttt, name = "ttt")
+    #
+    # decoded = keras.layers.LayerNormalization()(
+    #     layers.Dense(encoder_units, activation="relu")(ortho_layer))
+    # decoded = keras.layers.LayerNormalization()(
+    #     layers.Dense(encoder_units, activation="relu")(decoded))
     decoded = layers.Dense(total_features*num_decoder_tokens)(decoded_inputs)
     decoded = layers.Reshape([input_shape[0],input_shape[1],num_decoder_tokens])(decoded)
     decoded = layers.Activation("softmax")(decoded)
 
 
-    encoder = keras.Model(input_img, encoded)
-    decoder = keras.Model(decoded_inputs,  decoded)
+
+
+    encoder = keras.Model(input_img, encoded, name = "encoder")
+    decoder = keras.Model(decoded_inputs,  decoded, name = "decoder")
+
+    #decoder.summary()
+    #exit()
 
 
 
-    autoencoder = keras.Model(input_img, decoder(encoded))
+    autoencoder = keras.Model(input_img, decoder(ttt_model(encoded)),
+                              name = "autoencoder")
+    #print(autoencoder.summary())
     #optimizer = keras.optimizers.SGD(momentum=0.3, weight_decay=0.01, nesterov=True, learning_rate=0.1)
-    optimizer = keras.optimizers.AdamW()
+    optimizer = keras.optimizers.AdamW(learning_rate=0.001)
     autoencoder.compile(optimizer=optimizer,
 
                         loss='categorical_crossentropy',
                         metrics=["acc",batch_acc])
 
-    return autoencoder, encoder, decoder
+    return autoencoder, encoder, decoder, ttt_model
 
 
 class CustomModelCheckpoint(keras.callbacks.Callback):
@@ -76,7 +96,7 @@ class CustomModelCheckpoint(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # logs is a dictionary
         if(epoch % self.save_freq == 0):
-            print(f"Saving epoch: {epoch}, train_acc: {logs['acc']}, : {logs['acc_seq']}")
+            print(f"Saving epoch: {epoch}, train_acc: {logs['acc']}, : {logs['batch_acc']}")
             for name in self.models:
                 model = self.models[name]
                 model.save(f"{self.path}/{name}.keras", overwrite=True)
@@ -137,4 +157,13 @@ def batch_acc(y_true, y_pred):
     accuracy = keras.ops.mean(keras.ops.cast(all_correct, "float32"))
 
     return accuracy
+
+# class OrthogonalConstraint(keras.constraints.Constraint):
+#     def __call__(self, w):
+#         #print(w.shape)
+#         #exit()
+#         # Perform Singular Value Decomposition
+#         u, _, v = keras.ops.linalg.svd(w)
+#         # Reconstruct the nearest orthogonal matrix
+#         return keras.ops.matmul(u, keras.ops.transpose(v))
 
