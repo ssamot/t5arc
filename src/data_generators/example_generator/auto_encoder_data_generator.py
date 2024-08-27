@@ -257,6 +257,4 @@ class AutoEncoderDataExample(Example):
                 self.input_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=p + 1)
             plt.tight_layout()
 
-        plt.show()
-
 

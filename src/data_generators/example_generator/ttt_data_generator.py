@@ -3,7 +3,6 @@ import numpy as np
 
 from data import load_data as ld
 from data_generators.example_generator.arc_example_generator import ARCExample
-from constants import constants as const
 
 
 class ArcExampleData:

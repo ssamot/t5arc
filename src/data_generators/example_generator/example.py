@@ -366,9 +366,10 @@ class Example:
 
         return unique_objects, actual_pixels_array
 
-    def show(self, canvas_index: int | str = 'all', save_as: str | None = None):
+    def show(self, canvas_index: int | str = 'all', save_as: str | None = None, two_cols: bool = False):
         """
         Shows some (canvas_index is int or 'test') or all (canvas_index = 'all') the Canvases of the Experiment
+        :param two_cols: If False it will show the test data in a third column. Otherwise it will show the test data under the train
         :param save_as: If not None then save the figure generated as save_as file (but do not show it).
         :param canvas_index: Which Canvases to show (int, 'test' or 'all')
         :return:
@@ -381,23 +382,43 @@ class Example:
             canvas.show(save_as=save_as)
 
         elif canvas_index == 'test':
-            self.test_input_canvas.show()
+            self.test_input_canvas.show(save_as=save_as)
 
         elif canvas_index == 'all':
-            fig = plt.figure()
+            fig = plt.figure(figsize=(6, 16))
             index = 1
-            nrows = self.number_of_io_pairs
-            ncoloumns = 3
-            for p in range(self.number_of_io_pairs):
-                self.input_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index)
-                self.output_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1)
-                if p == 0:
-                    self.test_input_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2)
-                if p == 1 and self.test_output_canvas is not None:
-                    self.test_output_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2)
-                index += 3
-            plt.tight_layout()
+            nrows = self.number_of_io_pairs + 1 if two_cols else self.number_of_io_pairs
+            ncoloumns = 2 if two_cols else 3
+            if not two_cols:
+                for p in range(self.number_of_io_pairs):
+                    self.input_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
+                                                thin_lines=True)
+                    self.output_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1,
+                                                 thin_lines=True)
+                    if p == 0:
+                        self.test_input_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2,
+                                                    thin_lines=True)
+                    if p == 1 and self.test_output_canvas is not None:
+                        self.test_output_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2,
+                                                     thin_lines=True)
+                    index += 3
+            else:
+                for p in range(self.number_of_io_pairs + 1):
+                    if p < self.number_of_io_pairs:
+                        self.input_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
+                                                    thin_lines=True)
+                        self.output_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1,
+                                                     thin_lines=True)
+                    else:
+                        self.test_input_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
+                                                    thin_lines=True)
+                        self.test_output_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1,
+                                                     thin_lines=True)
+                    index += 2
+            plt.tight_layout(pad=0.01)
 
-        plt.show()
+            if save_as is not None:
+                fig.savefig(save_as, dpi=5000)
+                plt.close('all')
 
 

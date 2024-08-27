@@ -1,5 +1,5 @@
 
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 from data import load_data as ld
@@ -11,7 +11,7 @@ from data_generators.object_recognition.canvas import Canvas
 class ARCExample(Example):
 
     def __init__(self, arc_name: str | None = None, arc_group_and_index: List | None = None,
-                 arc_data: List | None = None):
+                 arc_data: List | Dict |None = None):
         """
         Generates an Example using specific data from an ARC task
         :param arc_name: The name of the task to be loaded
@@ -44,9 +44,20 @@ class ARCExample(Example):
             self.solution_data = solution
 
         if arc_data is not None:
-            self.name = arc_data[0]
-            self.task_data = arc_data[1]
-            self.solution_data = arc_data[2]
+            if type(arc_data) == list:
+                self.name = arc_data[0]
+                self.task_data = arc_data[1]
+                self.solution_data = arc_data[2]
+            elif type(arc_data) == dict:
+                self.name = arc_data['name']
+                self.task_data = {'test': [], 'train': []}
+                for in_data, out_data in zip(arc_data['input'][:-1], arc_data['output'][:-1]):
+                    in_data -= 1
+                    out_data -= 1
+                    self.task_data['train'].append({'input': [list(d.astype(int)) for d in in_data]})
+                    self.task_data['train'][-1]['output'] = [list(d.astype(int)) for d in out_data]
+                self.task_data['test'].append({'input': [list(d.astype(int) - 1) for d in arc_data['input'][-1]]})
+                self.solution_data = [[list(d.astype(int) - 1) for d in arc_data['output'][-1]]]
 
         super().__init__(run_generate_canvasses=False)
 
