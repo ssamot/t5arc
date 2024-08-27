@@ -1,4 +1,4 @@
-
+from copy import deepcopy
 from typing import List, Dict
 
 import numpy as np
@@ -49,6 +49,7 @@ class ARCExample(Example):
                 self.task_data = arc_data[1]
                 self.solution_data = arc_data[2]
             elif type(arc_data) == dict:
+                arc_data = deepcopy(arc_data)
                 self.name = arc_data['name']
                 self.task_data = {'test': [], 'train': []}
                 for in_data, out_data in zip(arc_data['input'][:-1], arc_data['output'][:-1]):
@@ -56,8 +57,10 @@ class ARCExample(Example):
                     out_data -= 1
                     self.task_data['train'].append({'input': [list(d.astype(int)) for d in in_data]})
                     self.task_data['train'][-1]['output'] = [list(d.astype(int)) for d in out_data]
-                self.task_data['test'].append({'input': [list(d.astype(int) - 1) for d in arc_data['input'][-1]]})
-                self.solution_data = [[list(d.astype(int) - 1) for d in arc_data['output'][-1]]]
+                test_in = arc_data['input'][-1] - 1
+                self.task_data['test'].append({'input': [list(d.astype(int)) for d in test_in]})
+                test_out = arc_data['output'][-1] - 1
+                self.solution_data = [[list(d.astype(int)) for d in test_out]]
 
         super().__init__(run_generate_canvasses=False)
 

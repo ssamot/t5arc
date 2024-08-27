@@ -1,11 +1,11 @@
 
 import numpy as np
-
+from collections.abc import Iterator
 from data import load_data as ld
 from data_generators.example_generator.arc_example_generator import ARCExample
 
 
-class ArcExampleData:
+class ArcExampleData(Iterator):
     def __init__(self, group: str = 'train'):
         challenges_names, challenges_tasks, solutions_tasks = ld.from_json(group)
         self.names = challenges_names
@@ -13,9 +13,6 @@ class ArcExampleData:
         self.solutions = solutions_tasks
         self._index = 0
         self.group = group
-
-    def __iter__(self):
-        return self
 
     def __next__(self):
         if self._index < len(self.tasks):
