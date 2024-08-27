@@ -11,6 +11,8 @@ from utils import acc_seq, batch_acc, AddMultiplyLayer
 
 from data_generators.example_generator.arc_data_generator import get_all_arc_data
 from data_generators.example_generator.ttt_data_generator import ArcExampleData
+from visualization.visualse_training_data_sets import visualise_training_data
+
 
 # def build_model(encoder, decoder, n_neurons):
 #     #encoder.summary()
@@ -68,7 +70,7 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
     # Freeze the weights
     encoder.trainable = False
     decoder.trainable = False
-    ttt.trainable = True
+    ttt.trainable = False
 
     it = ArcExampleData('train')
 
@@ -78,14 +80,18 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         #print(r["output"].shape)
         #exit()
 
+        visualise_training_data(r, f"./plots/{r['name']}.pdf",)
+        #exit()
+
+
         train_x = np.array(r["input"][:-1], dtype=np.int32)
         test_x = np.array(r["input"][-1:], dtype=np.int32)
 
         train_y = r["output"][:-1]
         test_y = r["output"][-1:]
 
-        train_y_one_hot = np.eye(11)[np.array(train_y, dtype=np.int32)]
-        test_y_one_hot = np.eye(11)[np.array(test_y, dtype=np.int32)]
+        train_y_one_hot = np.eye(11)[np.array(train_x, dtype=np.int32)]
+        test_y_one_hot = np.eye(11)[np.array(test_x, dtype=np.int32)]
         #print(train_x.shape, train_y.shape, test_x.shape, test_y.shape)
 
         #ttt_autoencoder, autoencoder, ttx_model = build_model(encoder, decoder, n_neurons)
@@ -110,9 +116,18 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
                                 metrics=["acc", batch_acc])
         ttt_autoencoder.fit(x=train_x, y = train_y_one_hot,
                             validation_data=(test_x, test_y_one_hot), batch_size=256,
-                            verbose=True, epochs=100000000,
+                            verbose=True, epochs=10000,
                             )
+
+        #p = ttt_autoencoder.predict(r["input"]).argmax(axis=-1)
+        #print(p)
         #exit()
+        #print(r["output"].shape)
+        r["output"] = ttt_autoencoder.predict(r["input"]).argmax(axis = -1)
+        #print(r["output"].shape)
+        visualise_training_data(r, f"./plots/{r['name']}_predicted.pdf", )
+
+        exit()
 
 
         #print(train_x.shape, train_y.shape, test_x.shape, test_y.shape)
