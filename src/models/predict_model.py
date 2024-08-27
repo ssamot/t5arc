@@ -7,7 +7,7 @@ from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from tqdm import tqdm
 import keras
-from utils import acc_seq
+from utils import acc_seq, batch_acc, AddMultiplyLayer
 
 from data_generators.example_generator.arc_data_generator import get_all_arc_data
 from data_generators.example_generator.ttt_data_generator import ArcExampleData
@@ -20,12 +20,15 @@ def build_model(encoder, decoder):
     decoded = decoder(encoded)
     #print(encoded)
     #exit()
-    ttt_x = keras.layers.Dense(1024, activation = "relu")(encoded)
-    ttt_x = keras.layers.Dense(1024, activation="relu")(ttt_x)
-    ttt_x = keras.layers.Dense(1024, activation="relu")(ttt_x)
-    ttt_x = keras.layers.Dense(64, activation="relu")(ttt_x)
 
-    ttt_x_decoded = decoder(ttt_x)
+    ttx_input = keras.layers.Input((64,))
+    ttt_x = AddMultiplyLayer()(ttx_input)
+    ttt_output = (ttt_x)
+
+
+    ttx_model = keras.models.Model(ttx_input, ttt_output, name = "ttx")
+
+    ttt_x_decoded = decoder(ttx_model(encoded))
 
     ttt_autoencoder = keras.models.Model(input, ttt_x_decoded)
     ttt_autoencoder.summary()
@@ -35,9 +38,16 @@ def build_model(encoder, decoder):
     ttt_autoencoder.compile(optimizer="AdamW",
 
                         loss='categorical_crossentropy',
-                        metrics=["acc", acc_seq])
+                        metrics=["acc", batch_acc])
+    autoencoder.compile(optimizer="AdamW",
 
-    return ttt_autoencoder, autoencoder
+                        loss='categorical_crossentropy',
+                        metrics=["acc", batch_acc])
+
+    ttx_model.compile(optimizer="AdamW", loss = "mse")
+
+
+    return ttt_autoencoder, autoencoder, ttx_model
 
 
 @click.command()
@@ -59,8 +69,9 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
     for r in tqdm(it):
         #print(r["name"])
-        # print(r["input"].shape)
-        # print(r["output"].shape)
+        #print(r["input"].shape)
+        #print(r["output"].shape)
+        #exit()
 
         train_x = np.array(r["input"][:-1], dtype=np.int32)
         test_x = np.array(r["input"][-1:], dtype=np.int32)
@@ -68,14 +79,27 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         train_y = r["output"][:-1]
         test_y = r["output"][-1:]
 
-        train_y = np.eye(11)[np.array(train_y, dtype=np.int32)]
-        test_y = np.eye(11)[np.array(test_y, dtype=np.int32)]
+        train_y_one_hot = np.eye(11)[np.array(train_y, dtype=np.int32)]
+        test_y_one_hot = np.eye(11)[np.array(test_y, dtype=np.int32)]
         print(train_x.shape, train_y.shape, test_x.shape, test_y.shape)
 
-        ttt_autoencoder, autoencoder = build_model(encoder, decoder)
-        ttt_autoencoder.fit(x=train_x, y = train_y,
+        ttt_autoencoder, autoencoder, ttx_model = build_model(encoder, decoder)
+
+        #print(encoder(train_x))
+        #exit()
+
+        ttt_x = encoder.predict(train_x)
+        ttt_y = encoder.predict(train_y)
+
+        ttt_x_validation = encoder.predict(test_x)
+        ttt_y_validation = encoder.predict(test_y)
+
+        ttx_model.fit(ttt_x, ttt_y, validation_data=(ttt_x_validation, ttt_y_validation),
+        verbose=True, epochs=100000000)
+        exit()
+        autoencoder.fit(x=train_x, y = train_y,
                             validation_data=(test_x, test_y), batch_size=256,
-                            verbose=True, epochs=100000,
+                            verbose=True, epochs=100000000,
                             )
         #exit()
 
