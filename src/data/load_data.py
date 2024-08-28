@@ -120,7 +120,7 @@ def generate_json_of_canvas_sizes():
                                              eval_input_canvases_size + eval_test_canvases_size))
 
     all_unique_sizes = {k: v for k, v in sorted(all_unique_sizes.items(), key=lambda item: item[1], reverse=True)}
-    json_file = join(path, 'data_generators', 'object_recognition', 'canvas_sizes.json')
+    json_file = join(path, 'generators', 'object_recognition', 'canvas_sizes.json')
 
     with open(json_file, "w") as outfile:
         json.dump(all_unique_sizes, outfile, indent=3)

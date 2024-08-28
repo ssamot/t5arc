@@ -5,13 +5,13 @@ import numpy as np
 from copy import copy
 from matplotlib import pyplot as plt
 
-from data_generators.example_generator.example import Example
-from data_generators.object_recognition.basic_geometry import Dimension2D
-from data_generators.object_recognition.canvas import Canvas
-from data_generators.object_recognition.primitives import Primitive, Parallelogram, Random
+from data.generators.example_generator.example import Example
+from data.generators.object_recognition.basic_geometry import Dimension2D
+from data.generators.object_recognition.canvas import Canvas
+from data.generators.object_recognition.primitives import Primitive, Parallelogram, Random
 from data import load_data as ld
-from constants import constants as const
-from data_generators.object_recognition.object import Transformations
+from data.generators import constants as const
+from data.generators.object_recognition.object import Transformations
 
 MIN_PAD_SIZE = 3
 MAX_PAD_SIZE = const.MAX_PAD_SIZE  # 32

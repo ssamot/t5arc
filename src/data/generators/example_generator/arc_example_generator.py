@@ -3,9 +3,9 @@ from typing import List, Dict
 
 import numpy as np
 from data import load_data as ld
-from data_generators.example_generator.example import Example
-from data_generators.object_recognition.basic_geometry import Dimension2D, Point
-from data_generators.object_recognition.canvas import Canvas
+from data.generators.example_generator import Example
+from data.generators.object_recognition.basic_geometry import Dimension2D, Point
+from data.generators.object_recognition.canvas import Canvas
 
 
 class ARCExample(Example):

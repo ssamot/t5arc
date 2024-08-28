@@ -23,12 +23,13 @@ from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from tqdm import tqdm
 import keras
-from utils import acc_seq, b_acc, AddMultiplyLayer
+from utils import b_acc
 
-from data_generators.example_generator.arc_data_generator import get_all_arc_data
-from data_generators.example_generator.ttt_data_generator import ArcExampleData
+from data.generators.example_generator.ttt_data_generator import ArcExampleData
 from visualization.visualse_training_data_sets import visualise_training_data
 from tqdm.keras import TqdmCallback
+
+
 
 
 
@@ -81,6 +82,12 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
     n_neurons = 64
 
+
+
+    # for c in combinations_2d:
+    #     print(np.array(c))
+    # exit()
+
     logging.info("Loading models")
     encoder = keras.models.load_model(f"{model_filepath}/encoder_{n_neurons}.keras")
     decoder = keras.models.load_model(f"{model_filepath}/decoder_{n_neurons}.keras")
@@ -96,14 +103,31 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
     for r in tqdm(it):
 
-        visualise_training_data(r, f"./plots/{r['name']}.pdf",)
+        # visualise_training_data(r, f"./plots/{r['name']}.pdf",)
 
         train_x = np.array(r["input"][:-1], dtype=np.int32)
         test_x = np.array(r["input"][-1:], dtype=np.int32)
 
+
         train_y = r["output"][:-1]
         test_y = r["output"][-1:]
 
+        train_x_a = []
+        train_y_a = []
+        for i in range(len(train_x)):
+            augmented_train_x, augmented_train_y = generate_consistent_combinations_2d_dual(train_x[i], train_y[i])
+            train_x_a.extend(augmented_train_x)
+            train_y_a.extend(augmented_train_y)
+            #print(np.array(augmented_train)[0])
+            #exit()
+
+        train_x_a = np.array(train_x_a)
+        train_y_a = np.array(train_y_a)
+        print(train_x_a.shape, train_y_a.shape)
+        #exit()
+
+
+        train_y_one_hot_a = np.eye(11)[np.array(train_y_a, dtype=np.int32)]
         train_y_one_hot = np.eye(11)[np.array(train_y, dtype=np.int32)]
         test_y_one_hot = np.eye(11)[np.array(test_y, dtype=np.int32)]
 
@@ -122,7 +146,7 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         ttt_autoencoder.compile(optimizer="AdamW",
                                 loss='categorical_crossentropy',
                                 metrics=["acc", b_acc])
-        ttt_autoencoder.fit(x=train_x, y = train_y_one_hot,
+        ttt_autoencoder.fit(x=train_x_a, y = train_y_one_hot_a,
                             validation_data=(test_x, test_y_one_hot), batch_size=256,
                             verbose=0, epochs=10000,callbacks=[TqdmCallback(verbose=0)]
                             )

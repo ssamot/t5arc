@@ -2,8 +2,8 @@
 import numpy as np
 
 from data import load_data as ld
-from data_generators.object_recognition.canvas import Canvas
-from constants import constants as const
+from data.generators.object_recognition.canvas import Canvas
+
 
 def get_all_arc_data(group: str = 'train') -> np.ndarray:
     """

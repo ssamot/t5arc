@@ -1,7 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from constants import constants as const
+from data.generators import constants as const
 
 
 def data_to_colour(pixels):

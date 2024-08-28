@@ -1,7 +1,7 @@
 
-from data_generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
-from data_generators.example_generator.arc_data_generator import get_all_arc_data
-from data_generators.example_generator.ttt_data_generator import ArcExampleData
+from data.generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
+from data.generators.example_generator.arc_data_generator import get_all_arc_data
+from data.generators.example_generator.ttt_data_generator import ArcExampleData
 from visualization.visualse_training_data_sets import visualise_training_data
 
 

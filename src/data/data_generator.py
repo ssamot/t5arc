@@ -2,8 +2,8 @@ import keras
 import numpy as np
 
 
-from data_generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
-from data_generators.example_generator.arc_data_generator import get_all_arc_data
+from data.generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
+from data.generators.example_generator.arc_data_generator import get_all_arc_data
 
 
 

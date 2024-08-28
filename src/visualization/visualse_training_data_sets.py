@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 from typing import Dict
-from data_generators.example_generator.arc_example_generator import ARCExample
+from data.generators.example_generator.arc_example_generator import ARCExample
 
 
 def visualise_training_data(data: Dict, save_as: str | None = None):

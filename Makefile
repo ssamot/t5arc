@@ -50,8 +50,19 @@ train:
 train_generator:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_generator.py models/
 
-data:
-	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src kernprof -lv src/data/create_ds.py  data/processed/ 1000
+data_pure_train:
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 train
+
+data_augmented_train:
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ augmented 1000 train
+
+data_pure_eval:
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 eval
+
+data_augmented_eval:
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ augmented 1000 eval
+
+data: data_pure_train data_augmented_train data_pure_eval data_augmented_eval
 
 
 predict:

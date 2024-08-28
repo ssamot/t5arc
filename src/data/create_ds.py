@@ -4,74 +4,41 @@ import logging
 import tqdm
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
-from models.tokenizer import CharacterTokenizer
-from data_generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
+from data.generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
+from data.generators.example_generator.arc_data_generator import get_all_arc_data
 
 import numpy as np
-from data.utils import load_data
-from models.tokens import token_list
 import secrets
+from data.augment.colour import apply_colour_augmentation_whole_dataset
 
+
+augmented = "augmented"
 @click.command()
 @click.argument('output_filepath', type=click.Path())
-@click.argument('repetitions', type=click.INT)
-def main(output_filepath, repetitions):
-    # build_model()
-    # Initialize a list to store the contents of the JSON files
-    arrays = []
-    strings = []
+@click.argument('augment', type=click.Choice(['pure', augmented]))
+@click.argument('max_perms', type=click.INT)
+@click.argument('type', type=click.STRING)
+def main(output_filepath, augment, max_perms, type):
 
 
-    model_max_length = 20000000
-    for _ in tqdm.tqdm(range(repetitions)):
-        # Create an Example
-        e = AutoEncoderDataExample(100)
-        array_reps = e.get_canvases_as_numpy_array()
-        #str_reps = e.get_canvasses_as_string()
 
 
-        #strings.extend([str(str_rep).replace(" ", "") for str_rep in str_reps])
-        #strings.extend(str_reps)
-        arrays.append(array_reps)
-        #tokenizer = CharacterTokenizer(token_list, model_max_length)
+    X = np.array(get_all_arc_data(group=type), dtype=np.int32)
 
-        # try:
-        #     tokenizer(
-        #         [clean_object],
-        #         padding="longest",
-        #         truncation=True,
-        #         return_tensors="np",
-        #     )
-        # except Exception:
-        #     print("======")
-        #     print(clean_object)
-        #     print(tokenizer._tokenize(clean_object))
-        #     print(e)
+    if(augment == augmented):
+        X = apply_colour_augmentation_whole_dataset(X, max_perms)
 
 
-    arrays = np.concatenate(arrays)
-    print(arrays.shape)
+
+    print(f"Dataset shape {X.shape} ")
+
+    # X_validation = np.array(get_all_arc_data(group='eval'), dtype=np.int32)
+    # y_validation = np.eye(11)[X_validation]
+    # X_validation = np.array(X_validation, dtype=np.int32)
 
 
-    tokenizer = CharacterTokenizer(token_list, model_max_length)
-    tokenized_inputs = tokenizer(
-        strings,
-        padding="longest",
-        truncation=True,
-        return_tensors="np",
-    )
-
-    object_ids = tokenized_inputs.input_ids
-    print(object_ids.shape)
-    print(arrays.shape)
-    #exit()
-
-    hex = secrets.token_hex(nbytes=16)
-
-    output_filepath = f"{output_filepath}/{hex}.npz"
-    np.savez(output_filepath, inputs=train, outputs = object_ids,
-             num_decoder_tokens = tokenizer.num_decoder_tokens,
-             )
+    output_filepath = f"{output_filepath}/{type}_{augment}.npz"
+    np.savez(output_filepath, X = output_filepath)
 
 
 if __name__ == '__main__':

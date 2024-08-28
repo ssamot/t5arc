@@ -2,7 +2,7 @@
 import numpy as np
 from collections.abc import Iterator
 from data import load_data as ld
-from data_generators.example_generator.arc_example_generator import ARCExample
+from data.generators.example_generator.arc_example_generator import ARCExample
 
 
 class ArcExampleData(Iterator):
