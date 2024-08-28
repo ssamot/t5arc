@@ -51,7 +51,7 @@ def main(train_data, eval_data, output_filepath):
               validation_data=(X_validation, y_validation),
               batch_size=128,validation_batch_size=128,
               epochs=100000,verbose = 0,
-              callbacks=[CustomModelCheckpoint(models,"./models", 100),
+              callbacks=[CustomModelCheckpoint(models,"./models", 10),
               TqdmCallback(verbose=1)])
 
 

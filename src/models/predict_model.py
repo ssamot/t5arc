@@ -28,6 +28,7 @@ from utils import b_acc
 from data.generators.example_generator.ttt_data_generator import ArcExampleData
 from visualization.visualse_training_data_sets import visualise_training_data
 from tqdm.keras import TqdmCallback
+from data.augment.colour import generate_consistent_combinations_2d
 
 
 
@@ -80,7 +81,7 @@ from tqdm.keras import TqdmCallback
 @click.argument('data_type', type=click.Path())
 def main(data_filepath, model_filepath, output_filepath, data_type):
 
-    n_neurons = 64
+    n_neurons = 256
 
 
 
@@ -115,7 +116,15 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         train_x_a = []
         train_y_a = []
         for i in range(len(train_x)):
-            augmented_train_x, augmented_train_y = generate_consistent_combinations_2d_dual(train_x[i], train_y[i])
+
+            merged_array = np.concatenate((train_x[i], train_y[i]), axis=1)
+            #print(merged_array.shape)
+
+            augmented = generate_consistent_combinations_2d(merged_array)
+            augmented = np.array(augmented)
+            #print(augmented.shape)
+
+            augmented_train_x, augmented_train_y = np.split(augmented, 2, axis=2)
             train_x_a.extend(augmented_train_x)
             train_y_a.extend(augmented_train_y)
             #print(np.array(augmented_train)[0])
@@ -123,7 +132,12 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
         train_x_a = np.array(train_x_a)
         train_y_a = np.array(train_y_a)
-        print(train_x_a.shape, train_y_a.shape)
+
+        #print(train_x.shape, train_y_a.shape, "3424234")
+
+        #train_x_a = np.concatenate([train_x, train_x_a])
+        #train_y_a = np.concatenate([train_y, train_y_a])
+        #print(train_x_a.shape, train_y_a.shape, "£23424234")
         #exit()
 
 
@@ -143,7 +157,9 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
         input = keras.layers.Input([32,32,1])
         ttt_autoencoder = keras.models.Model(input, decoder(ttt(encoder(input))))
-        ttt_autoencoder.compile(optimizer="AdamW",
+        #optimizer = keras.optimizers.AdamW(weight_decay=0.1)
+        optimizer = keras.optimizers.Adam()
+        ttt_autoencoder.compile(optimizer=optimizer,
                                 loss='categorical_crossentropy',
                                 metrics=["acc", b_acc])
         ttt_autoencoder.fit(x=train_x_a, y = train_y_one_hot_a,

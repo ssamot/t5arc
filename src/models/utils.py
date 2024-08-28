@@ -24,7 +24,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     x = keras.layers.LayerNormalization()(x)
 
     xs = [x]
-    for i in range(4):
+    for i in range(7):
         # skip connections
         x_new = keras.layers.Dense(n_neurons, activation=activation,
                                    )(x)
@@ -40,6 +40,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     # encoded = keras.layers.LayerNormalization()(encoded)
 
     encoded = x
+
     #encoded = keras.layers.Dropout(0.1)(encoded)
 
 
@@ -50,13 +51,14 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     #     layers.Dense(n_neurons,activation="relu")(decoded_inputs))
 
     ttt_input = keras.Input(shape=(encoder_units,))
+    ttt = layers.Activation("tanh", name = "ttt_input_activation")(ttt_input)
 
     ttt = (layers.Dense(encoder_units,name = "ttt_layer",
-                               use_bias=False,
+                               use_bias=False, activation = "tanh",
                                kernel_constraint=keras.constraints.UnitNorm())
-           (ttt_input))
+           (ttt))
 
-
+    #ttt = AddMultiplyLayer()(ttt_input)
 
 
 
@@ -66,7 +68,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     x = keras.layers.LayerNormalization()(x)
 
     xs = [x]
-    for i in range(4):
+    for i in range(7):
         # skip connections
         x_new = keras.layers.Dense(n_neurons, activation=activation,
                                    )(x)
@@ -133,16 +135,16 @@ class AddMultiplyLayer(keras.layers.Layer):
             trainable=True,
             name="add_weight"
         )
-        self.multiply_weight = self.add_weight(
-            shape=(input_shape[-1],),
-            initializer="ones",
-            trainable=True,
-            name="multiply_weight"
-        )
+        # self.multiply_weight = self.add_weight(
+        #     shape=(input_shape[-1],),
+        #     initializer="ones",
+        #     trainable=True,
+        #     name="multiply_weight"
+        # )
 
     def call(self, inputs):
         # Apply element-wise addition followed by element-wise multiplication
-        return (inputs + self.addi_weight) * self.multiply_weight
+        return (inputs + self.addi_weight)# * self.multiply_weight
 
 
 
@@ -175,6 +177,60 @@ def b_acc(y_true, y_pred):
     accuracy = keras.ops.mean(keras.ops.cast(all_correct, "float32"))
 
     return accuracy
+
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.layers import Layer
+from tensorflow.keras import initializers, regularizers, constraints
+
+
+class BinaryDense(Layer):
+    def __init__(self, units, use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros', **kwargs):
+        super(BinaryDense, self).__init__(**kwargs)
+        self.units = units
+        self.use_bias = use_bias
+        self.kernel_initializer = initializers.get(kernel_initializer)
+        self.bias_initializer = initializers.get(bias_initializer)
+
+    def build(self, input_shape):
+        self.input_dim = input_shape[-1]
+        self.kernel = self.add_weight(
+            shape=(self.input_dim, self.units),
+            initializer=self.kernel_initializer,
+            trainable=True,
+            name='kernel'
+        )
+        if self.use_bias:
+            self.bias = self.add_weight(
+                shape=(self.units,),
+                initializer=self.bias_initializer,
+                trainable=True,
+                name='bias'
+            )
+        super(BinaryDense, self).build(input_shape)
+
+    def call(self, inputs):
+        # Binarize the kernel weights
+        kernel_binarized = tf.sign(self.kernel)
+
+        # Perform the matrix multiplication
+        output = tf.matmul(inputs, kernel_binarized)
+
+        if self.use_bias:
+            output = tf.nn.bias_add(output, self.bias)
+
+        return output
+
+    def get_config(self):
+        config = super(BinaryDense, self).get_config()
+        config.update({
+            'units': self.units,
+            'use_bias': self.use_bias,
+            'kernel_initializer': initializers.serialize(self.kernel_initializer),
+            'bias_initializer': initializers.serialize(self.bias_initializer),
+        })
+        return config
 
 # class OrthogonalConstraint(keras.constraints.Constraint):
 #     def __call__(self, w):

@@ -27,7 +27,7 @@ def generate_consistent_combinations_2d(arr_2d, max_samples=1000, excluded_colou
     # Generate all possible mappings
     total_colours = set(range(0, 11))
     used_colours = total_colours - excluded_colours
-    print(total_colours, colours_in_sample)
+
 
     n_mappings = math.perm(len(used_colours), len(colours_in_sample))
     # print(n_mappings)
@@ -53,34 +53,6 @@ def generate_consistent_combinations_2d(arr_2d, max_samples=1000, excluded_colou
     return result
 
 
-def generate_consistent_combinations_2d_dual(arr_2d_1, arr_2d_2, max_samples=1000):
-    # Flatten both 2D arrays and get unique non-zero colors
-    flat_arr_1 = [color for row in arr_2d_1 for color in row if color != 0]
-    flat_arr_2 = [color for row in arr_2d_2 for color in row if color != 0]
-    unique_colors = sorted(set(flat_arr_1 + flat_arr_2))
-
-    # Generate all possible mappings
-    possible_values = range(1, 11)  # Assuming we're still using numbers 1-10 as replacements
-    all_mappings = list(itertools.permutations(possible_values, len(unique_colors)))
-
-    # If there are more than max_samples mappings, randomly sample max_samples of them
-    if len(all_mappings) > max_samples:
-        all_mappings = random.sample(all_mappings, max_samples)
-
-    result_1 = []
-    result_2 = []
-    for mapping in all_mappings:
-        # Create a dictionary to map original colors to new numbers
-        color_map = dict(zip(unique_colors, mapping))
-
-        # Apply the mapping to both original 2D arrays, keeping zeros unchanged
-        new_arr_1 = [[color_map.get(color, 0) if color != 0 else 0 for color in row] for row in arr_2d_1]
-        new_arr_2 = [[color_map.get(color, 0) if color != 0 else 0 for color in row] for row in arr_2d_2]
-
-        result_1.append(new_arr_1)
-        result_2.append(new_arr_2)
-
-    return result_1, result_2
 
 
 def print_sample_combinations(original, combinations, num_samples=5):
