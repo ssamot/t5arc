@@ -1,9 +1,10 @@
+
 from copy import deepcopy
 from typing import List, Dict
-
 import numpy as np
+
 from data import load_data as ld
-from data.generators.example_generator import Example
+from data.generators.example_generator.example import Example
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from data.generators.object_recognition.canvas import Canvas
 
@@ -38,10 +39,12 @@ class ARCExample(Example):
                     index = [k for k, j in enumerate(names) if j == arc_name][0]
                     task = [train_challenges_tasks, eval_challenges_tasks][i][index]
                     solution = [train_solutions_tasks, eval_solutions_tasks][i][index]
-
-            self.name = arc_name
-            self.task_data = task
-            self.solution_data = solution
+            try:
+                self.name = arc_name
+                self.task_data = task
+                self.solution_data = solution
+            except:
+                print(f'No name {arc_name} in the ARC data set. The ARCExample Example will be empty.')
 
         if arc_data is not None:
             if type(arc_data) == list:
