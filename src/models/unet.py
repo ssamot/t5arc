@@ -64,8 +64,8 @@ def satellite_unet(
     }
 
     x = layers.Conv2D(filters, **conv2d_args)(inputs)
-    c1 = layers.bn_conv_relu(x, filters, bachnorm_momentum, **conv2d_args)
-    x = layers.bn_conv_relu(c1, filters, bachnorm_momentum, **conv2d_args)
+    c1 = bn_conv_relu(x, filters, bachnorm_momentum, **conv2d_args)
+    x = bn_conv_relu(c1, filters, bachnorm_momentum, **conv2d_args)
     x = layers.MaxPooling2D(**maxpool2d_args)(x)
 
     down_layers = []

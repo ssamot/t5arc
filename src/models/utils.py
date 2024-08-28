@@ -22,6 +22,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     n_neurons = 256
     x = keras.layers.Dense(n_neurons, activation=activation,)(x)
     x = keras.layers.LayerNormalization()(x)
+    x = keras.layers.Dropout(0.1)(x)
 
     xs = [x]
     for i in range(7):
@@ -35,11 +36,11 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
 
     #encoded = layers.Reshape([4,4,8])(x)
     #
-    # encoded = keras.layers.Dense(encoder_units, activation=activation,
-    #                       )(x)
-    # encoded = keras.layers.LayerNormalization()(encoded)
+    encoded = keras.layers.Dense(encoder_units, activation=activation,
+                          )(x)
+    encoded = keras.layers.LayerNormalization()(encoded)
 
-    encoded = x
+
 
     #encoded = keras.layers.Dropout(0.1)(encoded)
 

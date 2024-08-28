@@ -82,7 +82,7 @@ from data.augment.colour import generate_consistent_combinations_2d
 def main(data_filepath, model_filepath, output_filepath, data_type):
 
     n_neurons = 256
-
+    keras.config.enable_unsafe_deserialization()
 
 
     # for c in combinations_2d:
