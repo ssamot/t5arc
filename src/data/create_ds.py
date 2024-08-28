@@ -10,9 +10,18 @@ from data.generators.example_generator.arc_data_generator import get_all_arc_dat
 import numpy as np
 import secrets
 from data.augment.colour import apply_colour_augmentation_whole_dataset
+import numpy as np
+from multiprocessing import Pool
+from functools import partial
 
 
 augmented = "augmented"
+
+
+def process_batch(batch, max_perms):
+    return apply_colour_augmentation_whole_dataset(batch, max_perms)
+
+
 @click.command()
 @click.argument('output_filepath', type=click.Path())
 @click.argument('augment', type=click.Choice(['pure', augmented]))
@@ -23,10 +32,18 @@ def main(output_filepath, augment, max_perms, type):
 
 
 
-    X = np.array(get_all_arc_data(group=type), dtype=np.int32)
+    def parallel_process(arr, n_batches):
+        splits = np.array_split(arr, n_batches)
+        with Pool() as pool:
+            results = pool.map(partial(process_batch, max_perms = max_perms), splits)
+        return np.concatenate(results)
+
+
+
+    X = np.array(get_all_arc_data(group=type), dtype=np.int8)
 
     if(augment == augmented):
-        X = apply_colour_augmentation_whole_dataset(X, max_perms)
+        X  = parallel_process(X, 50)
 
 
 
@@ -38,7 +55,7 @@ def main(output_filepath, augment, max_perms, type):
 
 
     output_filepath = f"{output_filepath}/{type}_{augment}.npz"
-    np.savez(output_filepath, X = output_filepath)
+    np.savez_compressed(output_filepath, X = X)
 
 
 if __name__ == '__main__':

@@ -13,42 +13,43 @@ def apply_colour_augmentation_whole_dataset(dataset, max_perms):
         # print(np.array(extra_images).shape)
         augmented_images.extend(extra_images)
 
-    return np.array(augmented_images, dtype=np.int32)
+    return np.array(augmented_images, dtype=np.int8)
 
 
 def random_permutation(possible_values, num_unique_nums):
     return random.sample(possible_values, num_unique_nums)
 
 
-def generate_consistent_combinations_2d(arr_2d, max_samples=1000):
-    # Flatten the 2D array and get unique non-zero numbers
-    flat_arr = [num for row in arr_2d for num in row if num != 0]
-    unique_nums = sorted(set(flat_arr))
+def generate_consistent_combinations_2d(arr_2d, max_samples=1000, excluded_colours = set([0, 1])):
+    # Flatten the 2D array and get unique colours
+    colours_in_sample = sorted(set(arr_2d.flatten()) - excluded_colours)
 
     # Generate all possible mappings
-    possible_values = range(1, 11)
-    n_mappings = math.perm(len(possible_values), len(unique_nums))
+    total_colours = set(range(0, 11))
+    used_colours = total_colours - excluded_colours
+    print(total_colours, colours_in_sample)
+
+    n_mappings = math.perm(len(used_colours), len(colours_in_sample))
     # print(n_mappings)
 
     if (n_mappings > max_samples):
         sampled_mappings = set()
         # Sample unique permutations
         while len(sampled_mappings) < max_samples:
-            sampled_mappings.add(tuple(random_permutation(possible_values, len(unique_nums))))
+            sampled_mappings.add(tuple(random_permutation(used_colours, len(colours_in_sample))))
 
         all_mappings = list(sampled_mappings)
     else:
-        all_mappings = list(itertools.permutations(possible_values, len(unique_nums)))
+        all_mappings = list(itertools.permutations(used_colours, len(colours_in_sample)))
 
     result = []
     for mapping in all_mappings:
         # Create a dictionary to map original numbers to new numbers
-        num_map = dict(zip(unique_nums, mapping))
+        num_map = dict(zip(colours_in_sample, mapping))
 
         # Apply the mapping to the original 2D array, keeping zeros unchanged
-        new_arr = [[num_map.get(num, 0) if num != 0 else 0 for num in row] for row in arr_2d]
+        new_arr = [[num_map.get(num, num) if num not in excluded_colours else num for num in row] for row in arr_2d]
         result.append(new_arr)
-
     return result
 
 

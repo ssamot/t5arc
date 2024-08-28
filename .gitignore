@@ -162,6 +162,7 @@ cython_debug/
 
 models/*
 plots/*
+data/processed/*
 copy_data.sh
 deploy.sh
 deployIADS4.sh

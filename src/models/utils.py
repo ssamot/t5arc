@@ -14,7 +14,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
 
 
     x = keras.layers.Reshape(input_shape, input_shape=total_features)(input_img)
-    x = keras.layers.Embedding(input_dim=11, output_dim=8, input_length=total_features)(x)
+    x = keras.layers.Embedding(input_dim=11, output_dim=16, input_length=total_features)(x)
     x = keras.layers.Flatten()(x)
 
     #x = keras.layers.Flatten()(input_img)
@@ -24,7 +24,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     x = keras.layers.LayerNormalization()(x)
 
     xs = [x]
-    for i in range(3):
+    for i in range(4):
         # skip connections
         x_new = keras.layers.Dense(n_neurons, activation=activation,
                                    )(x)
@@ -34,11 +34,13 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
         x = keras.layers.add(xs)
 
     #encoded = layers.Reshape([4,4,8])(x)
+    #
+    # encoded = keras.layers.Dense(encoder_units, activation=activation,
+    #                       )(x)
+    # encoded = keras.layers.LayerNormalization()(encoded)
 
-    encoded = keras.layers.Dense(encoder_units, activation=activation,
-                          )(x)
-    encoded = keras.layers.LayerNormalization()(encoded)
-    encoded = keras.layers.Dropout(0.1)(encoded)
+    encoded = x
+    #encoded = keras.layers.Dropout(0.1)(encoded)
 
 
 
@@ -60,8 +62,21 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
 
     ttt_model = keras.models.Model(ttt_input, ttt, name = "ttt")
 
+    x = keras.layers.Dense(n_neurons, activation=activation, )(decoded_inputs)
+    x = keras.layers.LayerNormalization()(x)
 
-    decoded = layers.Dense(total_features*num_decoder_tokens)(decoded_inputs)
+    xs = [x]
+    for i in range(4):
+        # skip connections
+        x_new = keras.layers.Dense(n_neurons, activation=activation,
+                                   )(x)
+        x_new = keras.layers.LayerNormalization()(x_new)
+
+        xs.append(x_new)
+        x = keras.layers.add(xs)
+
+
+    decoded = layers.Dense(total_features*num_decoder_tokens)(x)
     decoded = layers.Reshape([input_shape[0],input_shape[1],num_decoder_tokens])(decoded)
     decoded = layers.Activation("softmax")(decoded)
 
