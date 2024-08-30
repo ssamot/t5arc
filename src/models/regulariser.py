@@ -26,11 +26,11 @@ def svd_linear_regression_keras(X, y, alpha):
     mse = ops.mean(ops.square(y - y_pred), axis=0)
     s_mse = ops.mean(mse)
 
-    if (alpha > 0.0000001):
-        l2_reg = alpha * ops.sum(ops.square(theta[1:]))
-    else:
-        l2_reg = 0.0
-    return theta, mse, s_mse + l2_reg
+    # if (alpha > 0.0000001):
+    #     l2_reg = alpha * ops.sum(ops.square(theta[1:]))
+    # else:
+    #     l2_reg = 0.0
+    return theta, mse, s_mse
 
 def addition(X,y):
     theta = ops.mean(y - X, axis=0)
