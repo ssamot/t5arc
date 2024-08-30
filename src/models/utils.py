@@ -22,7 +22,6 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     n_neurons = 256
     x = keras.layers.Dense(n_neurons, activation=activation,)(x)
     x = keras.layers.LayerNormalization()(x)
-    x = keras.layers.Dropout(0.1)(x)
 
     xs = [x]
     for i in range(7):
@@ -52,13 +51,13 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     #     layers.Dense(n_neurons,activation="relu")(decoded_inputs))
 
     ttt_input = keras.Input(shape=(encoder_units,))
-    ttt = layers.Activation("tanh", name = "ttt_input_activation")(ttt_input)
+    #ttt = layers.Activation("tanh", name = "ttt_input_activation")(ttt_input)
 
     ttt = (layers.Dense(encoder_units,name = "ttt_layer",
-                               use_bias=False, activation = "tanh",
-                               kernel_constraint=keras.constraints.UnitNorm())
-           (ttt))
-
+                               use_bias=False, activation = "linear")
+           (ttt_input))
+    ttt = layers.GaussianNoise(stddev=0.01)(ttt)
+    #ttt = BinaryDense(encoder_units)(ttt_input)
     #ttt = AddMultiplyLayer()(ttt_input)
 
 
@@ -186,11 +185,11 @@ from tensorflow.keras.layers import Layer
 from tensorflow.keras import initializers, regularizers, constraints
 
 
+@keras.saving.register_keras_serializable(package="models")
 class BinaryDense(Layer):
-    def __init__(self, units, use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros', **kwargs):
+    def __init__(self, units, kernel_initializer='glorot_uniform', bias_initializer='zeros', **kwargs):
         super(BinaryDense, self).__init__(**kwargs)
         self.units = units
-        self.use_bias = use_bias
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.bias_initializer = initializers.get(bias_initializer)
 
@@ -202,24 +201,17 @@ class BinaryDense(Layer):
             trainable=True,
             name='kernel'
         )
-        if self.use_bias:
-            self.bias = self.add_weight(
-                shape=(self.units,),
-                initializer=self.bias_initializer,
-                trainable=True,
-                name='bias'
-            )
+
         super(BinaryDense, self).build(input_shape)
 
     def call(self, inputs):
         # Binarize the kernel weights
-        kernel_binarized = tf.sign(self.kernel)
+        #kernel_binarized = keras.ops.sign(self.kernel)
 
         # Perform the matrix multiplication
-        output = tf.matmul(inputs, kernel_binarized)
+        output = keras.ops.sign(keras.ops.matmul(inputs, self.kernel))
 
-        if self.use_bias:
-            output = tf.nn.bias_add(output, self.bias)
+
 
         return output
 
@@ -227,7 +219,6 @@ class BinaryDense(Layer):
         config = super(BinaryDense, self).get_config()
         config.update({
             'units': self.units,
-            'use_bias': self.use_bias,
             'kernel_initializer': initializers.serialize(self.kernel_initializer),
             'bias_initializer': initializers.serialize(self.bias_initializer),
         })
