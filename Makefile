@@ -45,13 +45,25 @@ clean:
 
 
 train:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model.py data/processed/train_augmented.npz data/processed/eval_pure.npz  models/
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model.py data/processed/train_pure.npz data/processed/eval_pure.npz  models/
+
+train_inout:
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_inout.py data/processed/train_pure_inout.npz data/processed/eval_pure_inout.npz  models/
+
 
 train_generator:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_generator.py models/
 
 data_pure_train:
 	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 train
+
+data_pure_train_inout:
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 train inout
+
+data_pure_eval_inout:
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 eval inout
+
+data_inout: data_pure_train_inout data_pure_eval_inout
 
 data_augmented_train:
 	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ augmented 1000 train

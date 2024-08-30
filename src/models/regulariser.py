@@ -4,13 +4,19 @@ from keras import ops
 
 
 
-def svd_linear_regression_keras(X, y):
+def svd_linear_regression_keras(X, y, alpha):
     X_b = ops.concatenate([ops.ones((ops.shape(X)[0], 1)), X], axis=1)
     # Step 1: Perform SVD on X_b
     U, s, Vt = ops.linalg.svd(X_b, full_matrices=False)
 
     # Calculate theta (coefficients)
-    s_inv = ops.diag(1.0 / s)
+
+    if(alpha > 0.0000001):
+        s_reg = s / (s ** 2 + alpha)
+        s_inv = ops.diag(s_reg)
+    else:
+        s_inv = ops.diag(1.0 / s)
+
 
     theta = ops.dot(ops.transpose(Vt),
                           ops.dot(s_inv, ops.dot(ops.transpose(U), y)))
@@ -19,7 +25,12 @@ def svd_linear_regression_keras(X, y):
     # Step 6: Compute the Mean Squared Error (MSE)
     mse = ops.mean(ops.square(y - y_pred), axis=0)
     s_mse = ops.mean(mse)
-    return theta, mse, s_mse
+
+    if (alpha > 0.0000001):
+        l2_reg = alpha * ops.sum(ops.square(theta[1:]))
+    else:
+        l2_reg = 0.0
+    return theta, mse, s_mse + l2_reg
 
 def addition(X,y):
     theta = ops.mean(y - X, axis=0)
@@ -30,12 +41,14 @@ def addition(X,y):
     return theta, mse, s_mse
 
 @keras.saving.register_keras_serializable(package="models")
-class CustomSplitRegularizer(keras.regularizers.Regularizer):
-    def __init__(self, regularization_type, coef):
+class CustomSplitRegularizer(keras.layers.Layer):
+    def __init__(self, regularization_type, coef, **kwargs):
+        super(CustomSplitRegularizer, self).__init__(**kwargs)
         self.regularization_type = regularization_type
         self.coef = coef
+        self.constant_loss_value = keras.ops.ones([1])*1000.0
 
-    def __call__(self, x):
+    def call(self, x):
         # Get the number of features
         num_features = ops.shape(x)[1]
 
@@ -49,12 +62,21 @@ class CustomSplitRegularizer(keras.regularizers.Regularizer):
         # Use dummy inputs to influence the regularization (example)
         # Here, just a demonstration of using these parameters
         if self.regularization_type == 'lr':
-            _, _, error = svd_linear_regression_keras(x_left, x_right)
+            _, _, error = svd_linear_regression_keras(x_left, x_right, 0.01)
         else:
            _,_, error = addition(x_left, x_right)
 
         # Return a dummy regularization term based on parameters
-        return self.coef * error
+        loss = self.coef * error
+        #print(loss)
+        self.add_loss(loss)
+
+        return x_left
+
+    def compute_output_shape(self, input_shape):
+        # The output shape will be the same as the input shape except for the last dimension
+        return (input_shape[0], input_shape[-1] // 2)
+
 
     def get_config(self):
         return {
@@ -63,7 +85,7 @@ class CustomSplitRegularizer(keras.regularizers.Regularizer):
         }
 
 @keras.saving.register_keras_serializable(package="models")
-class HalfNeuronsLayer(Layer):
+class HalfNeuronsLayer(keras.layers.Layer):
     def __init__(self, **kwargs):
         super(HalfNeuronsLayer, self).__init__(**kwargs)
 
@@ -96,15 +118,18 @@ class HalfNeuronsLayer(Layer):
 
 if __name__ == '__main__':
 
-    X = np.array([[1, 2, 3],
-                  [4, 5, 6],
-                  [7, 8, 9],
-                  [7, 8, 9]])
+    # X = np.array([[1, 2, 3],
+    #               [4, 5, 6],
+    #               [7, 8, 9],
+    #               [7, 8, 9]])
+    #
+    # y = np.array([[2, 3, 4],
+    #               [5, 6, 7],
+    #               [8, 9, 10],
+    #               [8, 9, 10]])
 
-    y = np.array([[2, 3, 4],
-                  [5, 6, 7],
-                  [8, 9, 10],
-                  [8, 9, 10]])
+    X = np.random.random(size = (10,3))
+    y = np.random.random(size=(10, 3))
 
     theta_val, mse_val, s_mse = addition(X, y)
 
@@ -126,7 +151,7 @@ if __name__ == '__main__':
     # y_tf = tf.convert_to_tensor(y, dtype=tf.float32)
 
     # Call the function
-    theta_val, mse_val, s_mse = svd_linear_regression_keras(X, y)
+    theta_val, mse_val, s_mse = svd_linear_regression_keras(X, y, alpha = 1)
 
 
     print("Coefficients (theta):", theta_val)

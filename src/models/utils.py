@@ -1,7 +1,7 @@
 
 import keras
 from keras import layers
-
+from regulariser import CustomSplitRegularizer, HalfNeuronsLayer
 
 activation = "relu"
 
@@ -53,10 +53,11 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     ttt_input = keras.Input(shape=(encoder_units,))
     #ttt = layers.Activation("tanh", name = "ttt_input_activation")(ttt_input)
 
+    ttt = layers.GaussianNoise(stddev=0.01)(ttt_input)
+
     ttt = (layers.Dense(encoder_units,name = "ttt_layer",
-                               use_bias=False, activation = "linear")
-           (ttt_input))
-    ttt = layers.GaussianNoise(stddev=0.01)(ttt)
+                               use_bias=False, activation = "tanh")
+           (ttt))
     #ttt = BinaryDense(encoder_units)(ttt_input)
     #ttt = AddMultiplyLayer()(ttt_input)
 
@@ -91,19 +92,36 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     #decoder.summary()
     #exit()
 
+    input_left = keras.layers.Input(shape=input_shape)
+    input_right = keras.layers.Input(shape=input_shape)
+
+    encoded_left = encoder(input_left)
+    encoded_right = encoder(input_right)
+
+    merged = keras.layers.concatenate([encoded_left, encoded_right])
+    unmerged = CustomSplitRegularizer("add", 1)(merged)
+
+
 
 
     autoencoder = keras.Model(input_img, decoder(ttt_model(encoded)),
                               name = "autoencoder")
+
+    twin_autoencoder = keras.Model([input_left, input_right],
+                                    decoder(ttt_model(unmerged)))
     #print(autoencoder.summary())
     #optimizer = keras.optimizers.SGD(momentum=0.3, weight_decay=0.01, nesterov=True, learning_rate=0.1)
     optimizer = keras.optimizers.AdamW(learning_rate=0.001)
-    autoencoder.compile(optimizer=optimizer,
+
+    def cce(y_true, y_pred, from_logits=False, label_smoothing=0.0, axis=-1):
+        return keras.metrics.categorical_crossentropy(y_true, y_pred, from_logits, label_smoothing, axis)
+
+    twin_autoencoder.compile(optimizer=optimizer,
 
                         loss='categorical_crossentropy',
-                        metrics=["acc", b_acc])
+                        metrics=["acc", b_acc, cce])
 
-    return autoencoder, encoder, decoder, ttt_model
+    return autoencoder, twin_autoencoder, encoder, decoder, ttt_model
 
 
 class CustomModelCheckpoint(keras.callbacks.Callback):
@@ -121,30 +139,6 @@ class CustomModelCheckpoint(keras.callbacks.Callback):
                 model = self.models[name]
                 model.save(f"{self.path}/{name}.keras", overwrite=True)
 
-
-
-class AddMultiplyLayer(keras.layers.Layer):
-    def __init__(self, **kwargs):
-        super(AddMultiplyLayer, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        # Create trainable weight variables for addition and multiplication
-        self.addi_weight = self.add_weight(
-            shape=(input_shape[-1],),  # One weight per input feature
-            initializer="zeros",
-            trainable=True,
-            name="add_weight"
-        )
-        # self.multiply_weight = self.add_weight(
-        #     shape=(input_shape[-1],),
-        #     initializer="ones",
-        #     trainable=True,
-        #     name="multiply_weight"
-        # )
-
-    def call(self, inputs):
-        # Apply element-wise addition followed by element-wise multiplication
-        return (inputs + self.addi_weight)# * self.multiply_weight
 
 
 
@@ -179,19 +173,14 @@ def b_acc(y_true, y_pred):
     return accuracy
 
 
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.layers import Layer
-from tensorflow.keras import initializers, regularizers, constraints
-
 
 @keras.saving.register_keras_serializable(package="models")
-class BinaryDense(Layer):
+class BinaryDense(keras.layers.Layer):
     def __init__(self, units, kernel_initializer='glorot_uniform', bias_initializer='zeros', **kwargs):
         super(BinaryDense, self).__init__(**kwargs)
         self.units = units
-        self.kernel_initializer = initializers.get(kernel_initializer)
-        self.bias_initializer = initializers.get(bias_initializer)
+        self.kernel_initializer = keras.initializers.get(kernel_initializer)
+        self.bias_initializer = keras.initializers.get(bias_initializer)
 
     def build(self, input_shape):
         self.input_dim = input_shape[-1]
@@ -219,8 +208,8 @@ class BinaryDense(Layer):
         config = super(BinaryDense, self).get_config()
         config.update({
             'units': self.units,
-            'kernel_initializer': initializers.serialize(self.kernel_initializer),
-            'bias_initializer': initializers.serialize(self.bias_initializer),
+            'kernel_initializer': keras.initializers.serialize(self.kernel_initializer),
+            'bias_initializer': keras.initializers.serialize(self.bias_initializer),
         })
         return config
 
