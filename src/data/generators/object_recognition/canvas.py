@@ -19,7 +19,7 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
 class Canvas:
-    def __init__(self, size: Dimension2D | np.ndarray | List | None = None, objects: List[Object] | None = None,
+    def __init__(self, size: Dimension2D | np.ndarray | List | None = None, objects: List[Primitive] | None = None,
                  _id: int | None = None, actual_pixels: np.ndarray | None = None):
 
         assert not(size is None and actual_pixels is None), print(f'Making a canvas with id {_id}. '
@@ -248,6 +248,18 @@ class Canvas:
         """
         self.objects[index]._canvas_pos = canvas_pos
         self.embed_objects()
+
+    def json_output(self, with_pixels: bool = False) -> dict:
+        result = {'canvas ID': self.id, 'objects': []}
+        if with_pixels:
+            result['actual_pixels'] = self.actual_pixels.tolist()
+            result['full_canvas'] =  self.full_canvas.tolist()
+        for o in self.objects:
+            o_json = o.json_output()
+            o_json['actual_pixels'] = o.actual_pixels.tolist()
+            result['objects'].append(o_json)
+
+        return result
 
     def show(self, full_canvas=True, fig_to_add: None | plt.Figure = None, nrows: int = 0, ncoloumns: int = 0,
              index: int = 1, save_as: str | None = None, thin_lines: bool = False):
