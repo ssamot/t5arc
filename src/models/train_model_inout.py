@@ -8,7 +8,7 @@ from tqdm.keras import TqdmCallback
 from tqdm import tqdm
 
 
-
+from utils import average_maps
 
 
 @click.command()
@@ -20,7 +20,7 @@ def main(train_data, eval_data, output_filepath):
     # Initialize a list to store the contents of the JSON files
 
     max_pad_size = 32
-    encoder_units = 512
+    encoder_units = 514
     num_decoder_tokens = 11
 
 
@@ -68,11 +68,17 @@ def main(train_data, eval_data, output_filepath):
                     train_y = np.array(train_train_y[batch], dtype=np.int32)
 
 
-                    losses = twin_autoencoder.train_on_batch([train_y, train_x ],
+                    losses_0 = twin_autoencoder.train_on_batch([train_y, train_x ],
                                                              np.eye(11)[train_y],
                                                              return_dict=True,
                                                              )
 
+                    losses_1 = twin_autoencoder.train_on_batch([train_x, train_x],
+                                                             np.eye(11)[train_x],
+                                                             return_dict=True,
+
+                                                             )
+                    losses = average_maps(losses_0, losses_1)
 
                     # r2 = losses["cce"] - losses["loss"]
                     # losses["r2"] = r2

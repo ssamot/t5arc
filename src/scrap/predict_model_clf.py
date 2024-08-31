@@ -128,8 +128,8 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         clf = SVDLinearRegression(0.001)
         #clf = AdditionRegression()
 
-        test = clf.fit(train_x_h, train_y_h)
-        print(test[0].shape, test[2], "reported scores" )
+        test = clf.fit(train_x_a_h, train_y_a_h)
+        print(test[2], train_x_a_h.shape,train_y_a_h.shape, "reported scores" )
         #exit()
         print(clf.score(train_x_a_h, train_y_a_h), "score augmented"),
         print(clf.score(test_x_h, test_y_h), "score augmented")

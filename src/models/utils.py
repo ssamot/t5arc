@@ -14,7 +14,9 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     input_img = keras.Input(shape=input_shape)
 
 
-    x = keras.layers.Reshape(input_shape, input_shape=total_features)(input_img)
+    x = keras.layers.Reshape(target_shape=(total_features,))(input_img)
+
+
     x = keras.layers.Embedding(input_dim=11, output_dim=16, input_length=total_features)(x)
     x = keras.layers.Flatten()(x)
 
@@ -104,7 +106,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     encoded_right = encoder(input_right)
 
     #merged = keras.layers.concatenate([encoded_left, encoded_right])
-    unmerged = CustomSplitRegularizer("lr", 1.0)([encoded_left,
+    unmerged = CustomSplitRegularizer("lr",)([encoded_left,
                                                   encoded_right])
 
 
@@ -116,13 +118,13 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     twin_autoencoder = keras.Model([input_left, input_right],
                                     decoder(ttt_model(unmerged)))
     #print(autoencoder.summary())
-    #optimizer = keras.optimizers.SGD(momentum=0.3, weight_decay=0.01, nesterov=True, learning_rate=0.1)
-    optimizer = keras.optimizers.AdamW(learning_rate=0.0001)
+    optimizer = keras.optimizers.SGD(momentum=0.8, weight_decay=0.001, nesterov=True, learning_rate=0.01)
+    #optimizer = keras.optimizers.AdamW(learning_rate=0.0001, clipnorm=0.1)
 
 
     twin_autoencoder.compile(optimizer=optimizer,
 
-                        loss='categorical_crossentropy',
+                        loss='categorical_crossentropy',#run_eagerly=True,
                         metrics=["acc", b_acc, cce])
 
     return autoencoder, twin_autoencoder, encoder, decoder, ttt_model
@@ -195,3 +197,17 @@ class BinaryDense(keras.layers.Layer):
 #         # Reconstruct the nearest orthogonal matrix
 #         return keras.ops.matmul(u, keras.ops.transpose(v))
 
+def average_maps(*maps):
+    # Initialize an empty dictionary to store the averages
+    averaged_map = {}
+
+    # Iterate over the keys of the first map (assuming all maps have the same keys)
+    for key in maps[0]:
+        # Sum the values for the current key from all maps
+        total = sum(map[key] for map in maps)
+        # Calculate the average
+        average = total / len(maps)
+        # Store the average in the new map
+        averaged_map[key] = average
+
+    return averaged_map
