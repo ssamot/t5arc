@@ -1,14 +1,16 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Tuple
 
 from matplotlib import pyplot as plt
 import numpy as np
 from copy import copy
 
 from data.generators.object_recognition.canvas import Canvas
-from data.generators.object_recognition.primitives import Primitive, ObjectType, Random
+# Do not delete the unused ones! They are actually been used through introspection!!
+from data.generators.object_recognition.primitives import Primitive, ObjectType, Random, Parallelogram, Cross, Hole,\
+    Pi, InverseCross, Dot, Angle, Diagonal, Steps, Fish, Bolt, Spiral, Tie, Pyramid
 from data.generators.object_recognition.basic_geometry import Point, Dimension2D, Surround
 from data.generators.object_recognition.object import Transformations
 from data.generators import constants as const
@@ -16,17 +18,21 @@ from data.generators import constants as const
 
 class Example:
     def __init__(self, min_canvas_size_for_background_object: int = 10, prob_of_background_object: float = 0.1,
-                 run_generate_canvasses: bool = True):
+                 run_generate_canvasses: bool = True, number_of_io_pairs: int | None = None):
 
         self.min_canvas_size_for_background_object = min_canvas_size_for_background_object
         self.prob_of_background_object = prob_of_background_object
-        self.number_of_io_pairs = np.random.randint(2, const.MAX_EXAMPLE_PAIRS)
+        if number_of_io_pairs is None:
+            self.number_of_io_pairs = np.random.randint(2, const.MAX_EXAMPLE_PAIRS)
+        else:
+            self.number_of_io_pairs = number_of_io_pairs
         self.number_of_canvasses = self.number_of_io_pairs * 2 + 1
 
         self.input_canvases = []
         self.output_canvases = []
         self.test_input_canvas = None
         self.test_output_canvas = None
+        self._canvas_ids = []
 
         # TODO: Develop the Grd Primitive to be able to also create the Grid Experiment type
         self.experiment_type = np.random.choice(['Object', 'Symmetry', 'Grid'], p=[0.8, 0.2, 0])
@@ -38,6 +44,21 @@ class Example:
 
         if run_generate_canvasses:
             self.generate_canvasses()
+
+    @property
+    def canvas_ids(self):
+        c_ids = []
+        for i, o in zip(self.input_canvases, self.output_canvases):
+            c_ids.append(i.id)
+            c_ids.append(o.id)
+
+        c_ids.append(self.test_input_canvas)
+        if self.test_output_canvas is not None:
+            c_ids.append(self.test_output_canvas.id)
+
+        self._canvas_ids = c_ids
+        return self._canvas_ids
+
 
     @staticmethod
     def get_random_colour(other_colour: int | None = None):
@@ -71,7 +92,7 @@ class Example:
         10x10. Override if a subclass requires a different way to generate canvases.
         :return:
         """
-        min_pad_size = const.MIN_PAD_SIZE if self.experiment_type == 'Object' else const.MIN_PAD_SIZE + 10
+        min_pad_size = const.MIN_PAD_SIZE if self.experiment_type == 'Object' else const.MIN_PAD_SIZE + 15
 
         for c in range(self.number_of_io_pairs):
             input_size = Dimension2D(np.random.randint(min_pad_size, const.MAX_PAD_SIZE),
@@ -98,12 +119,26 @@ class Example:
         test_canvas_size = Dimension2D(np.random.randint(min_pad_size, const.MAX_PAD_SIZE),
                                        np.random.randint(min_pad_size, const.MAX_PAD_SIZE))
 
-        self.test_input_canvas = Canvas(size=test_canvas_size, _id=0)
+        self.test_input_canvas = Canvas(size=test_canvas_size, _id=self.output_canvases[-1].id + 1)
         if np.all([test_canvas_size.dx > self.min_canvas_size_for_background_object,
                    test_canvas_size.dy > self.min_canvas_size_for_background_object]) \
                 and np.random.random() < self.prob_of_background_object:
             background_object = Random(size=test_canvas_size, occupancy_prob=np.random.gamma(1, 0.05) + 0.1)
             self.test_input_canvas.create_background_from_object(background_object)
+
+    def get_canvas_by_id(self, canvas_id: int) -> Canvas | None:
+        for i, o in zip(self.input_canvases, self.output_canvases):
+            if i.id == canvas_id:
+                return i
+            if o.id == canvas_id:
+                return o
+
+        if self.test_input_canvas.id == canvas_id:
+            return self.test_input_canvas
+        if self.test_output_canvas is not None and self.test_output_canvas.id == canvas_id:
+            return self.test_output_canvas
+
+        return None
 
     def create_object(self, obj_probs: np.ndarray | None = None, max_size_of_obj: Dimension2D = Dimension2D(15, 15),
                       overlap_prob: float = 0.8, far_away_prob: float = 0.1, debug: bool = False) -> Primitive:
@@ -324,6 +359,19 @@ class Example:
             self.test_input_canvas.add_new_object(o)
             self.objects.append(o)
 
+    def add_object_on_canvasses(self, obj: Primitive, canvas_ids: List[int]):
+        self.objects.append(obj)
+        for i, o in zip(self.input_canvases, self.output_canvases):
+            if i.id in canvas_ids:
+                i.add_new_object(obj)
+            if o.id in canvas_ids:
+                o.add_new_object(obj)
+
+        if self.test_input_canvas.id in canvas_ids:
+            self.test_input_canvas.add_new_object(obj)
+        if self.test_output_canvas is not None and self.test_output_canvas.id in canvas_ids:
+            self.test_output_canvas.add_new_object(obj)
+
     def create_canvas_arrays_input(self) -> dict:
         result = {'test': [{'input': np.flipud(self.test_input_canvas.full_canvas).tolist()}],
                   'train': []}
@@ -334,7 +382,7 @@ class Example:
 
         return result
 
-    def create_output(self):
+    def json_output_of_all_objects(self, lean: bool = True, only_canvasses: List[int] | None = None) -> Tuple[List, np.ndarray]:
         obj_pix_ids = []
         obj_with_unique_pix_ids = []
         positions_of_same_objects = {}
@@ -344,6 +392,8 @@ class Example:
             obj_pix_id = (obj.id, obj.actual_pixels_id)
             if not obj_pix_id in obj_pix_ids:
                 unique_objects.append(obj.json_output())
+                if not lean:
+                    unique_objects[-1]['actual_pixels'] = obj.actual_pixels.tolist()
                 actual_pixels_list.append(obj.actual_pixels)
                 obj_pix_ids.append(obj_pix_id)
                 obj_with_unique_pix_ids.append(obj)
@@ -355,7 +405,14 @@ class Example:
 
         for unique_object in unique_objects:
             o_p_id = (unique_object['id'], unique_object['actual_pixels_id'])
-            unique_object['canvasses_positions'] = positions_of_same_objects[o_p_id]
+            if lean:
+                unique_object['canvasses_positions'] = positions_of_same_objects[o_p_id]
+            else:
+                unique_object['canvasses_positions'] = {'canvas_ids': [],
+                                                        'canvas_positions': []}
+                for p in positions_of_same_objects[o_p_id]:
+                    unique_object['canvasses_positions']['canvas_ids'].append(p[0])
+                    unique_object['canvasses_positions']['canvas_positions'].append(p[1])
             unique_object.pop('canvas_pos', None)
             unique_object.pop('dimensions', None)
 
@@ -365,6 +422,9 @@ class Example:
 
         return unique_objects, actual_pixels_array
 
+    def create_example_json(self):
+        pass
+
     def show(self, canvas_index: int | str = 'all', save_as: str | None = None, two_cols: bool = False):
         """
         Shows some (canvas_index is int or 'test') or all (canvas_index = 'all') the Canvases of the Experiment
@@ -373,6 +433,10 @@ class Example:
         :param canvas_index: Which Canvases to show (int, 'test' or 'all')
         :return:
         """
+
+        thin_lines = True
+        if save_as is None:
+            thin_lines = False
         if type(canvas_index) == int:
             if canvas_index % 2 == 0:
                 canvas = self.input_canvases[canvas_index // 2]
@@ -391,15 +455,15 @@ class Example:
             if not two_cols:
                 for p in range(self.number_of_io_pairs):
                     self.input_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
-                                                thin_lines=True)
+                                                thin_lines=thin_lines)
                     self.output_canvases[p].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1,
-                                                 thin_lines=True)
+                                                 thin_lines=thin_lines)
                     if p == 0:
                         self.test_input_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2,
-                                                    thin_lines=True)
+                                                    thin_lines=thin_lines)
                     if p == 1 and self.test_output_canvas is not None:
                         self.test_output_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 2,
-                                                     thin_lines=True)
+                                                     thin_lines=thin_lines)
                     index += 3
             else:
                 for p in range(self.number_of_io_pairs + 1):
@@ -410,9 +474,10 @@ class Example:
                                                      thin_lines=True)
                     else:
                         self.test_input_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
-                                                    thin_lines=True)
-                        self.test_output_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1,
-                                                     thin_lines=True)
+                                                    thin_lines=thin_lines)
+                        if self.test_output_canvas is not None:
+                            self.test_output_canvas.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1,
+                                                         thin_lines=thin_lines)
                     index += 2
             plt.tight_layout(pad=0.01)
 

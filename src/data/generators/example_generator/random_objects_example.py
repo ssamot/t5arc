@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from copy import copy
 
-from data.generators.example_generator import Example
+from data.generators.example_generator.example import Example
 from data.generators.object_recognition.basic_geometry import Dimension2D
 from data.generators.object_recognition.primitives import Primitive, Parallelogram
 from data.generators import constants as const
@@ -33,9 +33,9 @@ MAX_NUMBER_OF_MIRRORS = 10
 
 
 class RandomObjectsExample(Example):
-    def __init__(self):
+    def __init__(self, number_of_io_pairs: int | None = None):
         super().__init__(min_canvas_size_for_background_object=MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
-                         prob_of_background_object=PROB_OF_BACKGROUND_OBJ)
+                         prob_of_background_object=PROB_OF_BACKGROUND_OBJ, number_of_io_pairs=number_of_io_pairs)
 
     def do_multiple_mirroring(self, obj: Primitive, number_of_mirrors: int | None = None) -> Primitive | None:
         """
