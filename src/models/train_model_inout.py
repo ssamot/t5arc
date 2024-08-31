@@ -57,19 +57,36 @@ def main(train_data, eval_data, output_filepath):
     n_epochs = 100000
     order = list(range(len(train_train_x)))
     save_freq = 100
-    with tqdm(total=n_epochs, desc='Epochs') as outer_pbar:
+    with (tqdm(total=n_epochs, desc='Epochs') as outer_pbar):
         with tqdm(total=len(train_train_x), colour="green") as pbar:
-
             for epoch in range(n_epochs):
-                #np.random.shuffle(order)
+                np.random.shuffle(order)
                 pbar.reset(total=len(train_train_x))
-                for i in order:
-                    train_x = np.array(train_train_x[i])
-                    train_y = np.array(train_train_y[i])
+                twin_autoencoder.reset_metrics()
+                for batch in order:
+                    train_x = np.array(train_train_x[batch], dtype=np.int32)
+                    train_y = np.array(train_train_y[batch], dtype=np.int32)
+
+                    train_x,train_y = np.concatenate([train_x, train_y], dtype=np.int32
+                                                     ), np.concatenate([train_y, train_y],  dtype=np.int32)
+
+                    #print(train_train_x[i].shape)
                     #print(train_x.shape, train_y.shape)
-                    losses = twin_autoencoder.train_on_batch([train_x, train_y], np.eye(11)[train_x], return_dict=True)
-                    pbar.set_postfix({key: f'{value:.3f}' for key, value in losses.items()})
+
+                    losses = twin_autoencoder.train_on_batch([train_x, train_y],
+                                                             np.eye(11)[train_x],
+                                                             return_dict=True,
+                                                             )
+
+
+                    r2 = losses["cce"] - losses["loss"]
+                    losses["r2"] = r2
+                    pbar.set_postfix({key: f'{value:.3f}' for key, value in losses.items()}
+)
                     pbar.update(1)
+
+
+                    #print(losses)
                 if (epoch % save_freq == 0):
                     # print(f"Saving epoch: {epoch}, train_acc: {logs['acc']}, : {logs['batch_acc']}")
                     for name in models:
@@ -80,12 +97,6 @@ def main(train_data, eval_data, output_filepath):
         #print(losses)
         #exit()
 
-    # twin.fit(x=(X_train,np.random.shuffle(X_train)), y = y_train,
-    #           validation_data=((X_validation, np.random.shuffle(X_validation)), y_validation),
-    #           batch_size=128,validation_batch_size=128,
-    #           epochs=100000,verbose = 0,
-    #           callbacks=[CustomModelCheckpoint(models,"./models", 1000),
-    #           TqdmCallback(verbose=1)])
 
 
 if __name__ == '__main__':

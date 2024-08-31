@@ -1,41 +1,68 @@
 import keras
 import numpy as np
 from keras import ops
+from sklearn.metrics import r2_score
+from lm import nrmse, r2
+
+class SVDLinearRegression:
+
+    def __init__(self, alpha):
+        self.alpha = alpha
+
+    def fit(self, X, y):
+
+        X_b = ops.concatenate([ops.ones((ops.shape(X)[0], 1)), X], axis=1)
+
+
+        # Step 1: Perform SVD on X_b
+        U, s, Vt = ops.linalg.svd(X_b, full_matrices=False)
+
+        # Calculate theta (coefficients)
+
+        if(self.alpha > 0.0000001):
+            s_reg = s / (s ** 2 + self.alpha)
+            s_inv = ops.diag(s_reg)
+        else:
+            s_inv = ops.diag(1.0 / s)
+
+        # print("s_inv", s_inv.shape)
+        # print("U", U.shape)
+        # print("s", s.shape)
+        # print("Vt", Vt.shape)
+        theta = ops.dot(ops.transpose(Vt),
+                              ops.dot(s_inv, ops.dot(ops.transpose(U), y)))
+
+        y_pred = ops.dot(X_b, theta)
+        metric = r2(y, y_pred)
+        average_metric = keras.ops.mean(metric)
+
+        # if (alpha > 0.0000001):
+        #     l2_reg = alpha * ops.sum(ops.square(theta[1:]))
+        # else:
+        #     l2_reg = 0.0
+        #s_mse = keras.ops.mean(mse)
+        self.theta = theta
+        return theta, metric, average_metric
+
+
+    def predict(self, X):
+        X_b = ops.concatenate([ops.ones((ops.shape(X)[0], 1)), X], axis=1)
+        y_pred = ops.dot(X_b, self.theta)
+        return y_pred
+
+    def score(self, X, y):
+        X_b = ops.concatenate([ops.ones((ops.shape(X)[0], 1)), X], axis=1)
+        y_pred = ops.dot(X_b, self.theta)
+        print(self.theta.shape, "theta")
+        return r2_score(y, y_pred)
 
 
 
-def svd_linear_regression_keras(X, y, alpha):
-    X_b = ops.concatenate([ops.ones((ops.shape(X)[0], 1)), X], axis=1)
-    # Step 1: Perform SVD on X_b
-    U, s, Vt = ops.linalg.svd(X_b, full_matrices=False)
-
-    # Calculate theta (coefficients)
-
-    if(alpha > 0.0000001):
-        s_reg = s / (s ** 2 + alpha)
-        s_inv = ops.diag(s_reg)
-    else:
-        s_inv = ops.diag(1.0 / s)
-
-
-    theta = ops.dot(ops.transpose(Vt),
-                          ops.dot(s_inv, ops.dot(ops.transpose(U), y)))
-
-    y_pred = ops.dot(X_b, theta)
-    # Step 6: Compute the Mean Squared Error (MSE)
-    mse = ops.mean(ops.square(y - y_pred), axis=0)
-    s_mse = ops.mean(mse)
-
-    # if (alpha > 0.0000001):
-    #     l2_reg = alpha * ops.sum(ops.square(theta[1:]))
-    # else:
-    #     l2_reg = 0.0
-    return theta, mse, s_mse
 
 def addition(X,y):
     theta = ops.mean(y - X, axis=0)
     y_pred = X + theta
-    mse = ops.mean(ops.square(y - y_pred), axis=0)
+    mse = r2(y,y_pred)
     s_mse = ops.mean(mse)
 
     return theta, mse, s_mse
@@ -50,19 +77,14 @@ class CustomSplitRegularizer(keras.layers.Layer):
 
     def call(self, x):
         # Get the number of features
-        num_features = ops.shape(x)[1]
-
-        # Calculate the midpoint for the split
-        midpoint = num_features // 2
-
-        # Split the input into two parts
-        x_left = x[:, :midpoint]
-        x_right = x[:, midpoint:]
+        x_left, x_right = x
 
         # Use dummy inputs to influence the regularization (example)
         # Here, just a demonstration of using these parameters
         if self.regularization_type == 'lr':
-            _, _, error = svd_linear_regression_keras(x_left, x_right, 0.01)
+            clf = SVDLinearRegression(0.0001)
+            print("LR")
+            _, _, error = clf.fit(x_left, x_right)
         else:
            _,_, error = addition(x_left, x_right)
 
@@ -73,9 +95,9 @@ class CustomSplitRegularizer(keras.layers.Layer):
 
         return x_left
 
-    def compute_output_shape(self, input_shape):
-        # The output shape will be the same as the input shape except for the last dimension
-        return (input_shape[0], input_shape[-1] // 2)
+    # def compute_output_shape(self, input_shape):
+    #     # The output shape will be the same as the input shape except for the last dimension
+    #     return (input_shape[0], input_shape[-1] // 2)
 
 
     def get_config(self):
@@ -128,17 +150,18 @@ if __name__ == '__main__':
     #               [8, 9, 10],
     #               [8, 9, 10]])
 
-    X = np.random.random(size = (10,3))
-    y = np.random.random(size=(10, 3))
-
-    theta_val, mse_val, s_mse = addition(X, y)
-
-    print("Coefficients (theta):", theta_val)
-    print("Mean Squared Error (MSE):", mse_val)
-    print("S Mean Squared Error (MSE):", s_mse)
+    # X = np.random.random(size = (10,3))
+    # y = np.random.random(size=(10, 3))
+    #
+    # theta_val, mse_val, s_mse = addition(X, y)
+    #
+    # print("Coefficients (theta):", theta_val)
+    # print("Mean Squared Error (MSE):", mse_val)
+    # print("S Mean Squared Error (MSE):", s_mse)
 
     X = np.random.rand(100, 3).astype(np.float32)  # Input features
-    theta = np.array([[3,5,6.0], [1,2.,3.]]).T
+    theta = np.array([[3,5,6.0], [1,2,3]]).T
+    print("theta", theta.shape)
     y = np.dot(X, theta)
 
 
@@ -151,7 +174,10 @@ if __name__ == '__main__':
     # y_tf = tf.convert_to_tensor(y, dtype=tf.float32)
 
     # Call the function
-    theta_val, mse_val, s_mse = svd_linear_regression_keras(X, y, alpha = 1)
+    clf = SVDLinearRegression(0.01)
+    theta_val, mse_val, s_mse = clf.fit(X, y)
+    # pr = clf.score(X,y)
+    # print("predict", pr)
 
 
     print("Coefficients (theta):", theta_val)

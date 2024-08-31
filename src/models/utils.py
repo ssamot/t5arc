@@ -1,7 +1,8 @@
 
 import keras
 from keras import layers
-from regulariser import CustomSplitRegularizer, HalfNeuronsLayer
+from regulariser import CustomSplitRegularizer
+from lm import b_acc, cce
 
 activation = "relu"
 
@@ -98,8 +99,9 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     encoded_left = encoder(input_left)
     encoded_right = encoder(input_right)
 
-    merged = keras.layers.concatenate([encoded_left, encoded_right])
-    unmerged = CustomSplitRegularizer("add", 1)(merged)
+    #merged = keras.layers.concatenate([encoded_left, encoded_right])
+    unmerged = CustomSplitRegularizer("lr", 1.0)([encoded_left,
+                                                  encoded_right])
 
 
 
@@ -111,10 +113,8 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
                                     decoder(ttt_model(unmerged)))
     #print(autoencoder.summary())
     #optimizer = keras.optimizers.SGD(momentum=0.3, weight_decay=0.01, nesterov=True, learning_rate=0.1)
-    optimizer = keras.optimizers.AdamW(learning_rate=0.001)
+    optimizer = keras.optimizers.AdamW(learning_rate=0.00001)
 
-    def cce(y_true, y_pred, from_logits=False, label_smoothing=0.0, axis=-1):
-        return keras.metrics.categorical_crossentropy(y_true, y_pred, from_logits, label_smoothing, axis)
 
     twin_autoencoder.compile(optimizer=optimizer,
 
@@ -140,37 +140,6 @@ class CustomModelCheckpoint(keras.callbacks.Callback):
                 model.save(f"{self.path}/{name}.keras", overwrite=True)
 
 
-
-
-
-def acc_seq(y_true, y_pred):
-    return keras.ops.mean(keras.ops.min(keras.ops.equal(keras.ops.argmax(y_true, axis=-1),
-                  keras.ops.argmax(y_pred, axis=-1)), axis=-1))
-
-
-def b_acc(y_true, y_pred):
-    # Get the predicted class by taking the argmax along the last dimension (the class dimension)
-    pred_classes = keras.ops.argmax(y_pred, axis=-1)
-
-    # Get the true class (already one-hot encoded, so take argmax)
-    true_classes = keras.ops.argmax(y_true, axis=-1)
-
-    # Compare predicted classes to true classes for each sample
-    correct_predictions = keras.ops.equal(pred_classes, true_classes)
-
-    # Sum the incorrect predictions for each sample
-    incorrect_predictions = keras.ops.sum(keras.ops.cast(~correct_predictions,
-                                                      "float32"),
-                                                 axis=[1, 2])
-
-    # A sample is correct only if the sum of incorrect predictions is 0
-    all_correct = keras.ops.cast(keras.ops.equal(incorrect_predictions, 0),
-                                 "float32")
-
-    # Calculate the percentage of samples that are fully correct
-    accuracy = keras.ops.mean(keras.ops.cast(all_correct, "float32"))
-
-    return accuracy
 
 
 

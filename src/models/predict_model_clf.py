@@ -30,55 +30,9 @@ from visualization.visualse_training_data_sets import visualise_training_data
 from tqdm.keras import TqdmCallback
 from data.augment.colour import generate_consistent_combinations_2d
 
-from sklearn.linear_model import MultiTaskLassoCV
-from sklearn.linear_model import MultiTaskElasticNetCV, LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.kernel_ridge import KernelRidge
+from regulariser import SVDLinearRegression
 
-
-
-
-
-
-
-# def build_model(encoder, decoder, n_neurons):
-#     #encoder.summary()
-#     #decoder.summary()
-#     input = keras.layers.Input([32,32,1])
-#     encoded = encoder(input)
-#     decoded = decoder(encoded)
-#     #print(encoded)
-#     #exit()
-#     keras.ops.svd
-#     ttx_input = keras.layers.Input((n_neurons,))
-#     ttt_x = keras.layers.Dense(n_neurons, "relu")(ttx_input)
-#     ttt_output = keras.layers.Dense(n_neurons)(ttt_x)
-#
-#
-#     ttx_model = keras.models.Model(ttx_input, ttt_output, name = "ttx")
-#
-#     ttt_x_decoded = decoder(ttx_model(encoded))
-#
-#     ttt_autoencoder = keras.models.Model(input, ttt_x_decoded)
-#     ttt_autoencoder.summary()
-#
-#     autoencoder = keras.models.Model(input, decoded)
-#
-#     ttt_autoencoder.compile(optimizer="AdamW",
-#
-#                         loss='categorical_crossentropy',
-#                         metrics=["acc", batch_acc])
-#     autoencoder.compile(optimizer="AdamW",
-#
-#                         loss='categorical_crossentropy',
-#                         metrics=["acc", batch_acc])
-#
-#     ttx_model.compile(optimizer="AdamW", loss = "mse")
-#
-#
-#     return ttt_autoencoder, autoencoder, ttx_model
 
 
 @click.command()
@@ -88,7 +42,7 @@ from sklearn.kernel_ridge import KernelRidge
 @click.argument('data_type', type=click.Path())
 def main(data_filepath, model_filepath, output_filepath, data_type):
 
-    n_neurons = 256
+    n_neurons = 512
     keras.config.enable_unsafe_deserialization()
 
 
@@ -144,8 +98,8 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
         #print(train_x.shape, train_y_a.shape, "3424234")
 
-        train_x_a = np.concatenate([train_x, train_x_a])
-        train_y_a = np.concatenate([train_y, train_y_a])
+        #train_x_a = np.concatenate([train_x, train_x_a])
+        #train_y_a = np.concatenate([train_y, train_y_a])
         #print(train_x_a.shape, train_y_a.shape, "£23424234")
         #exit()
 
@@ -162,27 +116,32 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
                                          (ttt(encoder(input))))
         ttt_decoder = keras.models.Model(input_dec, decoder((input_dec)))
 
-        train_x_a_h = ttt_encoder.predict(train_x_a)
-        train_y_a_h = ttt_encoder.predict(train_y_a)
-        train_x_h = ttt_encoder.predict(train_x)
-        train_y_h = ttt_encoder.predict(train_y)
-        test_x_h = ttt_encoder.predict(test_x)
-        test_y_h = ttt_encoder.predict(test_y)
+        train_x_a_h = ttt_encoder.predict(train_x)
+        train_y_a_h = ttt_encoder.predict(train_y, verbose=False)
+        train_x_h = ttt_encoder.predict(train_x, verbose=False)
+        train_y_h = ttt_encoder.predict(train_y, verbose=False)
+        test_x_h = ttt_encoder.predict(test_x, verbose=False)
+        test_y_h = ttt_encoder.predict(test_y, verbose=False)
 
         #clf = MultiTaskElasticNetCV(n_jobs=-1)
         #clf = RandomForestRegressor(1000, n_jobs=-1)
-        clf = KernelRidge()
-        clf.fit(train_x_a_h, train_y_a_h)
-        print(clf.score(train_x_a_h, train_y_a_h))
-        print(clf.score(test_x_h, test_y_h))
+        clf = SVDLinearRegression(0.0)
 
-        print(r2_score(clf.predict(train_x_a_h),clf.predict(train_y_a_h)))
-        print(r2_score(clf.predict(test_x_h),clf.predict(test_y_h)))
+        test = clf.fit(train_x_a_h, train_y_a_h)
+        print(test[2], train_x_a_h.shape,train_y_a_h.shape, "reported scores" )
+        #exit()
+        print(clf.score(train_x_a_h, train_y_a_h), "score augmented"),
+        #print(clf.score(test_x_h, test_y_h), "score augmented")
+
+        #print(mean_squared_error(clf.predict(train_x_a_h),train_y_a_h), "mse")
+        #print(mean_squared_error(clf.predict(test_x_h),test_y_h), "mse augmented")
+
+        #exit()
 
         train_hat = clf.predict(train_x_h)
         test_hat = clf.predict(test_x_h)
-        train_output = ttt_decoder.predict(train_y_h).argmax(axis = -1)
-        test_output = ttt_decoder.predict(test_hat).argmax(axis = -1)
+        train_output = ttt_decoder.predict(train_y_h, verbose = False).argmax(axis = -1)
+        test_output = ttt_decoder.predict(test_hat, verbose = False).argmax(axis = -1)
 
         print(train_output.shape, test_output.shape)
         #exit()
