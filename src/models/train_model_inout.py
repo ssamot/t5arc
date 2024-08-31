@@ -67,20 +67,15 @@ def main(train_data, eval_data, output_filepath):
                     train_x = np.array(train_train_x[batch], dtype=np.int32)
                     train_y = np.array(train_train_y[batch], dtype=np.int32)
 
-                    train_x,train_y = np.concatenate([train_x, train_y], dtype=np.int32
-                                                     ), np.concatenate([train_y, train_y],  dtype=np.int32)
 
-                    #print(train_train_x[i].shape)
-                    #print(train_x.shape, train_y.shape)
-
-                    losses = twin_autoencoder.train_on_batch([train_x, train_y],
-                                                             np.eye(11)[train_x],
+                    losses = twin_autoencoder.train_on_batch([train_y, train_x ],
+                                                             np.eye(11)[train_y],
                                                              return_dict=True,
                                                              )
 
 
-                    r2 = losses["cce"] - losses["loss"]
-                    losses["r2"] = r2
+                    # r2 = losses["cce"] - losses["loss"]
+                    # losses["r2"] = r2
                     pbar.set_postfix({key: f'{value:.3f}' for key, value in losses.items()}
 )
                     pbar.update(1)

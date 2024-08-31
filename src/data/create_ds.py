@@ -25,29 +25,29 @@ def process_batch(batch, max_perms):
 
 
 def augment_batch_inout(batch, max_perms):
+    train_x_a = []
+    train_y_a = []
 
+    for i in range(len(batch[0])):
 
-    for single_example in batch:
-        train_x_a = []
-        train_y_a = []
-        for i in range(len(single_example)):
-            merged_array = np.concatenate((single_example[i], single_example[i]), axis=1)
-            # print(merged_array.shape)
+        merged_array = np.concatenate((batch[0][i],
+                                       batch[1][i]), axis=1)
+        # print(merged_array.shape)
 
-            augmented = generate_consistent_combinations_2d(merged_array, max_perms)
-            augmented = np.array(augmented)
-            # print(augmented.shape)
+        augmented = generate_consistent_combinations_2d(merged_array, max_perms)
+        augmented = np.array(augmented)
+        # print(augmented.shape)
 
-            augmented_train_x, augmented_train_y = np.split(augmented, 2, axis=2)
-            train_x_a.extend(augmented_train_x)
-            train_y_a.extend(augmented_train_y)
-            # print(np.array(augmented_train)[0])
-            # exit()
+        augmented_train_x, augmented_train_y = np.split(augmented, 2, axis=2)
+        train_x_a.extend(augmented_train_x)
+        train_y_a.extend(augmented_train_y)
+        # print(np.array(augmented_train)[0])
+        # exit()
 
-        train_x_a = np.array(train_x_a)
-        train_y_a = np.array(train_y_a)
+    train_x_a = np.array(train_x_a)
+    train_y_a = np.array(train_y_a)
 
-    return np.array([train_x_a, train_y_a])
+    return [train_x_a, train_y_a]
 
 
 @click.command()
@@ -58,7 +58,7 @@ def augment_batch_inout(batch, max_perms):
 @click.argument('inout', type=click.Choice(['inout', "single"]))
 def main(output_filepath, augment, max_perms, type, inout):
 
-    if(inout):
+    if(inout == "inout"):
         it = ArcExampleData('train')
         all_train_x = []
         all_test_x = []
@@ -79,11 +79,31 @@ def main(output_filepath, augment, max_perms, type, inout):
             all_train_y.append(train_y)
             all_test_y.append(test_y)
 
-        all_train_x = np.array(all_train_x,dtype=object)
-        all_test_x = np.array(all_test_x,dtype=object)
-        all_train_y = np.array(all_train_y,dtype=object)
-        all_test_y = np.array(all_test_y,dtype=object)
+
         #print(all_train_x.shape)
+
+        if(augment == augmented):
+            pairs_train = list(zip(all_train_x, all_train_y))
+            pairs_test = list(zip(all_test_x, all_test_y))
+
+
+
+            def parallel_process(pairs):
+                with Pool() as pool:
+                    results = pool.map(partial(augment_batch_inout, max_perms=max_perms), pairs)
+                return results
+
+
+            pairs_train_a = parallel_process(pairs_train)
+            pairs_test_a = parallel_process(pairs_test)
+
+            all_train_x, all_train_y = list(zip(*pairs_train_a))
+            all_test_x, all_test_y = list(zip(*pairs_test_a))
+
+        all_train_x = np.array(all_train_x, dtype=object)
+        all_test_x = np.array(all_test_x, dtype=object)
+        all_train_y = np.array(all_train_y, dtype=object)
+        all_test_y = np.array(all_test_y, dtype=object)
 
         output_filepath = f"{output_filepath}/{type}_{augment}_{inout}.npz"
         np.savez_compressed(output_filepath, train_x = all_train_x,
@@ -91,8 +111,7 @@ def main(output_filepath, augment, max_perms, type, inout):
 
         return
 
-        if(augment):
-                pass
+
 
 
 

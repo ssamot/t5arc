@@ -125,16 +125,16 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
         #clf = MultiTaskElasticNetCV(n_jobs=-1)
         #clf = RandomForestRegressor(1000, n_jobs=-1)
-        clf = SVDLinearRegression(0.0)
+        clf = SVDLinearRegression(0.0001)
 
         test = clf.fit(train_x_a_h, train_y_a_h)
         print(test[2], train_x_a_h.shape,train_y_a_h.shape, "reported scores" )
         #exit()
         print(clf.score(train_x_a_h, train_y_a_h), "score augmented"),
-        #print(clf.score(test_x_h, test_y_h), "score augmented")
+        print(clf.score(test_x_h, test_y_h), "score augmented")
 
-        #print(mean_squared_error(clf.predict(train_x_a_h),train_y_a_h), "mse")
-        #print(mean_squared_error(clf.predict(test_x_h),test_y_h), "mse augmented")
+        print(mean_squared_error(clf.predict(train_x_a_h),train_y_a_h), "mse")
+        print(mean_squared_error(clf.predict(test_x_h),test_y_h), "mse augmented")
 
         #exit()
 

@@ -8,11 +8,18 @@ class SVDLinearRegression:
 
     def __init__(self, alpha):
         self.alpha = alpha
+        self.seed = keras.random.SeedGenerator(seed=1337)
+
 
     def fit(self, X, y):
 
-        X_b = ops.concatenate([ops.ones((ops.shape(X)[0], 1)), X], axis=1)
+        epsilon = 1e-4  # Small perturbation value
 
+        #print(epsilon * keras.random.uniform(X.shape, seed = self.seed))
+
+
+        X += epsilon * keras.random.uniform(X.shape, seed = self.seed)
+        X_b = ops.concatenate([ops.ones((ops.shape(X)[0], 1)), X], axis=1)
 
         # Step 1: Perform SVD on X_b
         U, s, Vt = ops.linalg.svd(X_b, full_matrices=False)
@@ -22,13 +29,10 @@ class SVDLinearRegression:
         if(self.alpha > 0.0000001):
             s_reg = s / (s ** 2 + self.alpha)
             s_inv = ops.diag(s_reg)
+            #print("REGULAR")
         else:
             s_inv = ops.diag(1.0 / s)
 
-        # print("s_inv", s_inv.shape)
-        # print("U", U.shape)
-        # print("s", s.shape)
-        # print("Vt", Vt.shape)
         theta = ops.dot(ops.transpose(Vt),
                               ops.dot(s_inv, ops.dot(ops.transpose(U), y)))
 
@@ -36,11 +40,6 @@ class SVDLinearRegression:
         metric = r2(y, y_pred)
         average_metric = keras.ops.mean(metric)
 
-        # if (alpha > 0.0000001):
-        #     l2_reg = alpha * ops.sum(ops.square(theta[1:]))
-        # else:
-        #     l2_reg = 0.0
-        #s_mse = keras.ops.mean(mse)
         self.theta = theta
         return theta, metric, average_metric
 
@@ -51,8 +50,7 @@ class SVDLinearRegression:
         return y_pred
 
     def score(self, X, y):
-        X_b = ops.concatenate([ops.ones((ops.shape(X)[0], 1)), X], axis=1)
-        y_pred = ops.dot(X_b, self.theta)
+        y_pred = self.predict(X)
         print(self.theta.shape, "theta")
         return r2_score(y, y_pred)
 
@@ -75,6 +73,7 @@ class CustomSplitRegularizer(keras.layers.Layer):
         self.coef = coef
         self.constant_loss_value = keras.ops.ones([1])*1000.0
 
+
     def call(self, x):
         # Get the number of features
         x_left, x_right = x
@@ -82,16 +81,18 @@ class CustomSplitRegularizer(keras.layers.Layer):
         # Use dummy inputs to influence the regularization (example)
         # Here, just a demonstration of using these parameters
         if self.regularization_type == 'lr':
-            clf = SVDLinearRegression(0.0001)
-            print("LR")
-            _, _, error = clf.fit(x_left, x_right)
+            clf = SVDLinearRegression(0.001)
+            #print("LR")
+            _, _, error = clf.fit(x_right, x_left )
+            x_left = clf.predict(x_right)
         else:
-           _,_, error = addition(x_left, x_right)
+           _,_, error = addition(x_right, x_left )
+
 
         # Return a dummy regularization term based on parameters
-        loss = self.coef * error
+        #loss = self.coef * error
         #print(loss)
-        self.add_loss(loss)
+        #self.add_loss(loss)
 
         return x_left
 
@@ -105,6 +106,10 @@ class CustomSplitRegularizer(keras.layers.Layer):
             "regularization_type": self.regularization_type,
             "coef": self.coef
         }
+
+    def compute_output_shape(self, input_shape):
+        # The output shape will be the same as the input shape except for the last dimension
+        return input_shape[0]
 
 @keras.saving.register_keras_serializable(package="models")
 class HalfNeuronsLayer(keras.layers.Layer):
@@ -176,10 +181,10 @@ if __name__ == '__main__':
     # Call the function
     clf = SVDLinearRegression(0.01)
     theta_val, mse_val, s_mse = clf.fit(X, y)
-    # pr = clf.score(X,y)
+    pr = clf.score(X,y)
     # print("predict", pr)
 
 
     print("Coefficients (theta):", theta_val)
-    print("Mean Squared Error (MSE):", mse_val)
+    print("Mean Squared Error (MSE):", pr)
     print("S Mean Squared Error (MSE):", s_mse)

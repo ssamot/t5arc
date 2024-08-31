@@ -54,11 +54,15 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     ttt_input = keras.Input(shape=(encoder_units,))
     #ttt = layers.Activation("tanh", name = "ttt_input_activation")(ttt_input)
 
-    ttt = layers.GaussianNoise(stddev=0.01)(ttt_input)
 
-    ttt = (layers.Dense(encoder_units,name = "ttt_layer",
-                               use_bias=False, activation = "tanh")
-           (ttt))
+    #ttt = layers.GaussianNoise(stddev=0.01)(ttt_input)
+
+    ttt = (layers.Dense(encoder_units, name="ttt_layer",
+                        use_bias=False, activation="tanh")
+           (ttt_input))
+
+
+
     #ttt = BinaryDense(encoder_units)(ttt_input)
     #ttt = AddMultiplyLayer()(ttt_input)
 
@@ -113,7 +117,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
                                     decoder(ttt_model(unmerged)))
     #print(autoencoder.summary())
     #optimizer = keras.optimizers.SGD(momentum=0.3, weight_decay=0.01, nesterov=True, learning_rate=0.1)
-    optimizer = keras.optimizers.AdamW(learning_rate=0.00001)
+    optimizer = keras.optimizers.AdamW(learning_rate=0.0001)
 
 
     twin_autoencoder.compile(optimizer=optimizer,
