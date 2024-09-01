@@ -118,8 +118,13 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     twin_autoencoder = keras.Model([input_left, input_right],
                                     decoder(ttt_model(unmerged)))
     #print(autoencoder.summary())
-    optimizer = keras.optimizers.SGD(momentum=0.8, weight_decay=0.001, nesterov=True, learning_rate=0.01)
-    #optimizer = keras.optimizers.AdamW(learning_rate=0.0001, clipnorm=0.1)
+    # optimizer = keras.optimizers.SGD(momentum=0.8,
+    #                                   weight_decay=0.001,
+    #                                   nesterov=True,
+    #                                   learning_rate=0.01,
+    #                                  gradient_accumulation_steps=10)
+    optimizer = keras.optimizers.AdamW(learning_rate=0.001,
+                                       gradient_accumulation_steps=400)
 
 
     twin_autoencoder.compile(optimizer=optimizer,

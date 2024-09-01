@@ -48,10 +48,10 @@ train:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model.py data/processed/train_pure.npz data/processed/eval_pure.npz  models/
 
 train_pure_inout:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_inout.py data/processed/train_pure_inout.npz data/processed/eval_pure_inout.npz  models/
+	CUDA_VISIBLE_DEVICES="0,1", KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_inout.py data/processed/train_pure_inout.npz data/processed/eval_pure_inout.npz  models/
 
 train_augmented_inout:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_inout.py data/processed/train_augmented_inout.npz data/processed/eval_augmented_inout.npz  models/
+	CUDA_VISIBLE_DEVICES="0,1", KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_inout.py data/processed/train_augmented_inout.npz data/processed/eval_augmented_inout.npz  models/
 
 
 train_generator:

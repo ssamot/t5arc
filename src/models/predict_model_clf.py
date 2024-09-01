@@ -33,6 +33,8 @@ from data.augment.colour import generate_consistent_combinations_2d
 from sklearn.metrics import mean_squared_error, r2_score
 from regulariser import SVDLinearRegression, AdditionRegression
 
+from utils import build_model
+
 
 
 @click.command()
@@ -57,9 +59,6 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
     #ttt.compile(optimizer="AdamW", loss="mse")
     # Freeze the weights
-    encoder.trainable = False
-    decoder.trainable = False
-    ttt.trainable = False
 
     it = ArcExampleData('train')
 
@@ -116,42 +115,40 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
                                          (ttt(encoder(input))))
         ttt_decoder = keras.models.Model(input_dec, decoder((input_dec)))
 
-        train_x_a_h = ttt_encoder.predict(train_x_a)
-        train_y_a_h = ttt_encoder.predict(train_y_a, verbose=False)
-        train_x_h = ttt_encoder.predict(train_x, verbose=False)
-        train_y_h = ttt_encoder.predict(train_y, verbose=False)
-        test_x_h = ttt_encoder.predict(test_x, verbose=False)
-        test_y_h = ttt_encoder.predict(test_y, verbose=False)
+        decoder.trainable = False
+        ttt.trainable = False
+        encoder.trainable = False
 
-        #clf = MultiTaskElasticNetCV(n_jobs=-1)
-        #clf = RandomForestRegressor(1000, n_jobs=-1)
-        clf = SVDLinearRegression(0.001)
-        #clf = AdditionRegression()
+        _, _, encoder, _, ttt = build_model((32, 32),
+                                                                 int(11),
+                                                                 n_neurons)
 
-        test = clf.fit(train_x_h, train_y_h)
-        print(test[0].shape, test[2], "reported scores" )
-        #exit()
-        print(clf.score(train_x_a_h, train_y_a_h), "score augmented"),
-        print(clf.score(test_x_h, test_y_h), "score augmented")
+        x = keras.layers.Dense(n_neurons, activation = "relu")(ttt(encoder(input)))
+        x = keras.layers.Dense(n_neurons, activation = "relu")(x)
+        autoencoder = keras.Model(input, decoder(x))
+        optimizer = keras.optimizers.AdamW(0.0001)
+        autoencoder.compile(optimizer=optimizer,
 
-        print(mean_squared_error(clf.predict(train_x_a_h),train_y_a_h), "mse")
-        print(mean_squared_error(clf.predict(test_x_h),test_y_h), "mse augmented")
+                        loss='categorical_crossentropy',#run_eagerly=True,
+                        metrics=["acc", b_acc])
 
-        #exit()
-
-        train_hat = clf.predict(train_x_h)
-        test_hat = clf.predict(test_x_h)
-        train_output = ttt_decoder.predict(train_hat, verbose = False).argmax(axis = -1)
-        test_output = ttt_decoder.predict(test_hat, verbose = False).argmax(axis = -1)
-
-        print(train_output.shape, test_output.shape)
-        #exit()
+        autoencoder.fit(train_x_a, train_y_one_hot_a,
+                        validation_data=(test_x, test_y_one_hot), epochs = 10000)
 
 
 
 
-        r["output"] = np.concatenate([train_output, test_output])
+
+        train_output = autoencoder.predict(train_x, verbose = False).argmax(axis = -1)
+        test_output = autoencoder.predict(test_x, verbose = False).argmax(axis = -1)
+
+
+
+
+
+        #r["output"] = np.concatenate([train_output, test_output])
         # #print(r["output"].shape)
+        r["output"] = np.concatenate([train_output, test_output])
         visualise_training_data(r, f"./plots/{r['name']}_predicted.pdf", )
         #
         # #exit()
