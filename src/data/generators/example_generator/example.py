@@ -52,7 +52,7 @@ class Example:
             c_ids.append(i.id)
             c_ids.append(o.id)
 
-        c_ids.append(self.test_input_canvas)
+        c_ids.append(self.test_input_canvas.id)
         if self.test_output_canvas is not None:
             c_ids.append(self.test_output_canvas.id)
 
