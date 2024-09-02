@@ -18,14 +18,15 @@ from data.generators import constants as const
 MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
-class Transformations(Enum):
-    scale: int = 0
+class Transformations(int, Enum):
+    translate: int = 0
     rotate: int = 1
-    shear: int = 2
-    mirror: int = 3
-    flip: int = 4
-    randomise_colour: int = 5
-    randomise_shape: int = 6
+    scale: int = 2
+    shear: int = 3
+    mirror: int = 4
+    flip: int = 5
+    randomise_colour: int = 6
+    randomise_shape: int = 7
 
     def get_random_parameters(self, random_obj_or_not: str = 'Random'):
         args = {}
@@ -219,7 +220,7 @@ class Object:
                 factor = 1/np.abs(factor)
                 sym.origin = (sym.origin - self._canvas_pos) * factor + self._canvas_pos
 
-        self.transformations.append([Transformations.scale, {'factor': factor}])
+        self.transformations.append([Transformations.scale.name, {'factor': factor}])
 
     def rotate(self, times: Union[1, 2, 3], center: np.ndarray | List | Point = (0, 0)):
         """
@@ -252,7 +253,7 @@ class Object:
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
-        self.transformations.append([Transformations.rotate, {'times': times}])
+        self.transformations.append([Transformations.rotate.name, {'times': times}])
 
     def shear(self, _shear: np.ndarray | List):
         """
@@ -260,7 +261,7 @@ class Object:
         :param _shear: Shear percentage (0 to 100)
         :return:
         """
-        self.transformations.append([Transformations.shear, {'_shear': _shear}])
+        self.transformations.append([Transformations.shear.name, {'_shear': _shear}])
 
         self.flip(Orientation.Left)
         _shear = _shear / 100
@@ -352,7 +353,7 @@ class Object:
 
         self.reset_dimensions()
 
-        self.transformations.append([Transformations.mirror, {'axis': axis}])
+        self.transformations.append([Transformations.mirror.name, {'axis': axis}])
 
     def flip(self, axis: Orientation, translate: bool = False):
         """
@@ -384,7 +385,17 @@ class Object:
                 elif axis in [Orientation.Up_Left, Orientation.Down_Left]:
                     self.canvas_pos.x -= self.dimensions.dx
 
-        self.transformations.append([Transformations.flip, {'axis': axis}])
+        self.transformations.append([Transformations.flip.name, {'axis': axis}])
+
+    def translate_to(self, target_point: Point, object_point: Point | None = None):
+        if object_point is None:
+            object_point = self.canvas_pos
+
+        self.transformations.append([Transformations.translate.name,
+                                     {'distance': (target_point - object_point).to_numpy().tolist()}])
+
+        object_point = self.canvas_pos - object_point
+        self.canvas_pos = target_point - object_point
 
     def translate_along_direction(self, direction: Vector):
         """
@@ -392,6 +403,7 @@ class Object:
         :param direction: The Vector to translate along
         :return:
         """
+        initial_canvas_pos = copy(self.canvas_pos)
         orient = direction.orientation
         if orient in [Orientation.Up, Orientation.Up_Left, Orientation.Up_Right]:
             self.canvas_pos.y += direction.length
@@ -401,6 +413,9 @@ class Object:
             self.canvas_pos.x -= direction.length
         if orient in [Orientation.Right, Orientation.Up_Right, Orientation.Down_Right]:
             self.canvas_pos.x += direction.length
+
+        self.transformations.append([Transformations.translate.name,
+                                     {'distance': (self.canvas_pos - initial_canvas_pos).to_numpy().tolist()}])
 
         self.reset_dimensions()
 
@@ -416,6 +431,9 @@ class Object:
         if this_point is not None:
             difference = other_point - this_point
             self.canvas_pos += difference
+
+            self.transformations.append([Transformations.translate.name,
+                                         {'distance': difference.to_numpy().tolist()}])
 
         self.reset_dimensions()
 
@@ -440,7 +458,7 @@ class Object:
 
             self.symmetries = []
 
-            self.transformations.append([Transformations.randomise_colour, {'ratio': ratio}])
+            self.transformations.append([Transformations.randomise_colour.name, {'ratio': ratio}])
 
     def randomise_shape(self, add_or_subtract: str = 'add', ratio: int = 10, colour: str = 'common'):
         """
@@ -471,7 +489,7 @@ class Object:
 
             self.symmetries = []
 
-            self.transformations.append([Transformations.randomise_shape, {'ratio': ratio}])
+            self.transformations.append([Transformations.randomise_shape.name, {'ratio': ratio}])
 
     def create_random_hole(self, hole_size: int) -> bool:
         """
