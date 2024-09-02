@@ -1,8 +1,8 @@
 
 from copy import copy
 
-from data_generators.example_generator.arc_example_generator import ARCExample
-from data_generators.object_recognition.basic_geometry import Dimension2D, Point
+from data.generators.example_generator.arc_example_generator import ARCExample
+from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from dsls.our_dsl.functions import dsl_functions as dsl
 
 example = ARCExample('05269061')

@@ -1,11 +1,12 @@
 
-from copy import copy
 
-from data_generators.example_generator.arc_example_generator import ARCExample
-from data_generators.object_recognition.basic_geometry import Dimension2D, Point
+from data.generators.example_generator.arc_example_generator import ARCExample
+from data.generators.object_recognition.basic_geometry import Dimension2D, Point
+from dsls.our_dsl.functions import task_solving_utils as utils
 from dsls.our_dsl.solutions import solutions as sols
 
 example = ARCExample('045e512c')
+example.generate_canvasses()
 
 unique_objects = [
     {'primitive': 'Hole', 'colour': 9, 'id': 0, 'actual_pixels_id': 0,'dimensions': Dimension2D(3, 3),
@@ -65,17 +66,6 @@ unique_objects = [
 ]
 
 example.generate_objects_from_output(unique_objects=unique_objects)
+example = utils.solve_canvas_pairs(example=example, solution=sols.solution_045e512c, which_pair='all')
 
-task_index = 'input'  # number or 'input'
-if type(task_index) == int:
-    canvas = example.input_canvases[task_index]
-    canvas = copy(canvas)
-    example.output_canvases[task_index] = canvas
-else:
-    canvas = example.test_input_canvas
-    canvas = copy(canvas)
-    example.test_output_canvas = canvas
-
-
-canvas = sols.solution_045e512c(canvas)
 example.show()

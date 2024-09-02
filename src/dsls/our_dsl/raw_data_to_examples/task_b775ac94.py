@@ -1,14 +1,12 @@
 
-from copy import copy
-
-import numpy as np
-
-from data_generators.example_generator.arc_example_generator import ARCExample
-from data_generators.object_recognition.basic_geometry import Dimension2D, Point, Orientation
-from data_generators.object_recognition.canvas import Canvas
+from data.generators.example_generator.arc_example_generator import ARCExample
+from data.generators.object_recognition.basic_geometry import Dimension2D, Point
+from dsls.our_dsl.functions import task_solving_utils as utils
 from dsls.our_dsl.solutions import solutions as sols
 
+
 example = ARCExample('b775ac94')
+example.generate_canvasses()
 
 unique_objects = [
     {'primitive': 'Random', 'colour': 2, 'id': 0, 'actual_pixels_id': 0, 'dimensions': Dimension2D(5, 5),
@@ -59,15 +57,15 @@ unique_objects = [
 ]
 
 example.generate_objects_from_output(unique_objects=unique_objects)
+example = utils.solve_canvas_pairs(example=example, solution=sols.solution_b775ac94, which_pair='all')
+
+example.show()
 
 
-canvas = example.input_canvases[0]
-canvas = example.test_input_canvas
-
-
-out_canvas = sols.solution_b775ac94(canvas)
-
-out_canvas.show()
+#canvas = example.input_canvases[0]
+#canvas = example.test_input_canvas
+#out_canvas = sols.solution_b775ac94(canvas)
+#out_canvas.show()
 
 
 

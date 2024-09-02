@@ -2,9 +2,9 @@
 from copy import copy
 from typing import List
 
-from data_generators.object_recognition.basic_geometry import Point, Vector
-from data_generators.object_recognition.canvas import Canvas
-from data_generators.object_recognition.object import Object
+from data.generators.object_recognition.basic_geometry import Point, Vector
+from data.generators.object_recognition.canvas import Canvas
+from data.generators.object_recognition.object import Object
 
 
 def furthest(origin: Point, targets: List[Point] | Point) -> Vector | None:
