@@ -253,13 +253,13 @@ class Point:
             orientation = Orientation.Up if self.y < other.y else Orientation.Down
             length = np.abs(self.y - other.y)
         elif np.sign(self.x - other.x) == np.sign(self.y - other.y):
-            length = np.abs(self.x - other.x)
+            length = np.max([np.abs(self.x - other.x), np.abs(self.y - other.y)])
             if np.abs(self.x - other.x) == np.abs(self.y - other.y):
                 orientation = Orientation.Up_Right if self.x < other.x else Orientation.Down_Left
             else:
                 orientation = None
         elif np.sign(self.x - other.x) != np.sign(self.y - other.y):
-            length = np.abs(self.x - other.x)
+            length = np.max([np.abs(self.x - other.x), np.abs(self.y - other.y)])
             if np.abs(self.x - other.x) == np.abs(self.y - other.y):
                 orientation = Orientation.Down_Right if self.x < other.x else Orientation.Up_Left
             else:
