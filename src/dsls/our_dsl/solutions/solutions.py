@@ -2,8 +2,8 @@
 from copy import copy
 import numpy as np
 
-from data_generators.object_recognition.basic_geometry import Point, Surround
-from data_generators.object_recognition.canvas import Canvas
+from data.generators.object_recognition.basic_geometry import Point, Surround
+from data.generators.object_recognition.canvas import Canvas
 from dsls.our_dsl.functions import dsl_functions as dsl
 
 
@@ -18,7 +18,8 @@ def solution_045e512c(canvas: Canvas) -> Canvas:
         for _ in range(3):
             no = copy(so)
             no.set_new_colour(oo.colour)
-            no.canvas_pos.transform(translation=eucl_dist)
+            no.translate_along_direction(eucl_dist)
+            #no.canvas_pos.transform(translation=eucl_dist)
             canvas.add_new_object(no)
             so = no
     return canvas
@@ -43,7 +44,8 @@ def solution_97a05b5b(canvas: Canvas) -> Canvas:
 
         new = copy(oo)
         new.rotate(match_positions[1])
-        new.canvas_pos = match_positions[0] - largest_object.canvas_pos
+        new.translate_to(target_point=match_positions[0] - largest_object.canvas_pos)
+        #new.canvas_pos = match_positions[0] - largest_object.canvas_pos
         canvas_out.add_new_object(new)
 
     return canvas_out
@@ -71,3 +73,17 @@ def solution_b775ac94(canvas: Canvas) -> Canvas:
 
     return out_canvas
 
+
+def solution_05f2a901(canvas: Canvas):
+
+    blue = canvas.find_objects_of_colour(9)[0]
+    red = canvas.find_objects_of_colour(3)[0]
+
+    dist = red.distance_to_object(blue)
+    dist.length -= 1
+    red.translate_along_direction(dist)
+    out_canvas = Canvas(size=canvas.size)
+    out_canvas.add_new_object(blue)
+    out_canvas.add_new_object(red)
+
+    return out_canvas
