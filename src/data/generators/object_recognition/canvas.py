@@ -84,6 +84,14 @@ class Canvas:
     def group_objects_by_colour(self):
         pass
 
+    def find_objects_of_colour(self, colour: int):
+        result = []
+        for obj in self.objects:
+            if obj.colour == colour:
+                result.append(obj)
+
+        return result
+
     def get_coloured_pixels_positions(self) -> np.ndarray:
         """
         Returns the Union of the positions of the coloured pixels of all the objects in the self.object list
