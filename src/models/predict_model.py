@@ -30,48 +30,11 @@ from visualization.visualse_training_data_sets import visualise_training_data
 from tqdm.keras import TqdmCallback
 from data.augment.colour import generate_consistent_combinations_2d
 
+from sklearn.metrics import mean_squared_error, r2_score
+from regulariser import SVDLinearRegression, AdditionRegression
 
+from utils import build_model
 
-
-
-
-
-# def build_model(encoder, decoder, n_neurons):
-#     #encoder.summary()
-#     #decoder.summary()
-#     input = keras.layers.Input([32,32,1])
-#     encoded = encoder(input)
-#     decoded = decoder(encoded)
-#     #print(encoded)
-#     #exit()
-#     keras.ops.svd
-#     ttx_input = keras.layers.Input((n_neurons,))
-#     ttt_x = keras.layers.Dense(n_neurons, "relu")(ttx_input)
-#     ttt_output = keras.layers.Dense(n_neurons)(ttt_x)
-#
-#
-#     ttx_model = keras.models.Model(ttx_input, ttt_output, name = "ttx")
-#
-#     ttt_x_decoded = decoder(ttx_model(encoded))
-#
-#     ttt_autoencoder = keras.models.Model(input, ttt_x_decoded)
-#     ttt_autoencoder.summary()
-#
-#     autoencoder = keras.models.Model(input, decoded)
-#
-#     ttt_autoencoder.compile(optimizer="AdamW",
-#
-#                         loss='categorical_crossentropy',
-#                         metrics=["acc", batch_acc])
-#     autoencoder.compile(optimizer="AdamW",
-#
-#                         loss='categorical_crossentropy',
-#                         metrics=["acc", batch_acc])
-#
-#     ttx_model.compile(optimizer="AdamW", loss = "mse")
-#
-#
-#     return ttt_autoencoder, autoencoder, ttx_model
 
 
 @click.command()
@@ -81,8 +44,8 @@ from data.augment.colour import generate_consistent_combinations_2d
 @click.argument('data_type', type=click.Path())
 def main(data_filepath, model_filepath, output_filepath, data_type):
 
-    n_neurons = 256
-    keras.config.enable_unsafe_deserialization()
+    n_neurons = 514
+    #keras.config.enable_unsafe_deserialization()
 
 
     # for c in combinations_2d:
@@ -96,11 +59,12 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
     #ttt.compile(optimizer="AdamW", loss="mse")
     # Freeze the weights
-    encoder.trainable = False
-    decoder.trainable = False
-    ttt.trainable = True
 
     it = ArcExampleData('train')
+
+    decoder.trainable = False
+    ttt.trainable = False
+    encoder.trainable = False
 
     for r in tqdm(it):
 
@@ -133,6 +97,8 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         train_x_a = np.array(train_x_a)
         train_y_a = np.array(train_y_a)
 
+
+
         #print(train_x.shape, train_y_a.shape, "3424234")
 
         #train_x_a = np.concatenate([train_x, train_x_a])
@@ -145,33 +111,102 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         train_y_one_hot = np.eye(11)[np.array(train_y, dtype=np.int32)]
         test_y_one_hot = np.eye(11)[np.array(test_y, dtype=np.int32)]
 
-        # ttt_x = encoder.predict(train_x)
-        # ttt_y = encoder.predict(train_y)
-        #
-        # ttt_x_validation = encoder.predict(test_x)
-        # ttt_y_validation = encoder.predict(test_y)
-
-        # ttt.fit(ttt_x, ttt_y, validation_data=(ttt_x_validation, ttt_y_validation),
-        # verbose=True, epochs=100000000)
-        # exit()
 
         input = keras.layers.Input([32,32,1])
-        ttt_autoencoder = keras.models.Model(input, decoder(ttt(encoder(input))))
-        #optimizer = keras.optimizers.AdamW(weight_decay=0.1)
-        optimizer = keras.optimizers.Adam()
-        ttt_autoencoder.compile(optimizer=optimizer,
-                                loss='categorical_crossentropy',
-                                metrics=["acc", b_acc])
-        ttt_autoencoder.fit(x=train_x_a, y = train_y_one_hot_a,
-                            validation_data=(test_x, test_y_one_hot), batch_size=256,
-                            verbose=0, epochs=10000,callbacks=[TqdmCallback(verbose=0)]
-                            )
+        input_dec = keras.layers.Input([n_neurons,])
 
-        r["output"] = ttt_autoencoder.predict(r["input"], verbose=False).argmax(axis = -1)
-        #print(r["output"].shape)
+        ttt_encoder = keras.models.Model(input,
+                                         (ttt(encoder(input))))
+        ttt_decoder = keras.models.Model(input_dec, decoder((input_dec)))
+
+
+        #
+        # _, _, encoder, _, ttt = build_model((32, 32),
+        #                                                          int(11),
+        #                                                          n_neurons)
+        ev = keras.layers.Dense(n_neurons, activation = "linear")
+       # bn = keras.layers.BatchNormalization()
+        x = (ev(ttt(encoder(input))))
+        #x = keras.layers.Dense(n_neurons, activation = "relu")(x)
+        autoencoder = keras.Model(input, decoder(x))
+        #optimizer = keras.optimizers.SGD(0.01)
+        optimizer = keras.optimizers.AdamW(0.0001)
+        autoencoder.compile(optimizer=optimizer,
+
+                        loss='categorical_crossentropy',#run_eagerly=True,
+                        metrics=["acc", b_acc])
+
+        # from cma import CMAEvolutionStrategy
+        # # Initialize CMA-ES with the initial mean and standard deviation
+        #
+        # from utils import NNWeightHelper
+        #
+        # nwe = NNWeightHelper(model=ev)
+        #
+        # w = nwe.get_weights()
+        # #w = ev.get_weights()
+        # #print(w.size)
+        # #exit()
+        #
+        # initial_mean = w  # Starting point
+        # initial_sigma = 0.5  # Initial standard deviation
+        #
+        # # Create an instance of the CMAEvolutionStrategy
+        # opts = {}
+        # opts['CMA_diagonal'] = True
+        # es = CMAEvolutionStrategy(initial_mean, initial_sigma,inopts = opts)
+        #
+        # # Optimization loop using the ask-tell API
+        # while not es.stop():
+        #     # Generate a new population of candidate solutions
+        #     solutions = es.ask(100)
+        #
+        #     # Evaluate the objective function for each candidate solution
+        #     fitnesses = []
+        #     print(len(solutions))
+        #     for x in solutions:
+        #         nwe.set_weights(x)
+        #         score = autoencoder.evaluate(train_x_a, train_y_one_hot_a,
+        #                                      return_dict=True, verbose=False)["acc"]
+        #
+        #         fitnesses.append(-score)
+        #         #print(score)
+        #         #exit()
+        #
+        #
+        #
+        #
+        #     # Tell the optimizer the fitnesses of the candidate solutions
+        #     es.tell(solutions, fitnesses)
+        #
+        #     # Optional: Print the current best solution and its fitness
+        #     print(f"Best solution so far: {es.result.xbest}")
+        #     print(f"Best fitness so far: {es.result.fbest}")
+
+        #
+        autoencoder.fit(train_x_a, train_y_one_hot_a, batch_size=16,
+                        validation_data=(test_x, test_y_one_hot), verbose = False,
+                        epochs = 20000, callbacks=[TqdmCallback(verbose=0)])
+        score = autoencoder.evaluate(train_x_a, train_y_one_hot_a)
+        print(score)
+        #
+        #
+        #
+
+
+        train_output = autoencoder.predict(train_x, verbose = False).argmax(axis = -1)
+        test_output = autoencoder.predict(test_x, verbose = False).argmax(axis = -1)
+
+
+
+
+
+        #r["output"] = np.concatenate([train_output, test_output])
+        # #print(r["output"].shape)
+        r["output"] = np.concatenate([train_output, test_output])
         visualise_training_data(r, f"./plots/{r['name']}_predicted.pdf", )
-
-        #exit()
+        #
+        # #exit()
 
 
         #print(train_x.shape, train_y.shape, test_x.shape, test_y.shape)

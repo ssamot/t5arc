@@ -67,6 +67,16 @@ def main(train_data, eval_data, output_filepath):
                     train_x = np.array(train_train_x[batch], dtype=np.int32)
                     train_y = np.array(train_train_y[batch], dtype=np.int32)
 
+                    batch_size = 32
+                    b_len = len(train_x)
+
+                    shuffled = list(range(len(train_x)))
+                    np.random.shuffle(shuffled)
+                    shuffled = shuffled[:batch_size]
+
+                    train_x = train_x[shuffled]
+                    train_y = train_y[shuffled]
+
 
                     losses_0 = twin_autoencoder.train_on_batch([train_y, train_x ],
                                                              np.eye(11)[train_y],
@@ -81,9 +91,10 @@ def main(train_data, eval_data, output_filepath):
                     losses = average_maps(losses_0, losses_1)
 
                     # r2 = losses["cce"] - losses["loss"]
-                    # losses["r2"] = r2
-                    pbar.set_postfix({key: f'{value:.3f}' for key, value in losses.items()}
-)
+                    losses = {key: f'{value:.3f}' for key, value in losses.items()}
+                    losses["blen"] = f"{b_len:04}"
+
+                    pbar.set_postfix(losses)
                     pbar.update(1)
 
 
@@ -93,7 +104,7 @@ def main(train_data, eval_data, output_filepath):
                     for name in models:
                         model = models[name]
                         model.save(f"{output_filepath}/{name}.keras", overwrite=True)
-
+                outer_pbar.set_postfix(losses)
                 outer_pbar.update(1)
         #print(losses)
         #exit()

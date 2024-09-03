@@ -118,8 +118,13 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     twin_autoencoder = keras.Model([input_left, input_right],
                                     decoder(ttt_model(unmerged)))
     #print(autoencoder.summary())
-    optimizer = keras.optimizers.SGD(momentum=0.8, weight_decay=0.001, nesterov=True, learning_rate=0.01)
-    #optimizer = keras.optimizers.AdamW(learning_rate=0.0001, clipnorm=0.1)
+    # optimizer = keras.optimizers.SGD(momentum=0.8,
+    #                                   weight_decay=0.001,
+    #                                   nesterov=True,
+    #                                   learning_rate=0.01,
+    #                                  gradient_accumulation_steps=10)
+    optimizer = keras.optimizers.AdamW(learning_rate=0.001,
+                                       gradient_accumulation_steps=30)
 
 
     twin_autoencoder.compile(optimizer=optimizer,
@@ -211,3 +216,54 @@ def average_maps(*maps):
         averaged_map[key] = average
 
     return averaged_map
+
+
+import numpy as np
+
+
+class NNWeightHelper:
+    def __init__(self, model):
+        self.model = model
+        self.init_weights = self.model.get_weights()
+
+
+    def _set_trainable_weight(self, model, weights):
+        """Sets the weights of the model.
+
+        # Arguments
+            model: a keras neural network model
+            weights: A list of Numpy arrays with shapes and types matching
+                the output of `model.trainable_weights`.
+        """
+
+        # for sw, w in zip(layer.trainable_weights, weights):
+        #      tuples.append((sw, w))
+
+
+        model.set_weights(tuples)
+
+
+    def set_weights(self, weights):
+        tuples = []
+
+        for w in self.init_weights:
+            num_param = w.size
+
+            layer_weights = weights[:num_param]
+            new_w = np.array(layer_weights).reshape(w.shape)
+            #print(new_w.shape)
+
+            tuples.append(new_w)
+            weights = weights[num_param:]
+
+        self.model.set_weights(tuples)
+
+
+
+
+    def get_weights(self):
+        W_list = (self.model.trainable_weights)
+        W_flattened_list = [np.array(k).flatten() for k in W_list]
+        W = np.concatenate(W_flattened_list)
+
+        return W

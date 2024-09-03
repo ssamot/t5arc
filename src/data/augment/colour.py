@@ -30,7 +30,6 @@ def generate_consistent_combinations_2d(arr_2d, max_samples=1000, excluded_colou
 
 
     n_mappings = math.perm(len(used_colours), len(colours_in_sample))
-    # print(n_mappings)
 
     if (n_mappings > max_samples):
         sampled_mappings = set()
@@ -40,7 +39,10 @@ def generate_consistent_combinations_2d(arr_2d, max_samples=1000, excluded_colou
 
         all_mappings = list(sampled_mappings)
     else:
+        #print(used_colours, colours_in_sample)
+        #exit()
         all_mappings = list(itertools.permutations(used_colours, len(colours_in_sample)))
+
 
     result = []
     for mapping in all_mappings:
@@ -49,6 +51,7 @@ def generate_consistent_combinations_2d(arr_2d, max_samples=1000, excluded_colou
 
         # Apply the mapping to the original 2D array, keeping zeros unchanged
         new_arr = [[num_map.get(num, num) if num not in excluded_colours else num for num in row] for row in arr_2d]
+
         result.append(new_arr)
     return result
 
