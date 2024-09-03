@@ -397,6 +397,12 @@ class Object:
         object_point = self.canvas_pos - object_point
         self.canvas_pos = target_point - object_point
 
+    def translate_by(self, distance: Dimension2D):
+        self.canvas_pos += Point(distance.dx, distance.dy)
+
+        self.transformations.append([Transformations.translate.name,
+                                     {'distance': distance.to_numpy().tolist()}])
+
     def translate_along_direction(self, direction: Vector):
         """
         Translate the Object along a given Vector

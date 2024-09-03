@@ -39,5 +39,5 @@ example.generate_objects_from_output(unique_objects=unique_objects)
 example = utils.solve_canvas_pairs(example=example, solution=sols.solution_05f2a901, which_pair='all')
 
 
-example.show()
+#example.show()
 
