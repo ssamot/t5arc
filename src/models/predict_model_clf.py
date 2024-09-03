@@ -174,11 +174,11 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         from regulariser import SVDLinearRegression
         clf = SVDLinearRegression(0.001)
         score = clf.fit(train_x_a_h, train_y_a_h)
-        print(score)
+        print(score[-1])
+
         print(clf.score(train_x_a_h, train_y_a_h))
         print(clf.score(test_x_h, test_y_h))
 
-        #exit()
 
         print(r2_score(clf.predict(train_x_a_h),clf.predict(train_y_a_h)))
         print(r2_score(clf.predict(test_x_h),clf.predict(test_y_h)))

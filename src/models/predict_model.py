@@ -186,7 +186,7 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         #
         autoencoder.fit(train_x_a, train_y_one_hot_a, batch_size=16,
                         validation_data=(test_x, test_y_one_hot), verbose = False,
-                        epochs = 20000, callbacks=[TqdmCallback(verbose=0)])
+                        epochs = 2000, callbacks=[TqdmCallback(verbose=0)])
         score = autoencoder.evaluate(train_x_a, train_y_one_hot_a)
         print(score)
         #
