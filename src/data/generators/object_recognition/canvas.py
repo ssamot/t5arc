@@ -258,12 +258,14 @@ class Canvas:
         self.embed_objects()
 
     def json_output(self, with_pixels: bool = False) -> dict:
-        result = {'canvas ID': self.id, 'objects': []}
+        result = {'objects': []}
         if with_pixels:
             result['actual_pixels'] = self.actual_pixels.tolist()
-            result['full_canvas'] =  self.full_canvas.tolist()
+            result['full_canvas'] = self.full_canvas.tolist()
         for o in self.objects:
             o_json = o.json_output()
+            o_json.pop('id', None)
+            o_json.pop('actual_pixels_id', None)
             o_json['actual_pixels'] = o.actual_pixels.tolist()
             result['objects'].append(o_json)
 

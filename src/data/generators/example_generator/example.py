@@ -423,7 +423,12 @@ class Example:
         return unique_objects, actual_pixels_array
 
     def create_example_json(self):
-        pass
+        result = {'Input Canvasses': [], 'Output Canvasses': []}
+        for i, o in zip(self.input_canvases, self.output_canvases):
+            result['Input Canvasses'].append(i.json_output())
+            result['Output Canvasses'].append(o.json_output())
+
+        return result
 
     def show(self, canvas_index: int | str = 'all', save_as: str | None = None, two_cols: bool = False):
         """
