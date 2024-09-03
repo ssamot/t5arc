@@ -25,8 +25,8 @@ box = Parallelogram(canvas_pos = [6, 3], colour = 9, dimensions = [2, 2])
 
 Output Canvas has size [10, 9]
 It has two Objects:
-random = Random(canvas_pos = [3, 4], colour = 9, dimensions = [3, 4])
-box = Parallelogram(canvas_pos = [3, 4], colour = 3, dimensions = [2, 2])
+random = Random(canvas_pos = [3, 4], colour = 3, dimensions = [3, 4])
+box = Parallelogram(canvas_pos = [3, 4], colour = 9, dimensions = [2, 2])
 
 The random Object also has a transformation: Translate(distance = [3, 0]).
 

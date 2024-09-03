@@ -8,7 +8,7 @@ example = ARCExample('05f2a901')
 example.generate_canvasses()
 
 unique_objects = [
-    {'primitive': 'Random', 'colour': 9, 'id': 0, 'actual_pixels_id': 0, 'dimensions': Dimension2D(2, 2),
+    {'primitive': 'Parallelogram', 'colour': 9, 'id': 0, 'actual_pixels_id': 0, 'dimensions': Dimension2D(2, 2),
      'canvases_positions': [[0, Point(3, 2, 0)], [2, Point(6, 3, 0)], [4, Point(3, 8, 0)], [6, Point(1, 3, 0)]],
      'actual_pixels': example.get_object_pixels_from_data(0, Point(3, 2, 0), Dimension2D(2, 2)),
      'transformations': [],

@@ -3,6 +3,7 @@ import json
 from copy import copy
 
 from data.generators.object_recognition.basic_geometry import Dimension2D
+from data.generators.object_recognition.primitives import Random, Parallelogram
 from dsls.our_dsl.raw_data_to_examples.task_05f2a901 import example
 
 json_dict = example.create_example_json()
@@ -65,7 +66,7 @@ def transform_all_canvases(input_canvases):
 
 
 # <editor-fold desc="CLAUDE's Code but with API changes to make it run straight on the Classes and not on the json.">
-def transform_canvas(input_canvas):
+def transform_canvas_old(input_canvas):
     output_canvas = copy(input_canvas)  # Create a copy to modify
 
     # Find the objects with colour 9 and 3
@@ -136,32 +137,42 @@ def transform_canvas(input_canvas):
         translation = Dimension2D(0, diff_y)
 
     # Apply the translation
-    #obj_3['transformations'] = [
-    #    ['translate', {'distance': [translation_x, translation_y, 0]}]
-    #]
     obj_3.translate_by(translation)
 
-    # Update the bounding box and canvas position
-    # This is taken care of automatically
-    '''
-    obj_3['bbox'] = [
-        [obj_3['bbox'][0][0] + translation_x, obj_3['bbox'][0][1] + translation_y],
-        [obj_3['bbox'][1][0] + translation_x, obj_3['bbox'][1][1] + translation_y]
-    ]
-    obj_3['canvas_pos'] = [
-        obj_3['canvas_pos'][0] + translation_x,
-        obj_3['canvas_pos'][1] + translation_y,
-        obj_3['canvas_pos'][2]
-    ]
-    '''
     output_canvas.embed_objects()
     return output_canvas
-
-
 # </editor-fold>
 
 
-i = 2
+# <editor-fold desc="CLAUDE's Code (almost) coming from giving CLAUDE a textual description of the problem">
+
+def transform_canvas(input_canvas):
+    output_canvas = copy(input_canvas)  # Create a copy to modify
+    random_obj = next(obj for obj in input_canvas.objects if isinstance(obj, Random))
+    parallelogram_obj = next(obj for obj in input_canvas.objects if isinstance(obj, Parallelogram))
+
+    # Calculate the translation for the Random object
+    translation_x = parallelogram_obj.canvas_pos.x - random_obj.canvas_pos.x
+    translation_y = parallelogram_obj.canvas_pos.y - random_obj.canvas_pos.y
+
+
+    # If translation_x is not zero, move horizontally
+    if translation_x != 0:
+        translation = Dimension2D(translation_x, 0)
+        random_obj.translate_by(translation)
+        #random_obj.apply_transformation(Translate(distance=[translation_x, 0]))
+    # If translation_x is zero, move vertically
+    else:
+        translation = Dimension2D(0, translation_y)
+        #random_obj.apply_transformation(Translate(distance=[0, translation_y]))
+        random_obj.translate_by(translation)
+
+    output_canvas.objects[1] = random_obj
+    output_canvas.embed_objects()
+    return output_canvas
+# </editor-fold>
+
+i = 0
 example.input_canvases[i].show()
 output_canvas = transform_canvas(example.input_canvases[i])
 output_canvas.show()
