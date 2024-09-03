@@ -13,7 +13,7 @@ class SVDLinearRegression:
 
     def fit(self, X, y):
 
-        epsilon = 1e-2  # Small perturbation value
+        epsilon = 1e-8  # Small perturbation value
         reg = keras.random.normal(X.shape,0,  epsilon, seed = self.seed)
 
 
@@ -49,6 +49,10 @@ class SVDLinearRegression:
 
 
     def predict(self, X):
+        epsilon = 1e-2  # Small perturbation value
+        #reg = keras.random.normal(X.shape, 0, epsilon, seed=self.seed)
+
+        #X += reg
         X_b = ops.concatenate([ops.ones((ops.shape(X)[0], 1)), X], axis=1)
         y_pred = ops.dot(X_b, self.theta)
         return y_pred

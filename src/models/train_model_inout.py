@@ -104,7 +104,7 @@ def main(train_data, eval_data, output_filepath):
                     for name in models:
                         model = models[name]
                         model.save(f"{output_filepath}/{name}.keras", overwrite=True)
-
+                outer_pbar.set_postfix(losses)
                 outer_pbar.update(1)
         #print(losses)
         #exit()

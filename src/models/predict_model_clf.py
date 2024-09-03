@@ -30,11 +30,55 @@ from visualization.visualse_training_data_sets import visualise_training_data
 from tqdm.keras import TqdmCallback
 from data.augment.colour import generate_consistent_combinations_2d
 
+from sklearn.linear_model import MultiTaskLassoCV
+from sklearn.linear_model import MultiTaskElasticNetCV, LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
-from regulariser import SVDLinearRegression, AdditionRegression
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.kernel_ridge import KernelRidge
 
-from utils import build_model
 
+
+
+
+
+
+# def build_model(encoder, decoder, n_neurons):
+#     #encoder.summary()
+#     #decoder.summary()
+#     input = keras.layers.Input([32,32,1])
+#     encoded = encoder(input)
+#     decoded = decoder(encoded)
+#     #print(encoded)
+#     #exit()
+#     keras.ops.svd
+#     ttx_input = keras.layers.Input((n_neurons,))
+#     ttt_x = keras.layers.Dense(n_neurons, "relu")(ttx_input)
+#     ttt_output = keras.layers.Dense(n_neurons)(ttt_x)
+#
+#
+#     ttx_model = keras.models.Model(ttx_input, ttt_output, name = "ttx")
+#
+#     ttt_x_decoded = decoder(ttx_model(encoded))
+#
+#     ttt_autoencoder = keras.models.Model(input, ttt_x_decoded)
+#     ttt_autoencoder.summary()
+#
+#     autoencoder = keras.models.Model(input, decoded)
+#
+#     ttt_autoencoder.compile(optimizer="AdamW",
+#
+#                         loss='categorical_crossentropy',
+#                         metrics=["acc", batch_acc])
+#     autoencoder.compile(optimizer="AdamW",
+#
+#                         loss='categorical_crossentropy',
+#                         metrics=["acc", batch_acc])
+#
+#     ttx_model.compile(optimizer="AdamW", loss = "mse")
+#
+#
+#     return ttt_autoencoder, autoencoder, ttx_model
 
 
 @click.command()
@@ -45,7 +89,7 @@ from utils import build_model
 def main(data_filepath, model_filepath, output_filepath, data_type):
 
     n_neurons = 514
-    #keras.config.enable_unsafe_deserialization()
+    keras.config.enable_unsafe_deserialization()
 
 
     # for c in combinations_2d:
@@ -59,6 +103,9 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
     #ttt.compile(optimizer="AdamW", loss="mse")
     # Freeze the weights
+    encoder.trainable = False
+    decoder.trainable = False
+    ttt.trainable = True
 
     it = ArcExampleData('train')
 
@@ -97,8 +144,8 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
         #print(train_x.shape, train_y_a.shape, "3424234")
 
-        #train_x_a = np.concatenate([train_x, train_x_a])
-        #train_y_a = np.concatenate([train_y, train_y_a])
+        train_x_a = np.concatenate([train_x, train_x_a])
+        train_y_a = np.concatenate([train_y, train_y_a])
         #print(train_x_a.shape, train_y_a.shape, "£23424234")
         #exit()
 
@@ -115,40 +162,40 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
                                          (ttt(encoder(input))))
         ttt_decoder = keras.models.Model(input_dec, decoder((input_dec)))
 
-        decoder.trainable = False
-        ttt.trainable = False
-        encoder.trainable = False
+        train_x_a_h = ttt_encoder.predict(train_x_a)
+        train_y_a_h = ttt_encoder.predict(train_y_a)
+        train_x_h = ttt_encoder.predict(train_x)
+        train_y_h = ttt_encoder.predict(train_y)
+        test_x_h = ttt_encoder.predict(test_x)
+        test_y_h = ttt_encoder.predict(test_y)
 
-        _, _, encoder, _, ttt = build_model((32, 32),
-                                                                 int(11),
-                                                                 n_neurons)
+        #clf = MultiTaskElasticNetCV(n_jobs=-1)
+        #clf = RandomForestRegressor(1000, n_jobs=-1)
+        from regulariser import SVDLinearRegression
+        clf = SVDLinearRegression(0.001)
+        score = clf.fit(train_x_a_h, train_y_a_h)
+        print(score)
+        print(clf.score(train_x_a_h, train_y_a_h))
+        print(clf.score(test_x_h, test_y_h))
 
-        x = keras.layers.Dense(n_neurons, activation = "relu")(ttt(encoder(input)))
-        x = keras.layers.Dense(n_neurons, activation = "relu")(x)
-        autoencoder = keras.Model(input, decoder(x))
-        optimizer = keras.optimizers.AdamW(0.0001)
-        autoencoder.compile(optimizer=optimizer,
+        #exit()
 
-                        loss='categorical_crossentropy',#run_eagerly=True,
-                        metrics=["acc", b_acc])
+        print(r2_score(clf.predict(train_x_a_h),clf.predict(train_y_a_h)))
+        print(r2_score(clf.predict(test_x_h),clf.predict(test_y_h)))
 
-        autoencoder.fit(train_x_a, train_y_one_hot_a,
-                        validation_data=(test_x, test_y_one_hot), epochs = 10000)
+        train_hat = clf.predict(train_x_h)
+        test_hat = clf.predict(test_x_h)
+        train_output = ttt_decoder.predict(train_y_h).argmax(axis = -1)
+        test_output = ttt_decoder.predict(test_hat).argmax(axis = -1)
 
-
-
-
-
-        train_output = autoencoder.predict(train_x, verbose = False).argmax(axis = -1)
-        test_output = autoencoder.predict(test_x, verbose = False).argmax(axis = -1)
-
+        print(train_output.shape, test_output.shape)
+        #exit()
 
 
 
 
-        #r["output"] = np.concatenate([train_output, test_output])
-        # #print(r["output"].shape)
         r["output"] = np.concatenate([train_output, test_output])
+        # #print(r["output"].shape)
         visualise_training_data(r, f"./plots/{r['name']}_predicted.pdf", )
         #
         # #exit()
