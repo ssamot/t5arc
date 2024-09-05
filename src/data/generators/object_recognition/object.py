@@ -103,7 +103,7 @@ class Object:
 
         self.dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 
-        self.number_of_coloured_pixels: int = int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
+        #self.number_of_coloured_pixels: int = int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
 
         self.symmetries: List = []
 
@@ -123,6 +123,10 @@ class Object:
         for sym in self.symmetries:
             sym.origin += move
         self.reset_dimensions()
+
+    @property
+    def number_of_coloured_pixels(self):
+        return int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
 
     @property
     def holes(self):
@@ -359,6 +363,7 @@ class Object:
         """
         Flips the object along an axis. If the Orientation is diagonal it will flip twice
         :param axis: The direction to flip towards. The edge of the bbox toward that direction becomes the axis of the flip.
+        :param translate:
         :return: Nothing
         """
 
@@ -589,7 +594,7 @@ class Object:
         """
         Calculates the Vector that defines the distance (in pixels) between this and the obj Object. The exact 
         calculation depends on the type asked for. If type is 'min' then this is the distance between the two nearest 
-        pixels of the Objects. If it is 'max' it is between the two furthest. If it is 'canvas_pos' then it is the 
+        pixels of the Objects. If it is 'max' it is between the two furthest_point_to_point. If it is 'canvas_pos' then it is the
         distance between the two canvas positions of the Objects.
         If the two Points that are being compared lie along a Direction then the returned Vector also has this Direction.
         If more than two pairs of points qualify to calculate the distance then one with a Direction is chosen (with
@@ -723,13 +728,13 @@ class Object:
         return holes, n
 
     def match(self, other: Object, after_rotation: bool = False, match_shape_only: bool = False,
-              padding: Surround = Surround(0, 0, 0, 0)) -> List[Point] | List[List[Point, int]]:
+              padding: Surround = Surround(0, 0, 0, 0)) -> Tuple[List[Point], List[int]]:
         """
         Calculates the canvas positions that this Object should be moved to, to generate the best match
         (cross - correlation) with the other Object. Multiple best matches generate multiple positions.
         :param padding: Whether the Object should be padded with 1s to allow better matching.
         :param other: The other Object.
-        :param after_rotation: Also rotates this Object to check for matches # TODO Not implemented yet!
+        :param after_rotation: Also rotates this Object to check for matches.
         :param match_shape_only: Cares only about the shape of the Objects and ignores the colours
         :return: The List of Points that this Object could have as canvas_pos that would generate the largest overlap
         with the other Object. If after_rotation is True then each element of this list is a List[Point, int]
@@ -780,19 +785,20 @@ class Object:
             result = match_for_a_specific_rotation(0)
             best_relative_positions = np.argwhere(result == np.amax(result))
             best_positions = [Point(x=other.dimensions.dx - brp[1] - 1 + other.canvas_pos.x + 2 * padding.Left,
-                                     y=other.dimensions.dy - brp[0] - 1 + other.canvas_pos.y + 2 * padding.Down)
+                                    y=other.dimensions.dy - brp[0] - 1 + other.canvas_pos.y + 2 * padding.Down)
                               for brp in best_relative_positions]
+            rotations = [0 for _ in best_relative_positions]
         else:
             result = []
             for rot in range(4):
                 result.append(match_for_a_specific_rotation(rot))
             best_relative_positions = np.argwhere(result == np.amax(result))
-            best_positions = [[Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x + 2 * padding.Left,
-                                     y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y + 2 * padding.Down),
-                               brp[0]]
+            best_positions = [Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x + 2 * padding.Left,
+                                    y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y + 2 * padding.Down)
                               for brp in best_relative_positions]
+            rotations = [brp[0] for brp in best_relative_positions]
 
-        return best_positions
+        return best_positions, rotations
 
     def show(self, symmetries_on=True, show_holes=False):
         """
@@ -829,4 +835,6 @@ class Object:
                     plt_lines = ax.hlines
 
                 plt_lines(line_at, line_min, line_max, linewidth=2)
+
+
 
