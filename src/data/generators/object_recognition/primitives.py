@@ -207,6 +207,32 @@ class Primitive(Object):
     def __repr__(self):
         return json.dumps(self, cls=PrimitivesJSONEncoder, sort_keys=True, indent=4)
 
+    def __eq__(self, other: Primitive) -> bool:
+        result = True
+        if self.colour != other.colour:
+            result = False
+        if not np.array_equal(self.actual_pixels, other.actual_pixels):
+            result = False
+        if self.size != other.size:
+            result = False
+        if self.border_size != other.border_size:
+            result = False
+        if self.required_dist_to_others != other.required_dist_to_others:
+            result = False
+        if self.dimensions != other.dimensions:
+            result = False
+        if self.actual_pixels_id != other.actual_pixels_id:
+            result = False
+        if self.bbox != other.bbox:
+            result = False
+        if self.symmetries != other.symmetries:
+            result = False
+        if self.number_of_coloured_pixels != other.number_of_coloured_pixels:
+            result = False
+        if self.rotation_axis != other.rotation_axis:
+            result = False
+
+        return result
 
 class Random(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
