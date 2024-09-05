@@ -159,11 +159,17 @@ class Dimension2D:
     def __mul__(self, other: float | int | bool) -> Dimension2D:
         return Dimension2D(self.x * other, self.y * other)
 
-    def __truediv__(self, other) -> Dimension2D:
+    def __truediv__(self, other: int | float) -> Dimension2D:
         return Dimension2D(self.x / other, self.y / other)
 
     def __copy__(self):
         return Dimension2D(dx=self.dx, dy=self.dy)
+
+    def __eq__(self, other: Dimension2D) -> bool:
+        if self.dx == other.dx and self.dy == other.dy:
+            return True
+        else:
+            return False
 
     def to_numpy(self):
         return np.array([self.dx, self.dy])
@@ -375,6 +381,12 @@ class Vector:
     def __copy__(self):
         return Vector(orientation=copy(self.orientation), length=self.length, origin=copy(self.origin))
 
+    def __eq__(self, other: Vector) -> bool:
+        if self.length == other.length and self.origin == other.origin and self.orientation == other.orientation:
+            return True
+        else:
+            return False
+
     # TODO: Need to deal with transformations other than rotation
     def transform(self, affine_matrix: np.ndarray | None = None,
                   rotation: float = 0,
@@ -406,6 +418,12 @@ class Bbox:
 
     def __repr__(self):
         return f'Bbox(Top Left: {self.top_left}, Bottom Right: {self.bottom_right}, Center: {self.center})'
+
+    def __eq__(self, other: Bbox) -> bool:
+        if self.top_left == other.top_left and self.bottom_right == other.bottom_right:
+            return True
+        else:
+            return False
 
     def _calculate_center(self):
         center = Point(x=(self.bottom_right.x - self.top_left.x) / 2 + self.top_left.x,
