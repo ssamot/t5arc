@@ -140,6 +140,11 @@ class Example:
 
         return None
 
+    def permute_colours(self, max_num_of_permutations: int = 1000):
+        pass
+
+
+
     def create_object(self, obj_probs: np.ndarray | None = None, max_size_of_obj: Dimension2D = Dimension2D(15, 15),
                       overlap_prob: float = 0.8, far_away_prob: float = 0.1, debug: bool = False) -> Primitive:
         """

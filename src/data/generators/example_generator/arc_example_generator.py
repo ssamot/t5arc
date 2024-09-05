@@ -12,7 +12,7 @@ from data.generators.object_recognition.canvas import Canvas
 class ARCExample(Example):
 
     def __init__(self, arc_name: str | None = None, arc_group_and_index: List | None = None,
-                 arc_data: List | Dict |None = None):
+                 arc_data: List | Dict |None = None, augmentations: List[str] | None = None):
         """
         Generates an Example using specific data from an ARC task
         :param arc_name: The name of the task to be loaded
@@ -68,20 +68,28 @@ class ARCExample(Example):
         super().__init__(run_generate_canvasses=False)
 
         self.experiment_type = 'ARC'
+        self.augmentations = augmentations
 
     def generate_canvasses(self, empty: bool = True):
+        """
+        Generate the ARC task Canvasses using the self.task_name, self.task_data and self.solution_data.
+        :param empty: If empty is True then make the Canvasses the correct size but keep them empty (canvas.actual_pixels = 1).
+        If False then copy onto the Canvasses the loaded data (this generates the correct looking Canvasses but they
+        carry no Objects).
+        :return:
+        """
         self.number_of_io_pairs = len(self.task_data['train'])
         self.number_of_canvasses = self.number_of_io_pairs * 2 + 2
 
         for pair in range(self.number_of_io_pairs):
             input_data = np.flipud(np.array(self.task_data['train'][pair]['input']) + 1)
-            output_date = np.flipud(np.array(self.task_data['train'][pair]['output']) + 1)
+            output_data = np.flipud(np.array(self.task_data['train'][pair]['output']) + 1)
             if not empty:
                 self.input_canvases.append(Canvas(actual_pixels=input_data, _id=pair * 2))
-                self.output_canvases.append(Canvas(actual_pixels=output_date, _id=pair * 2 + 1))
+                self.output_canvases.append(Canvas(actual_pixels=output_data, _id=pair * 2 + 1))
             else:
                 self.input_canvases.append(Canvas(size=Dimension2D(input_data.shape[1], input_data.shape[0]), _id=pair * 2))
-                self.output_canvases.append(Canvas(size=Dimension2D(output_date.shape[1], output_date.shape[0]), _id=pair * 2 + 1))
+                self.output_canvases.append(Canvas(size=Dimension2D(output_data.shape[1], output_data.shape[0]), _id=pair * 2 + 1))
 
         test_input_date = np.flipud(np.array(self.task_data['test'][0]['input']) + 1)
         test_output_data = np.flipud(np.array(self.solution_data[0]) + 1)
