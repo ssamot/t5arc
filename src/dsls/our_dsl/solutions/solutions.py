@@ -11,7 +11,8 @@ def solution_045e512c(canvas: Canvas) -> Canvas:
     other_objects = dsl.select_rest_of_the_objects(canvas=canvas, obj=largest_object)
     canvas_pos_lo = dsl.get_object_feature_canvas_pos(largest_object)
     for oo in other_objects:
-        point = dsl.get_point_for_match_shape_furthest(largest_object, oo, match_shape_only=True, padding=Surround(0, 0, 0, 0))
+        point = dsl.get_point_for_match_shape_furthest(largest_object, oo, match_shape_only=True,
+                                                       padding=Surround(0, 0, 0, 0))
         dist, _ = dsl.furthest_point_to_point(canvas_pos_lo, point)
         colour = dsl.get_object_feature_colour(oo)
         obj = dsl.copy_object(largest_object)
@@ -55,9 +56,9 @@ def solution_b775ac94(canvas: Canvas) -> Canvas:
     for init_obj in object_list:
         canvas_temp = dsl.make_new_canvas_as(canvas)
         canvas_temp = dsl.add_object_to_canvas(canvas_temp, init_obj)
-        canvas_temp = dsl.split_object_by_colour_on_canvas(canvas=canvas_temp, obj=init_obj)
-        largest_object = dsl.select_largest_object_by_area(canvas=canvas_temp)
-        other_objects = dsl.select_rest_of_the_objects(canvas=canvas_temp, obj=largest_object)
+        canvas_temp = dsl.split_object_by_colour_on_canvas(canvas_temp, init_obj)
+        largest_object = dsl.select_largest_object_by_area(canvas_temp)
+        other_objects = dsl.select_rest_of_the_objects(canvas_temp, largest_object)
 
         for oo in other_objects:
             colour = dsl.get_object_feature_colour(oo)
