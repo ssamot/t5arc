@@ -25,7 +25,7 @@ def main(train_data, eval_data, output_filepath):
 
 
 
-    _, twin_autoencoder, encoder, decoder, ttt = build_model((max_pad_size, max_pad_size),
+    _, twin_autoencoder, encoder, decoder = build_model((max_pad_size, max_pad_size),
                                           int(num_decoder_tokens),
                                           encoder_units)
 
@@ -48,7 +48,6 @@ def main(train_data, eval_data, output_filepath):
 
     models = {f"encoder_{encoder_units}": encoder,
               f"decoder_{encoder_units}": decoder,
-              f"ttt_{encoder_units}": ttt,
              # f"twin_autoencoder_{encoder_units}": twin_autoencoder
               }
 

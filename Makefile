@@ -92,6 +92,9 @@ data: data_pure_train data_pure_eval data_augmented_train
 predict_clf:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/predict_model_clf.py data/processed/ models/ data/processed/eval/spider dev
 
+search:
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/search.py
+
 predict:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/predict_model.py data/processed/ models/ data/processed/eval/spider dev
 

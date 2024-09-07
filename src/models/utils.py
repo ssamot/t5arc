@@ -38,13 +38,13 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
 
     #encoded = layers.Reshape([4,4,8])(x)
     #
-    encoded = keras.layers.Dense(encoder_units, activation=activation,
+    encoded = keras.layers.Dense(encoder_units, activation="tanh",
                           )(x)
     encoded = keras.layers.LayerNormalization()(encoded)
 
 
 
-    #encoded = keras.layers.Dropout(0.1)(encoded)
+    encoded = keras.layers.Dropout(0.05)(encoded)
 
 
 
@@ -53,15 +53,7 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     # decoded = keras.layers.LayerNormalization()(
     #     layers.Dense(n_neurons,activation="relu")(decoded_inputs))
 
-    ttt_input = keras.Input(shape=(encoder_units,))
-    #ttt = layers.Activation("tanh", name = "ttt_input_activation")(ttt_input)
 
-
-    #ttt = layers.GaussianNoise(stddev=0.01)(ttt_input)
-
-    ttt = (layers.Dense(encoder_units, name="ttt_layer",
-                        use_bias=False, activation="tanh")
-           (ttt_input))
 
 
 
@@ -69,8 +61,6 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     #ttt = AddMultiplyLayer()(ttt_input)
 
 
-
-    ttt_model = keras.models.Model(ttt_input, ttt, name = "ttt")
 
     x = keras.layers.Dense(n_neurons, activation=activation, )(decoded_inputs)
     x = keras.layers.LayerNormalization()(x)
@@ -112,11 +102,11 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
 
 
 
-    autoencoder = keras.Model(input_img, decoder(ttt_model(encoded)),
+    autoencoder = keras.Model(input_img, decoder(encoded),
                               name = "autoencoder")
 
     twin_autoencoder = keras.Model([input_left, input_right],
-                                    decoder(ttt_model(unmerged)))
+                                    decoder(unmerged))
     #print(autoencoder.summary())
     # optimizer = keras.optimizers.SGD(momentum=0.8,
     #                                   weight_decay=0.001,
@@ -124,15 +114,15 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     #                                   learning_rate=0.01,
     #                                  gradient_accumulation_steps=10)
     optimizer = keras.optimizers.AdamW(learning_rate=0.001,
-                                       gradient_accumulation_steps=30)
+                                      gradient_accumulation_steps=30)
 
 
     twin_autoencoder.compile(optimizer=optimizer,
 
-                        loss='categorical_crossentropy',#run_eagerly=True,
+                        loss='categorical_crossentropy',#jit_compile=False,
                         metrics=["acc", b_acc, cce])
 
-    return autoencoder, twin_autoencoder, encoder, decoder, ttt_model
+    return autoencoder, twin_autoencoder, encoder, decoder
 
 
 class CustomModelCheckpoint(keras.callbacks.Callback):
