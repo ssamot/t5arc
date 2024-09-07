@@ -1,6 +1,11 @@
 import inspect
 import importlib
 from typing import get_type_hints
+import click
+import logging
+from dotenv import find_dotenv, load_dotenv
+from pathlib import Path
+
 
 
 def get_functions_with_types_from_module(module_name):
@@ -36,13 +41,39 @@ def get_functions_with_types_from_module(module_name):
     return functions_dict
 
 
+@click.command()
+@click.argument('problem', type=click.STRING())
+@click.argument('output_filepath', type=click.Path())
+def main(problem, output_filepath):
+    location = "dsls.our_dsl.functions.dsl_functions"
+    functions_info = get_functions_with_types_from_module(location)
+
+
+
+    for func_name, details in functions_info.items():
+        print(f"Function Name: {func_name}")
+        print(f"  Input Types: {details['input_types']}")
+        print(f"  Output Type: {details['output_type']}")
+        print()
+
+
+if __name__ == '__main__':
+    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=logging.INFO, format=log_fmt)
+
+    # not used in this stub but often useful for finding various files
+    project_dir = Path(__file__).resolve().parents[2]
+
+    # find .env automagically by walking up directories until it's found, then
+    # load up the .env entries as environment variables
+    load_dotenv(find_dotenv())
+
+    main()
+
+
+
 # Example usage:
 # Assuming you have a module named 'mypackage.mymodule' with some functions
-functions_info = get_functions_with_types_from_module('dsls.our_dsl.functions.dsl_functions')
 
 # Print the function names, input types, and output types
-for func_name, details in functions_info.items():
-    print(f"Function Name: {func_name}")
-    print(f"  Input Types: {details['input_types']}")
-    print(f"  Output Type: {details['output_type']}")
-    print()
+

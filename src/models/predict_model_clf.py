@@ -99,13 +99,14 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
     logging.info("Loading models")
     encoder = keras.models.load_model(f"{model_filepath}/encoder_{n_neurons}.keras")
     decoder = keras.models.load_model(f"{model_filepath}/decoder_{n_neurons}.keras")
-    ttt = keras.models.load_model(f"{model_filepath}/ttt_{n_neurons}.keras")
+
+    #ttt = keras.models.load_model(f"{model_filepath}/ttt_{n_neurons}.keras")
 
     #ttt.compile(optimizer="AdamW", loss="mse")
     # Freeze the weights
     encoder.trainable = False
     decoder.trainable = False
-    ttt.trainable = True
+    #ttt.trainable = True
 
     it = ArcExampleData('train')
 
@@ -159,7 +160,7 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         input_dec = keras.layers.Input([n_neurons,])
 
         ttt_encoder = keras.models.Model(input,
-                                         (ttt(encoder(input))))
+                                         ((encoder(input))))
         ttt_decoder = keras.models.Model(input_dec, decoder((input_dec)))
 
         train_x_a_h = ttt_encoder.predict(train_x_a)

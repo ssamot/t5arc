@@ -98,8 +98,8 @@ search:
 predict:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/predict_model.py data/processed/ models/ data/processed/eval/spider dev
 
-create_solver_files:
-	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_solver_files.py data/raw/solvers.py data/processed/train
+generate_grammar:
+	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/search/generate_grammar.py data/raw/
 
 
 
