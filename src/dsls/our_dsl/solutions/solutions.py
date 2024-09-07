@@ -65,7 +65,7 @@ def solution_b775ac94(canvas: Canvas) -> Canvas:
             dist = dsl.get_distance_min_between_objects(largest_object, oo)
             largest_object = dsl.object_transform_flip_and_translate(largest_object, dist)
             largest_object = dsl.object_transform_new_colour(largest_object, colour)
-            canvas_out.add_new_object(largest_object)
+            canvas_out = dsl.add_object_to_canvas(canvas_out, largest_object)
 
     return canvas_out
 
