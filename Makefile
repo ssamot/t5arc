@@ -99,8 +99,10 @@ predict:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/predict_model.py data/processed/ models/ data/processed/eval/spider dev
 
 generate_grammar:
-	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/search/generate_grammar.py data/raw/
+	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/search/generate_grammar.py test ./data
 
+generate_dsl_programmes:
+	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/search/generate_grammar.py test ./data
 
 
 

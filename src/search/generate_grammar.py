@@ -5,6 +5,7 @@ import click
 import logging
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
+from collections import defaultdict
 
 
 
@@ -42,7 +43,7 @@ def get_functions_with_types_from_module(module_name):
 
 
 @click.command()
-@click.argument('problem', type=click.STRING())
+@click.argument('problem', type=click.STRING)
 @click.argument('output_filepath', type=click.Path())
 def main(problem, output_filepath):
     location = "dsls.our_dsl.functions.dsl_functions"
@@ -50,11 +51,84 @@ def main(problem, output_filepath):
 
 
 
+    test_functions = [
+        "select_object_of_colour",
+        "get_distance_touching_between_objects",
+        "object_transform_translate_along_direction",
+        "make_new_canvas_as",
+        "add_object_to_canvas",
+        "get_distance_origin_to_origin_between_objects"
+    ]
+
+
+    function_per_output_type = defaultdict(lambda:  [])
+
     for func_name, details in functions_info.items():
-        print(f"Function Name: {func_name}")
-        print(f"  Input Types: {details['input_types']}")
-        print(f"  Output Type: {details['output_type']}")
-        print()
+
+        if(func_name in test_functions):
+            it_l = list(details['input_types'].values())
+            #out_l = list(details['output_type'].values())
+            #input_types = [t for input_types  ]
+            input_types = []
+            output_type = details['output_type'].__name__
+            for it in it_l:
+                #print((it.__name__))
+                it = it.__name__
+                input_types.append(it)
+
+            function_per_output_type[output_type].append([func_name, input_types])
+
+    function_per_output_type["Canvas"].append(["literal", ["\"canvas\""]])
+    function_per_output_type["int"].append(["literal", [f"\"{i}\"" for i in range(11)]])
+
+    def get_init_string(typedata):
+        name, params = typedata
+
+        if(name == "literal"):
+            params = " | ".join(params)
+        else:
+            params = " \",\" ".join(params)
+
+
+        return name, type, params
+
+
+
+
+    for type in function_per_output_type.keys():
+        #print(type, function_per_output_type[type])
+
+        name, type, params = get_init_string(function_per_output_type[type][0])
+        if(name == "literal"):
+            init_string = f"{type} -> {params} "
+        else:
+            init_string = f"{type} -> \"{name} (\" {params}  \")\""
+
+        #print(init_string)
+
+
+
+        for funcs in function_per_output_type[type][1:]:
+            name, type, params = get_init_string(funcs)
+            if(name == "literal"):
+                init_string += f" | {params} "
+            else:
+                init_string += f" | \" {name} (\" {params}  \")\""
+
+
+
+
+
+
+
+        print(init_string)
+
+   # print(function_per_output_type)
+            #print(type(details['input_types']))
+            # print(f"Function Name: {func_name}")
+            # print(f"  Input Types: {input_types}")
+            # print(f"  Output Type: {output_types}")
+            # print()
 
 
 if __name__ == '__main__':

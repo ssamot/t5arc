@@ -1,26 +1,34 @@
 from nltk import CFG
-from nltk.parse.generate import generate
+from custom_generate import generate
 
 grammar_str = """
-    S -> function
-    function -> "f(" function ")"  | "g(" function ")" | terminal
-    terminal -> "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" |"9"
-
+Canvas -> "add_object_to_canvas (" Canvas "," Primitive  ")" | " make_new_canvas_as (" Canvas  ")" | "canvas"
+Vector -> "get_distance_origin_to_origin_between_objects (" Primitive "," Primitive  ")" | " get_distance_touching_between_objects (" Primitive "," Primitive  ")"
+Primitive -> "object_transform_translate_along_direction (" Primitive "," Vector  ")" | " select_object_of_colour (" Canvas "," int  ")"
+int -> "0" | "1" 
 """
 
-# grammar_str ="""
-#   S -> A B
-#   A -> B
-#   B -> "b" | A
-#  """
 
-print(grammar_str)
+#print(grammar_str)
 # Define a simple grammar
 grammar = CFG.fromstring(
     grammar_str
 )
 #print(grammar.productions())
 
-# Generate all possible sentences
-for sentence in generate(grammar, depth=4):
-    print(' '.join(sentence))
+depth = 7
+
+
+# from black import format_str, FileMode
+# # Generate all possible sentences
+def heuristic(s):
+    return (("get_distance_origin_to_origin_between_objects") not in s )
+
+print(len( list(generate(grammar,depth = depth, heuristic=heuristic))))
+
+for sentence in generate(grammar,depth = depth, heuristic=heuristic):
+    s = ' '.join(sentence)
+
+    #out = format_str(s, mode=FileMode())
+
+    #print(out)
