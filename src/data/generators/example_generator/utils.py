@@ -42,21 +42,21 @@ def random_permutation(possible_values, num_unique_nums):
 
 
 def colours_permutations(colours: List[int], max_samples: int = 1000) -> List[dict[int, int]]:
-    excluded_colours = {0, 1}
     colours = set(colours)
-    used_colours = colours - excluded_colours
+    colours.update({1})
+    all_colours = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-    n_mappings = math.perm(len(used_colours), len(used_colours))
+    n_mappings = math.perm(len(all_colours), len(colours))
     if (n_mappings > max_samples):
         sampled_mappings = set()
         while len(sampled_mappings) < max_samples:
-            sampled_mappings.add(tuple(random_permutation(list(used_colours), len(used_colours))))
+            sampled_mappings.add(tuple(random_permutation(list(all_colours), len(colours))))
         all_mappings = list(sampled_mappings)
     else:
-        all_mappings = list(itertools.permutations(list(used_colours), len(used_colours)))
+        all_mappings = list(itertools.permutations(list(all_colours), len(colours)))
 
     result = []
     for mapping in all_mappings:
-        result.append(dict(zip(used_colours, mapping)))
+        result.append(dict(zip(colours, mapping)))
 
     return result

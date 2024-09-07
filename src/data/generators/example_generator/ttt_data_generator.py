@@ -62,6 +62,7 @@ class ArcExampleData(Iterator):
                     self._index += 1
 
             return {'name': self.current_example.name, 'augmentation_index': self._augmented_index - 1,
+                    'augmented_size': len(self.current_example.test_input_canvas_augmented),
                     'input': np.array(inputs), 'output': np.array(outputs)}
         else:
             raise StopIteration
