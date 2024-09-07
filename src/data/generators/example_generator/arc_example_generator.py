@@ -1,5 +1,7 @@
 
-from copy import deepcopy
+from copy import deepcopy, copy
+from functools import partial
+from multiprocessing import Pool
 from typing import List, Dict
 import numpy as np
 
@@ -7,12 +9,13 @@ from data import load_data as ld
 from data.generators.example_generator.example import Example
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from data.generators.object_recognition.canvas import Canvas
+from data.generators.example_generator import utils
 
 
 class ARCExample(Example):
 
     def __init__(self, arc_name: str | None = None, arc_group_and_index: List | None = None,
-                 arc_data: List | Dict |None = None, augmentations: List[str] | None = None):
+                 arc_data: List | Dict |None = None):
         """
         Generates an Example using specific data from an ARC task
         :param arc_name: The name of the task to be loaded
@@ -68,14 +71,20 @@ class ARCExample(Example):
         super().__init__(run_generate_canvasses=False)
 
         self.experiment_type = 'ARC'
-        self.augmentations = augmentations
+        self.input_canvases_augmented = []
+        self.output_canvases_augmented = []
+        self.test_input_canvas_augmented = []
+        self.test_output_canvas_augmented = []
+        self.colour_mappings_for_augmentation = []
 
-    def generate_canvasses(self, empty: bool = True):
+    def generate_canvasses(self, empty: bool = True, augment_with: List[str] | None = None):
         """
         Generate the ARC task Canvasses using the self.task_name, self.task_data and self.solution_data.
         :param empty: If empty is True then make the Canvasses the correct size but keep them empty (canvas.actual_pixels = 1).
         If False then copy onto the Canvasses the loaded data (this generates the correct looking Canvasses but they
         carry no Objects).
+        :param augment_with: Choose what type of augmentation to apply to the data. List of string with possible values
+         'colour', 'rotation', 'translation'
         :return:
         """
         self.number_of_io_pairs = len(self.task_data['train'])
@@ -91,16 +100,46 @@ class ARCExample(Example):
                 self.input_canvases.append(Canvas(size=Dimension2D(input_data.shape[1], input_data.shape[0]), _id=pair * 2))
                 self.output_canvases.append(Canvas(size=Dimension2D(output_data.shape[1], output_data.shape[0]), _id=pair * 2 + 1))
 
-        test_input_date = np.flipud(np.array(self.task_data['test'][0]['input']) + 1)
+        test_input_data = np.flipud(np.array(self.task_data['test'][0]['input']) + 1)
         test_output_data = np.flipud(np.array(self.solution_data[0]) + 1)
         if not empty:
-            self.test_input_canvas = Canvas(actual_pixels=test_input_date, _id=2 * self.number_of_io_pairs)
+            self.test_input_canvas = Canvas(actual_pixels=test_input_data, _id=2 * self.number_of_io_pairs)
             self.test_output_canvas = Canvas(actual_pixels=test_output_data, _id=2 * self.number_of_io_pairs + 1)
         else:
-            self.test_input_canvas = Canvas(size=Dimension2D(test_input_date.shape[1], test_input_date.shape[0]),
+            self.test_input_canvas = Canvas(size=Dimension2D(test_input_data.shape[1], test_input_data.shape[0]),
                                             _id=2 * self.number_of_io_pairs)
             self.test_output_canvas = Canvas(size=Dimension2D(test_output_data.shape[1], test_output_data.shape[0]),
                                              _id=2 * self.number_of_io_pairs + 1)
+
+        if augment_with is not None and not empty:
+            self.generate_augmented_canvasses(augment_with)
+
+    def generate_augmented_canvasses(self, augment_with: List[str], max_samples: int = 1000):
+
+        if 'colour' in augment_with:
+            used_colours = self.get_all_colours()
+            self.colour_mappings_for_augmentation = utils.colours_permutations(used_colours, max_samples)
+            for map in self.colour_mappings_for_augmentation:
+                self.augment_with_colour(map)
+
+    def augment_with_colour(self, colour_map: dict[int, int]):
+        temp_inputs = []
+        temp_outputs = []
+        for i, o in zip(self.input_canvases, self.output_canvases):
+            a = copy(i)
+            a.swap_colours(colour_map)
+            temp_inputs.append(a)
+            b = copy(o)
+            b.swap_colours(colour_map)
+            temp_outputs.append(b)
+        self.input_canvases_augmented.append(temp_inputs)
+        self.output_canvases_augmented.append(temp_outputs)
+        a = copy(self.test_input_canvas)
+        a.swap_colours(colour_map)
+        self.test_input_canvas_augmented.append(a)
+        a = copy(self.test_output_canvas)
+        a.swap_colours(colour_map)
+        self.test_output_canvas_augmented.append(a)
 
     def get_object_pixels_from_data(self, canvas_id: int, canvas_pos: Point, size: Dimension2D):
 
@@ -122,3 +161,14 @@ class ARCExample(Example):
     def reset_object_colours(self):
         for o in self.objects:
             o.set_colour_to_most_common()
+
+    def show_augmented(self, index):
+        temp_example = Example(run_generate_canvasses=False, number_of_io_pairs=self.number_of_io_pairs)
+        temp_example.generate_canvasses()
+        for i in range(self.number_of_io_pairs):
+            temp_example.input_canvases[i] = self.input_canvases_augmented[index][i]
+            temp_example.output_canvases[i] = self.output_canvases_augmented[index][i]
+        temp_example.test_input_canvas = self.test_input_canvas_augmented[index]
+        temp_example.test_output_canvas = self.test_output_canvas_augmented[index]
+
+        temp_example.show()

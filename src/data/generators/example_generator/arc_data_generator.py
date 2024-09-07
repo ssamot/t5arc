@@ -5,6 +5,7 @@ from data import load_data as ld
 from data.generators.object_recognition.canvas import Canvas
 
 
+# TODO Add the augmented data
 def get_all_arc_data(group: str = 'train') -> np.ndarray:
     """
     Return all Canvasses of the group ARC set.

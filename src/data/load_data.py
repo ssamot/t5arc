@@ -1,10 +1,12 @@
 
-from os.path import join, dirname, relpath
+from os.path import join, dirname, relpath, sep
 import json
 from typing import List
 import platform
 
-path = "./"
+path = "." + sep
+if platform.system() == 'Windows':
+    path = r'E:\Code\Competitions\ARC2024\t5arc'
 raw_data_path = join(path, 'data', 'raw')
 
 train_challenges_path = join(raw_data_path, 'arc-agi_training_challenges.json')

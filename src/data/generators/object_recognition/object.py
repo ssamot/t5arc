@@ -27,6 +27,7 @@ class Transformations(int, Enum):
     flip: int = 5
     randomise_colour: int = 6
     randomise_shape: int = 7
+    swap_colours: int = 8
 
     def get_random_parameters(self, random_obj_or_not: str = 'Random'):
         args = {}
@@ -59,24 +60,28 @@ class Transformations(int, Enum):
             else:
                 args['ratio'] = int(np.random.gamma(shape=3, scale=5) + 2)  # Mainly between 0.1 and 0.3
                 args['ratio'] = 50 if args['ratio'] > 50 else args['ratio']
+        if self.name == 'swap_colours':
+            args['colour_swap_hash'] = {2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 2}
         return args
 
     @staticmethod
     def get_specific_parameters(transformation_index, values):
         args = {}
-        if transformation_index == 0:
+        if transformation_index == 1:
             args['factor'] = values
-        elif transformation_index == 1:
-            args['times'] = values
         elif transformation_index == 2:
-            args['_shear'] = values
+            args['times'] = values
         elif transformation_index == 3:
+            args['_shear'] = values
+        elif transformation_index == 4:
             args['axis'] = values[0]
             args['on_axis'] = values[1]
-        elif transformation_index == 5:
-            args['ratio'] = values
         elif transformation_index == 6:
             args['ratio'] = values
+        elif transformation_index == 7:
+            args['ratio'] = values
+        elif transformation_index == 7:
+            args['colour_swap_hash'] = values
 
         return args
 
@@ -102,8 +107,6 @@ class Object:
         self.rotation_axis = deepcopy(self._canvas_pos)
 
         self.dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
-
-        #self.number_of_coloured_pixels: int = int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
 
         self.symmetries: List = []
 
@@ -673,9 +676,42 @@ class Object:
         self.colour = int(np.median(colours))
 
     def negative_colour(self):
+        """
+        Swaps between the coloured and the black pixels but uses the self.colour for the new colour (so any colour
+        changes get lost).
+        :return:
+        """
         temp = copy(self.actual_pixels)
         self.actual_pixels = np.ones(self.actual_pixels.shape)
         self.actual_pixels[np.where(temp == 1)] = self.colour
+
+    def replace_colour(self, initial_colour: int, final_colour: int):
+        """
+        Replace one colour with another
+        :param initial_colour:
+        :param final_colour:
+        :return:
+        """
+        self.actual_pixels[np.where(self.actual_pixels == initial_colour)] = final_colour
+        if self.colour == initial_colour:
+            self.colour = final_colour
+        self.transformations.append([Transformations.swap_colours, {'colour_swap_hash': {initial_colour: final_colour}}])
+
+    def replace_all_colours(self, colours_hash: dict[int, int]):
+        """
+        Swaps all the colours of the Object according to the colours_hash dict
+        :param colours_hash: The dict that defines what colour will become what (old colour = key, new colour = value)
+        :return:
+        """
+        colours = self.get_used_colours()
+        temp_pixels = copy(self.actual_pixels)
+        for c in colours:
+            if c in colours_hash:
+                temp_pixels[np.where(self.actual_pixels == c)] = colours_hash[c]
+                if self.colour == c:
+                    self.colour = colours_hash[c]
+        self.actual_pixels = copy(temp_pixels)
+        self.transformations.append([Transformations.swap_colours, {'colour_swap_hash': colours_hash}])
 
     def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: int = 10) -> None | np.ndarray:
         """

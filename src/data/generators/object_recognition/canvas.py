@@ -55,6 +55,8 @@ class Canvas:
         new_canvas = Canvas(size=self.size, _id=None)
         for o in self.objects:
             new_canvas.add_new_object(copy(o))
+        new_canvas.full_canvas = copy(self.full_canvas)
+        new_canvas.actual_pixels = copy(self.actual_pixels)
         return new_canvas
 
     def sort_objects_by_size(self, used_dim: str = 'area') -> List[Primitive]:
@@ -270,6 +272,21 @@ class Canvas:
             result['objects'].append(o_json)
 
         return result
+
+    def get_used_colours(self):
+        colours = set(np.unique(self.actual_pixels))
+        colours -= {0, 1}
+        return list(colours)
+
+    def swap_colours(self, colour_swap_map: dict[int, int]):
+        temp_pixels = copy(self.full_canvas)
+        for colour in colour_swap_map:
+            temp_pixels[np.where(self.full_canvas == colour)] = colour_swap_map[colour]
+        self.full_canvas = copy(temp_pixels)
+        self.actual_pixels = self.full_canvas[:self.actual_pixels.shape[0], :self.actual_pixels.shape[1]]
+
+        for obj in self.objects:
+            obj.replace_all_colours(colours_hash=colour_swap_map)
 
     def show(self, full_canvas=True, fig_to_add: None | plt.Figure = None, nrows: int = 0, ncoloumns: int = 0,
              index: int = 1, save_as: str | None = None, thin_lines: bool = False):

@@ -140,11 +140,6 @@ class Example:
 
         return None
 
-    def permute_colours(self, max_num_of_permutations: int = 1000):
-        pass
-
-
-
     def create_object(self, obj_probs: np.ndarray | None = None, max_size_of_obj: Dimension2D = Dimension2D(15, 15),
                       overlap_prob: float = 0.8, far_away_prob: float = 0.1, debug: bool = False) -> Primitive:
         """
@@ -386,6 +381,16 @@ class Example:
                                     'output': np.flipud(output_canvas.full_canvas).tolist()})
 
         return result
+
+    def get_all_colours(self) -> List[int]:
+        pass
+        colours = set()
+        for i, o in zip(self.input_canvases, self.output_canvases):
+            colours.update(set(i.get_used_colours()))
+            colours.update(set(o.get_used_colours()))
+        colours.update(set(self.test_input_canvas.get_used_colours()))
+
+        return list(colours)
 
     def json_output_of_all_objects(self, lean: bool = True, only_canvasses: List[int] | None = None) -> Tuple[List, np.ndarray]:
         obj_pix_ids = []
