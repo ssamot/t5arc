@@ -206,7 +206,7 @@ class CustomSplitRegularizer(keras.layers.Layer):
 
         x_left = clf.predict(x_right)
 
-        #self.add_loss(error * 0.1)
+        self.add_loss(error * 0.1)
 
         return x_left
 

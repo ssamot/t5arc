@@ -16,19 +16,30 @@ grammar = CFG.fromstring(
 )
 #print(grammar.productions())
 
-depth = 7
+depth = 6
 
 
-# from black import format_str, FileMode
+from black import format_str, FileMode
 # # Generate all possible sentences
 def heuristic(s):
-    return (("get_distance_origin_to_origin_between_objects") not in s )
+    # n = len(s)
+    # x = 10
+    #
+    # for i in range(n):
+    #     for j in range(i + x + 1, n - x + 1):
+    #         substring = s[i:j]
+    #         if len(substring) > x and s.count(substring) >= 3:
+    #             #print(substring)
+    #             return False
+
+    return True
 
 print(len( list(generate(grammar,depth = depth, heuristic=heuristic))))
 
 for sentence in generate(grammar,depth = depth, heuristic=heuristic):
     s = ' '.join(sentence)
+    #print(s)
 
-    #out = format_str(s, mode=FileMode())
+    out = format_str(s, mode=FileMode())
 
     #print(out)

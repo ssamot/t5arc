@@ -113,17 +113,11 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         input = keras.layers.Input([32,32,1])
         input_dec = keras.layers.Input([n_neurons,])
 
-        ttt = keras.layers.Dense(514)
+        ttt = keras.layers.Dense(n_neurons)
 
 
-
-        #
-        # _, _, encoder, _, ttt = build_model((32, 32),
-        #                                                          int(11),
-        #                                                          n_neurons)
-        ev = keras.layers.Dense(n_neurons, activation = "linear")
        # bn = keras.layers.BatchNormalization()
-        x = (ev(ttt(encoder(input))))
+        x = (ttt(encoder(input)))
         #x = keras.layers.Dense(n_neurons, activation = "relu")(x)
         autoencoder = keras.Model(input, decoder(x))
         #optimizer = keras.optimizers.SGD(0.01)
