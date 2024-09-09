@@ -9,11 +9,13 @@ from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from data.generators.object_recognition.canvas import Canvas
 from data.generators.example_generator import utils
 
+from_json = ld.from_json
+
 
 class ARCExample(Example):
 
     def __init__(self, arc_name: str | None = None, arc_group_and_index: List | None = None,
-                 arc_data: List | Dict |None = None):
+                 arc_data: List | Dict | None = None):
         """
         Generates an Example using specific data from an ARC task
         :param arc_name: The name of the task to be loaded
@@ -26,7 +28,7 @@ class ARCExample(Example):
         if arc_group_and_index is not None:
             group = arc_group_and_index[0]
             index = arc_group_and_index[1]
-            challenges_names, challenges_tasks, solutions_tasks = ld.from_json(group)
+            challenges_names, challenges_tasks, solutions_tasks = from_json(group)
             self.name = challenges_names[index]
             self.solution_data = solutions_tasks[index]
             self.task_data = challenges_tasks[index]
@@ -75,9 +77,10 @@ class ARCExample(Example):
         self.test_output_canvas_augmented = []
         self.colour_mappings_for_augmentation = []
 
-    def generate_canvasses(self, empty: bool = True, augment_with: List[str] | None = None):
+    def generate_canvasses(self, empty: bool = True, augment_with: List[str] | None = None, max_samples: int = 10000):
         """
         Generate the ARC task Canvasses using the self.task_name, self.task_data and self.solution_data.
+        :param max_samples:
         :param empty: If empty is True then make the Canvasses the correct size but keep them empty (canvas.actual_pixels = 1).
         If False then copy onto the Canvasses the loaded data (this generates the correct looking Canvasses but they
         carry no Objects).
@@ -110,9 +113,9 @@ class ARCExample(Example):
                                              _id=2 * self.number_of_io_pairs + 1)
 
         if augment_with is not None and not empty:
-            self.generate_augmented_canvasses(augment_with)
+            self.generate_augmented_canvasses(augment_with, max_samples)
 
-    def generate_augmented_canvasses(self, augment_with: List[str], max_samples: int = 1000):
+    def generate_augmented_canvasses(self, augment_with: List[str], max_samples: int = 10000):
 
         if 'colour' in augment_with:
             used_colours = self.get_all_colours()
