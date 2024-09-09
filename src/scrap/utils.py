@@ -1,7 +1,8 @@
 
 import keras
 from keras import layers
-
+from regulariser import CustomSplitRegularizer
+from lm import b_acc, cce
 
 activation = "relu"
 
@@ -13,33 +14,37 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     input_img = keras.Input(shape=input_shape)
 
 
-    x = keras.layers.Reshape(input_shape, input_shape=total_features)(input_img)
-    x = keras.layers.Embedding(input_dim=11, output_dim=8, input_length=total_features)(x)
+    x = keras.layers.Reshape(target_shape=(total_features,))(input_img)
+
+
+    x = keras.layers.Embedding(input_dim=11, output_dim=16, input_length=total_features)(x)
     x = keras.layers.Flatten()(x)
 
     #x = keras.layers.Flatten()(input_img)
 
     n_neurons = 256
-    x = keras.layers.Dense(n_neurons, activation=activation,
-                                   kernel_constraint="max_norm")(x)
+    x = keras.layers.Dense(n_neurons, activation=activation,)(x)
     x = keras.layers.LayerNormalization()(x)
-    x = keras.layers.Dropout(0.1)(x)
+
     xs = [x]
-    for i in range(3):
+    for i in range(7):
         # skip connections
         x_new = keras.layers.Dense(n_neurons, activation=activation,
-                                   kernel_constraint="max_norm")(x)
+                                   )(x)
         x_new = keras.layers.LayerNormalization()(x_new)
-        x_new = keras.layers.Dropout(0.1)(x_new)
+
         xs.append(x_new)
         x = keras.layers.add(xs)
 
     #encoded = layers.Reshape([4,4,8])(x)
-
-    encoded = keras.layers.Dense(encoder_units, activation=activation,
-                           kernel_constraint="max_norm")(x)
+    #
+    encoded = keras.layers.Dense(encoder_units, activation="tanh",
+                          )(x)
     encoded = keras.layers.LayerNormalization()(encoded)
-    encoded = keras.layers.Dropout(0.1)(encoded)
+
+
+
+    encoded = keras.layers.Dropout(0.05)(encoded)
 
 
 
@@ -48,21 +53,30 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     # decoded = keras.layers.LayerNormalization()(
     #     layers.Dense(n_neurons,activation="relu")(decoded_inputs))
 
-    ttt_input = keras.Input(shape=(encoder_units,))
-
-    ttt = (layers.Dense(encoder_units,name = "ttt_layer",
-                               use_bias=False,
-                               kernel_constraint=keras.constraints.UnitNorm())
-           (ttt_input))
 
 
 
 
+    #ttt = BinaryDense(encoder_units)(ttt_input)
+    #ttt = AddMultiplyLayer()(ttt_input)
 
-    ttt_model = keras.models.Model(ttt_input, ttt, name = "ttt")
 
 
-    decoded = layers.Dense(total_features*num_decoder_tokens)(decoded_inputs)
+    x = keras.layers.Dense(n_neurons, activation=activation, )(decoded_inputs)
+    x = keras.layers.LayerNormalization()(x)
+
+    xs = [x]
+    for i in range(7):
+        # skip connections
+        x_new = keras.layers.Dense(n_neurons, activation=activation,
+                                   )(x)
+        x_new = keras.layers.LayerNormalization()(x_new)
+
+        xs.append(x_new)
+        x = keras.layers.add(xs)
+
+
+    decoded = layers.Dense(total_features*num_decoder_tokens)(x)
     decoded = layers.Reshape([input_shape[0],input_shape[1],num_decoder_tokens])(decoded)
     decoded = layers.Activation("softmax")(decoded)
 
@@ -75,19 +89,75 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
     #decoder.summary()
     #exit()
 
+    input_left = keras.layers.Input(shape=input_shape)
+    input_right = keras.layers.Input(shape=input_shape)
+
+    encoded_left = encoder(input_left)
+    encoded_right = encoder(input_right)
+
+    #merged = keras.layers.concatenate([encoded_left, encoded_right])
+    unmerged = CustomSplitRegularizer("lr",)([encoded_left,
+                                                  encoded_right])
 
 
-    autoencoder = keras.Model(input_img, decoder(ttt_model(encoded)),
+
+
+    autoencoder = keras.Model(input_img, decoder(encoded),
                               name = "autoencoder")
+
+    twin_autoencoder = keras.Model([input_left, input_right],
+                                    decoder(unmerged))
     #print(autoencoder.summary())
-    #optimizer = keras.optimizers.SGD(momentum=0.3, weight_decay=0.01, nesterov=True, learning_rate=0.1)
+    # optimizer = keras.optimizers.SGD(momentum=0.8,
+    #                                   weight_decay=0.001,
+    #                                   nesterov=True,
+    #                                   learning_rate=0.01,
+    #                                  gradient_accumulation_steps=10)
+    optimizer = keras.optimizers.AdamW(learning_rate=0.001,
+                                      gradient_accumulation_steps=30)
+
+
+    twin_autoencoder.compile(optimizer=optimizer,
+
+                        loss='categorical_crossentropy',#jit_compile=False,
+                        metrics=["acc", b_acc, cce])
+
+    return autoencoder, twin_autoencoder, encoder, decoder
+
+
+
+def build_NMF(n_image_embeddings, n_programme_embeddings, n_image_examples, n_programmes,
+              input_shape):
+    total_features = input_shape[0] * input_shape[1] * input_shape[2]
+
+    input_image = keras.Input((1, 1),name="input_images")
+    input_programme = keras.Input((1,1), name = "input_programmes")
+
+    image_emb = layers.Flatten()(layers.Embedding(n_image_examples, n_image_embeddings,
+                                                  name = "embeddings_images")(input_image))
+    programme_emb = layers.Flatten()(layers.Embedding(n_programmes, n_programme_embeddings,
+                                                      name = "embeddings_programmes")(input_programme))
+
+
+    #x = keras.layers.dot([image_emb, programme_emb])
+
+    x = keras.layers.concatenate([image_emb, programme_emb])
+
+    decoded = layers.Dense(total_features, name = "dense")(x)
+    decoded = layers.Reshape(input_shape)(decoded)
+    decoded = layers.Activation("softmax")(decoded)
+
+    decoder = keras.Model([input_image, input_programme], decoded, name = "model")
+
     optimizer = keras.optimizers.AdamW(learning_rate=0.001)
-    autoencoder.compile(optimizer=optimizer,
+    #optimizer = keras.optimizers.SGD(learning_rate=0.01, momentum=0.8, nesterov=True)
 
-                        loss='categorical_crossentropy',
-                        metrics=["acc", b_acc])
+    decoder.compile(optimizer=optimizer,
 
-    return autoencoder, encoder, decoder, ttt_model
+                    loss='categorical_crossentropy',  # jit_compile=False,
+                    metrics=["acc", b_acc, cce])
+
+    return decoder
 
 
 class CustomModelCheckpoint(keras.callbacks.Callback):
@@ -107,60 +177,46 @@ class CustomModelCheckpoint(keras.callbacks.Callback):
 
 
 
-class AddMultiplyLayer(keras.layers.Layer):
-    def __init__(self, **kwargs):
-        super(AddMultiplyLayer, self).__init__(**kwargs)
+
+
+@keras.saving.register_keras_serializable(package="models")
+class BinaryDense(keras.layers.Layer):
+    def __init__(self, units, kernel_initializer='glorot_uniform', bias_initializer='zeros', **kwargs):
+        super(BinaryDense, self).__init__(**kwargs)
+        self.units = units
+        self.kernel_initializer = keras.initializers.get(kernel_initializer)
+        self.bias_initializer = keras.initializers.get(bias_initializer)
 
     def build(self, input_shape):
-        # Create trainable weight variables for addition and multiplication
-        self.addi_weight = self.add_weight(
-            shape=(input_shape[-1],),  # One weight per input feature
-            initializer="zeros",
+        self.input_dim = input_shape[-1]
+        self.kernel = self.add_weight(
+            shape=(self.input_dim, self.units),
+            initializer=self.kernel_initializer,
             trainable=True,
-            name="add_weight"
+            name='kernel'
         )
-        self.multiply_weight = self.add_weight(
-            shape=(input_shape[-1],),
-            initializer="ones",
-            trainable=True,
-            name="multiply_weight"
-        )
+
+        super(BinaryDense, self).build(input_shape)
 
     def call(self, inputs):
-        # Apply element-wise addition followed by element-wise multiplication
-        return (inputs + self.addi_weight) * self.multiply_weight
+        # Binarize the kernel weights
+        #kernel_binarized = keras.ops.sign(self.kernel)
+
+        # Perform the matrix multiplication
+        output = keras.ops.sign(keras.ops.matmul(inputs, self.kernel))
 
 
 
+        return output
 
-def acc_seq(y_true, y_pred):
-    return keras.ops.mean(keras.ops.min(keras.ops.equal(keras.ops.argmax(y_true, axis=-1),
-                  keras.ops.argmax(y_pred, axis=-1)), axis=-1))
-
-
-def b_acc(y_true, y_pred):
-    # Get the predicted class by taking the argmax along the last dimension (the class dimension)
-    pred_classes = keras.ops.argmax(y_pred, axis=-1)
-
-    # Get the true class (already one-hot encoded, so take argmax)
-    true_classes = keras.ops.argmax(y_true, axis=-1)
-
-    # Compare predicted classes to true classes for each sample
-    correct_predictions = keras.ops.equal(pred_classes, true_classes)
-
-    # Sum the incorrect predictions for each sample
-    incorrect_predictions = keras.ops.sum(keras.ops.cast(~correct_predictions,
-                                                      "float32"),
-                                                 axis=[1, 2])
-
-    # A sample is correct only if the sum of incorrect predictions is 0
-    all_correct = keras.ops.cast(keras.ops.equal(incorrect_predictions, 0),
-                                 "float32")
-
-    # Calculate the percentage of samples that are fully correct
-    accuracy = keras.ops.mean(keras.ops.cast(all_correct, "float32"))
-
-    return accuracy
+    def get_config(self):
+        config = super(BinaryDense, self).get_config()
+        config.update({
+            'units': self.units,
+            'kernel_initializer': keras.initializers.serialize(self.kernel_initializer),
+            'bias_initializer': keras.initializers.serialize(self.bias_initializer),
+        })
+        return config
 
 # class OrthogonalConstraint(keras.constraints.Constraint):
 #     def __call__(self, w):
@@ -171,3 +227,68 @@ def b_acc(y_true, y_pred):
 #         # Reconstruct the nearest orthogonal matrix
 #         return keras.ops.matmul(u, keras.ops.transpose(v))
 
+def average_maps(*maps):
+    # Initialize an empty dictionary to store the averages
+    averaged_map = {}
+
+    # Iterate over the keys of the first map (assuming all maps have the same keys)
+    for key in maps[0]:
+        # Sum the values for the current key from all maps
+        total = sum(map[key] for map in maps)
+        # Calculate the average
+        average = total / len(maps)
+        # Store the average in the new map
+        averaged_map[key] = average
+
+    return averaged_map
+
+
+import numpy as np
+
+
+class NNWeightHelper:
+    def __init__(self, model):
+        self.model = model
+        self.init_weights = self.model.get_weights()
+
+
+    def _set_trainable_weight(self, model, weights):
+        """Sets the weights of the model.
+
+        # Arguments
+            model: a keras neural network model
+            weights: A list of Numpy arrays with shapes and types matching
+                the output of `model.trainable_weights`.
+        """
+
+        # for sw, w in zip(layer.trainable_weights, weights):
+        #      tuples.append((sw, w))
+
+
+        model.set_weights(tuples)
+
+
+    def set_weights(self, weights):
+        tuples = []
+
+        for w in self.init_weights:
+            num_param = w.size
+
+            layer_weights = weights[:num_param]
+            new_w = np.array(layer_weights).reshape(w.shape)
+            #print(new_w.shape)
+
+            tuples.append(new_w)
+            weights = weights[num_param:]
+
+        self.model.set_weights(tuples)
+
+
+
+
+    def get_weights(self):
+        W_list = (self.model.trainable_weights)
+        W_flattened_list = [np.array(k).flatten() for k in W_list]
+        W = np.concatenate(W_flattened_list)
+
+        return W

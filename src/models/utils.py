@@ -6,24 +6,16 @@ from lm import b_acc, cce
 
 activation = "relu"
 
-def build_model(input_shape, num_decoder_tokens, encoder_units):
-    total_features = input_shape[0] * input_shape[1]
+def build_NMF(n_image_embeddings, n_programme_embeddings, n_programmes,
+              input_shape):
+    total_features = input_shape[0] * input_shape[1] * input_shape[2]
 
+    input_img = keras.Input(shape=input_shape, name="input_images")
 
-
-    input_img = keras.Input(shape=input_shape)
-
-
-    x = keras.layers.Reshape(target_shape=(total_features,))(input_img)
-
-
-    x = keras.layers.Embedding(input_dim=11, output_dim=16, input_length=total_features)(x)
-    x = keras.layers.Flatten()(x)
-
-    #x = keras.layers.Flatten()(input_img)
+    x = keras.layers.Flatten()(input_img)
 
     n_neurons = 256
-    x = keras.layers.Dense(n_neurons, activation=activation,)(x)
+    x = keras.layers.Dense(n_neurons, activation=activation, )(x)
     x = keras.layers.LayerNormalization()(x)
 
     xs = [x]
@@ -36,93 +28,64 @@ def build_model(input_shape, num_decoder_tokens, encoder_units):
         xs.append(x_new)
         x = keras.layers.add(xs)
 
-    #encoded = layers.Reshape([4,4,8])(x)
-    #
-    encoded = keras.layers.Dense(encoder_units, activation="tanh",
-                          )(x)
+    encoded = keras.layers.Dense(n_image_embeddings, activation="tanh",
+                                 )(x)
     encoded = keras.layers.LayerNormalization()(encoded)
 
 
+    input_programme = keras.Input((1,1), name = "input_programmes")
+    input_decoder = keras.Input((n_image_embeddings,))
 
-    encoded = keras.layers.Dropout(0.05)(encoded)
+    encoder = keras.Model(input_img, encoded, name = "encoded")
+    #####
 
+    ttt_emb = layers.Flatten()(layers.Embedding(n_programmes,
+                                                      n_programme_embeddings,
+                                                      name = "embeddings_programmes")(input_programme))
 
-
-    ## decoder
-    decoded_inputs = keras.Input(shape=(encoder_units,))
-    # decoded = keras.layers.LayerNormalization()(
-    #     layers.Dense(n_neurons,activation="relu")(decoded_inputs))
-
-
-
-
-
-    #ttt = BinaryDense(encoder_units)(ttt_input)
-    #ttt = AddMultiplyLayer()(ttt_input)
+    programme_emb_input = keras.Input((n_programme_embeddings,))
 
 
 
-    x = keras.layers.Dense(n_neurons, activation=activation, )(decoded_inputs)
-    x = keras.layers.LayerNormalization()(x)
+    ttt = keras.Model(input_programme, ttt_emb)
 
-    xs = [x]
-    for i in range(7):
-        # skip connections
-        x_new = keras.layers.Dense(n_neurons, activation=activation,
-                                   )(x)
-        x_new = keras.layers.LayerNormalization()(x_new)
+    x = keras.layers.concatenate([input_decoder, programme_emb_input])
 
-        xs.append(x_new)
-        x = keras.layers.add(xs)
+    # x = keras.layers.Dense(n_neurons, activation=activation, )(x)
+    #
+    # xs = [x]
+    # for i in range(7):
+    #     # skip connections
+    #     x_new = keras.layers.Dense(n_neurons, activation=activation,
+    #                                )(x)
+    #     x_new = keras.layers.LayerNormalization()(x_new)
+    #
+    #     xs.append(x_new)
+    #     x = keras.layers.add(xs)
 
-
-    decoded = layers.Dense(total_features*num_decoder_tokens)(x)
-    decoded = layers.Reshape([input_shape[0],input_shape[1],num_decoder_tokens])(decoded)
+    decoded = layers.Dense(total_features, name = "dense_decoded")(x)
+    decoded = layers.Reshape(input_shape)(decoded)
     decoded = layers.Activation("softmax")(decoded)
-
-
-
-
-    encoder = keras.Model(input_img, encoded, name = "encoder")
-    decoder = keras.Model(decoded_inputs,  decoded, name = "decoder")
-
-    #decoder.summary()
-    #exit()
-
-    input_left = keras.layers.Input(shape=input_shape)
-    input_right = keras.layers.Input(shape=input_shape)
-
-    encoded_left = encoder(input_left)
-    encoded_right = encoder(input_right)
-
-    #merged = keras.layers.concatenate([encoded_left, encoded_right])
-    unmerged = CustomSplitRegularizer("lr",)([encoded_left,
-                                                  encoded_right])
-
-
-
-
-    autoencoder = keras.Model(input_img, decoder(encoded),
+    decoder = keras.Model([input_decoder, programme_emb_input],
+                          decoded,
+                          name = "decoder")
+    ######
+    autoenc_input_img = keras.Input(shape=input_shape, name="input_images_auto")
+    autoenc_input_programme = keras.Input((1, 1))
+    autoencoder = keras.Model([autoenc_input_img, autoenc_input_programme],
+                              decoder([encoder(autoenc_input_img),
+                                       ttt(autoenc_input_programme)]) ,
                               name = "autoencoder")
 
-    twin_autoencoder = keras.Model([input_left, input_right],
-                                    decoder(unmerged))
-    #print(autoencoder.summary())
-    # optimizer = keras.optimizers.SGD(momentum=0.8,
-    #                                   weight_decay=0.001,
-    #                                   nesterov=True,
-    #                                   learning_rate=0.01,
-    #                                  gradient_accumulation_steps=10)
-    optimizer = keras.optimizers.AdamW(learning_rate=0.001,
-                                      gradient_accumulation_steps=30)
+    optimizer = keras.optimizers.AdamW(learning_rate=0.001)
+    #optimizer = keras.optimizers.SGD(learning_rate=0.01, momentum=0.8, nesterov=True)
 
+    autoencoder.compile(optimizer=optimizer,
 
-    twin_autoencoder.compile(optimizer=optimizer,
+                    loss='categorical_crossentropy',
+                    metrics=["acc", b_acc, cce])
 
-                        loss='categorical_crossentropy',#jit_compile=False,
-                        metrics=["acc", b_acc, cce])
-
-    return autoencoder, twin_autoencoder, encoder, decoder
+    return encoder, decoder, autoencoder, ttt
 
 
 class CustomModelCheckpoint(keras.callbacks.Callback):
