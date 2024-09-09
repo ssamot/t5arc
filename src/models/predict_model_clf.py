@@ -154,40 +154,48 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         train_y_one_hot_a = np.eye(11)[np.array(train_y_a, dtype=np.int32)]
         train_y_one_hot = np.eye(11)[np.array(train_y, dtype=np.int32)]
         test_y_one_hot = np.eye(11)[np.array(test_y, dtype=np.int32)]
+        test_x_one_hot = np.eye(11)[np.array(test_x, dtype=np.int32)]
 
 
         input = keras.layers.Input([32,32,1])
         input_dec = keras.layers.Input([n_neurons,])
 
-        ttt_encoder = keras.models.Model(input,
-                                         ((encoder(input))))
-        ttt_decoder = keras.models.Model(input_dec, decoder((input_dec)))
 
-        train_x_a_h = ttt_encoder.predict(train_x_a)
-        train_y_a_h = ttt_encoder.predict(train_y_a)
-        train_x_h = ttt_encoder.predict(train_x)
-        train_y_h = ttt_encoder.predict(train_y)
-        test_x_h = ttt_encoder.predict(test_x)
-        test_y_h = ttt_encoder.predict(test_y)
+        ttt_input = keras.Input((1,1))
 
-        #clf = MultiTaskElasticNetCV(n_jobs=-1)
-        #clf = RandomForestRegressor(1000, n_jobs=-1)
-        from regulariser import SVDLinearRegression
-        clf = SVDLinearRegression(0.001)
-        score = clf.fit(train_x_a_h, train_y_a_h)
-        print(score[-1])
+        ttt = keras.layers.Flatten()(keras.layers.Embedding(2,
+                                          32,
+                                          name="embeddings_programmes",
+                                          embeddings_regularizer="l2",
+                                          embeddings_constraint=keras.constraints.NonNeg())(ttt_input))
 
-        print(clf.score(train_x_a_h, train_y_a_h))
-        print(clf.score(test_x_h, test_y_h))
+        decoded =  decoder([input_dec, ttt])
+        ttt_decoder = keras.models.Model([input_dec, ttt_input],decoded)
+
+        ttt_decoder.compile(optimizer="AdamW",
+
+                            loss='categorical_crossentropy',
+                            metrics=["acc", b_acc, ])
+
+        train_x_a_h = encoder.predict(train_y_one_hot_a)
+        train_x_h = encoder.predict(train_y_one_hot)
+        test_x_h = encoder.predict(test_x_one_hot)
+        test_y_h = encoder.predict(test_y_one_hot)
 
 
-        print(r2_score(clf.predict(train_x_a_h),clf.predict(train_y_a_h)))
-        print(r2_score(clf.predict(test_x_h),clf.predict(test_y_h)))
 
-        train_hat = clf.predict(train_x_h)
-        test_hat = clf.predict(test_x_h)
-        train_output = ttt_decoder.predict(train_y_h).argmax(axis = -1)
-        test_output = ttt_decoder.predict(test_hat).argmax(axis = -1)
+
+        programme_train_a = np.ones(shape=(len(train_x_a_h), 1,1))
+        programme_test = np.ones(shape=(len(test_y_h), 1, 1))
+
+        print(train_x_a_h.shape,programme_train_a.shape )
+
+        ttt_decoder.fit([train_x_a_h, programme_train_a], train_y_one_hot_a,
+                        validation_data=([test_x_h, programme_test], test_y_one_hot),
+                        verbose=True, epochs=1000)
+
+        train_output = ttt_decoder.predict([train_x_a_h,programme_train_a]).argmax(axis = -1)
+        test_output = ttt_decoder.predict([test_x_h, programme_test]).argmax(axis = -1)
 
         print(train_output.shape, test_output.shape)
         #exit()

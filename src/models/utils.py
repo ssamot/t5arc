@@ -1,7 +1,6 @@
 
 import keras
 from keras import layers
-from regulariser import CustomSplitRegularizer
 from lm import b_acc, cce
 
 activation = "relu"
@@ -41,27 +40,25 @@ def build_NMF(n_image_embeddings, n_programme_embeddings, n_programmes,
 
     ttt_emb = layers.Flatten()(layers.Embedding(n_programmes,
                                                       n_programme_embeddings,
-                                                      name = "embeddings_programmes")(input_programme))
+                                                      name = "embeddings_programmes",
+                                                embeddings_regularizer="l2",
+                                                embeddings_constraint=keras.constraints.NonNeg())(input_programme))
 
     programme_emb_input = keras.Input((n_programme_embeddings,))
 
-
-
-    ttt = keras.Model(input_programme, ttt_emb)
-
+    ttt = keras.Model(input_programme, ttt_emb, name = "ttt")
     x = keras.layers.concatenate([input_decoder, programme_emb_input])
+    x = keras.layers.Dense(n_neurons, activation=activation, )(x)
 
-    # x = keras.layers.Dense(n_neurons, activation=activation, )(x)
-    #
-    # xs = [x]
-    # for i in range(7):
-    #     # skip connections
-    #     x_new = keras.layers.Dense(n_neurons, activation=activation,
-    #                                )(x)
-    #     x_new = keras.layers.LayerNormalization()(x_new)
-    #
-    #     xs.append(x_new)
-    #     x = keras.layers.add(xs)
+    xs = [x]
+    for i in range(7):
+        # skip connections
+        x_new = keras.layers.Dense(n_neurons, activation=activation,
+                                   )(x)
+        x_new = keras.layers.LayerNormalization()(x_new)
+
+        xs.append(x_new)
+        x = keras.layers.add(xs)
 
     decoded = layers.Dense(total_features, name = "dense_decoded")(x)
     decoded = layers.Reshape(input_shape)(decoded)

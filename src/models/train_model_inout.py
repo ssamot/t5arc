@@ -80,6 +80,62 @@ def main(train_data, eval_data, output_filepath):
                                TqdmCallback()])
 
 
+    # n_epochs = 100000
+    # order = list(range(len(X)))
+    # save_freq = 100
+    # batch_size = 128
+    # with (tqdm(total=n_epochs, desc='Epochs') as outer_pbar):
+    #     total = len(X)/batch_size
+    #     with tqdm(total=total, colour="green") as pbar:
+    #         for epoch in range(n_epochs):
+    #             np.random.shuffle(order)
+    #             pbar.reset(total=total)
+    #             autoencoder.reset_metrics()
+    #             for batch in order:
+    #                 train_x = np.array(train_train_x[batch], dtype=np.int32)
+    #                 train_y = np.array(train_train_y[batch], dtype=np.int32)
+    #
+    #
+    #                 b_len = len(train_x)
+    #
+    #                 shuffled = list(range(len(train_x)))
+    #                 np.random.shuffle(shuffled)
+    #                 shuffled = shuffled[:batch_size]
+    #
+    #                 train_x = train_x[shuffled]
+    #                 train_y = train_y[shuffled]
+    #
+    #
+    #                 losses_0 = twin_autoencoder.train_on_batch([train_y, train_x ],
+    #                                                          np.eye(11)[train_y],
+    #                                                          return_dict=True,
+    #                                                          )
+    #
+    #                 losses_1 = twin_autoencoder.train_on_batch([train_x, train_x],
+    #                                                          np.eye(11)[train_x],
+    #                                                          return_dict=True,
+    #
+    #                                                          )
+    #                 losses = average_maps(losses_0, losses_1)
+    #
+    #                 # r2 = losses["cce"] - losses["loss"]
+    #                 losses = {key: f'{value:.3f}' for key, value in losses.items()}
+    #                 losses["blen"] = f"{b_len:04}"
+    #
+    #                 pbar.set_postfix(losses)
+    #                 pbar.update(1)
+    #
+    #
+    #                 #print(losses)
+    #             if (epoch % save_freq == 0):
+    #                 # print(f"Saving epoch: {epoch}, train_acc: {logs['acc']}, : {logs['batch_acc']}")
+    #                 for name in models:
+    #                     model = models[name]
+    #                     model.save(f"{output_filepath}/{name}.keras", overwrite=True)
+    #             outer_pbar.set_postfix(losses)
+    #             outer_pbar.update(1)
+
+
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level=logging.INFO, format=log_fmt)
