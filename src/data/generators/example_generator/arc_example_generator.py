@@ -8,6 +8,7 @@ from data.generators.example_generator.example import Example
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from data.generators.object_recognition.canvas import Canvas
 from data.generators.example_generator import utils
+from data.generators import constants as const
 
 from_json = ld.from_json
 
@@ -77,10 +78,12 @@ class ARCExample(Example):
         self.test_output_canvas_augmented = []
         self.colour_mappings_for_augmentation = []
 
-    def generate_canvasses(self, empty: bool = True, augment_with: List[str] | None = None, max_samples: int = 10000):
+    def generate_canvasses(self, empty: bool = True, augment_with: List[str] | None = None, max_samples: int = 10000,
+                           with_black: bool = True):
         """
         Generate the ARC task Canvasses using the self.task_name, self.task_data and self.solution_data.
-        :param max_samples:
+        :param with_black: If True augment the data by permuting also the black (0) colour.
+        :param max_samples: The maximum sample to create if augmentation is on.
         :param empty: If empty is True then make the Canvasses the correct size but keep them empty (canvas.actual_pixels = 1).
         If False then copy onto the Canvasses the loaded data (this generates the correct looking Canvasses but they
         carry no Objects).
@@ -113,15 +116,17 @@ class ARCExample(Example):
                                              _id=2 * self.number_of_io_pairs + 1)
 
         if augment_with is not None and not empty:
-            self.generate_augmented_canvasses(augment_with, max_samples)
+            self.generate_augmented_canvasses(augment_with, max_samples, with_black)
 
-    def generate_augmented_canvasses(self, augment_with: List[str], max_samples: int = 10000):
+    def generate_augmented_canvasses(self, augment_with: List[str], max_samples: int = 10000, with_black: bool = True):
 
         if 'colour' in augment_with:
             used_colours = self.get_all_colours()
-            self.colour_mappings_for_augmentation = utils.colours_permutations(used_colours, max_samples)
+            self.colour_mappings_for_augmentation = utils.colours_permutations(used_colours, max_samples, with_black)
             for map in self.colour_mappings_for_augmentation:
                 self.augment_with_colour(map)
+        if 'rotation' in augment_with:
+            self.augment_with_rotation()
 
     def augment_with_colour(self, colour_map: dict[int, int]):
         temp_inputs = []
@@ -141,6 +146,35 @@ class ARCExample(Example):
         a = copy(self.test_output_canvas)
         a.swap_colours(colour_map)
         self.test_output_canvas_augmented.append(a)
+
+    def augment_with_rotation(self):
+        j = 0
+        while j < len(self.input_canvases_augmented):
+
+            for k in range(3):
+                p_in = []
+                p_out = []
+                for p in range(self.number_of_io_pairs):
+                    ir = np.rot90(self.input_canvases_augmented[j + k][p].actual_pixels)
+                    ir_c = Canvas(size=Dimension2D(const.MAX_PAD_SIZE, const.MAX_PAD_SIZE), actual_pixels=ir)
+                    p_in.append(ir_c)
+
+                    outr = np.rot90(self.output_canvases_augmented[j + k][p].actual_pixels)
+                    outr_c = Canvas(size=Dimension2D(const.MAX_PAD_SIZE, const.MAX_PAD_SIZE), actual_pixels=outr)
+                    p_out.append(outr_c)
+
+                self.input_canvases_augmented.insert(j + k + 1, p_in)
+                self.output_canvases_augmented.insert(j + k + 1, p_out)
+
+                tir = np.rot90(self.test_input_canvas_augmented[j + k].actual_pixels)
+                tir_c = Canvas(size=Dimension2D(const.MAX_PAD_SIZE, const.MAX_PAD_SIZE), actual_pixels=tir)
+                self.test_input_canvas_augmented.insert(j + k + 1, tir_c)
+
+                tor = np.rot90(self.test_output_canvas_augmented[j + k].actual_pixels)
+                tor_c = Canvas(size=Dimension2D(const.MAX_PAD_SIZE, const.MAX_PAD_SIZE), actual_pixels=tor)
+                self.test_output_canvas_augmented.insert(j + k + 1, tor_c)
+
+            j += 4
 
     def get_object_pixels_from_data(self, canvas_id: int, canvas_pos: Point, size: Dimension2D):
 

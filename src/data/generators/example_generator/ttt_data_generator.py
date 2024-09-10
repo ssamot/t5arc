@@ -10,7 +10,7 @@ from data.generators.example_generator.arc_example_generator import ARCExample
 
 class ArcExampleData(Iterator):
     def __init__(self, group: str = 'train', augment_with: List[str] | None = None,
-                 max_samples: int = 10000, load_step: int = 100):
+                 max_samples: int = 10000, load_step: int = 100, with_black: bool = True):
         """
         The Iterator that generates numpy arrays from the Canvasses of the ARC examples. It returns a dict with the name
         of the example, the augmentation index, the input numpy array of size (number of example pairs + 1 x 32 x 32) and
@@ -23,6 +23,7 @@ class ArcExampleData(Iterator):
         :param augment_with: None for no augmented data or a List of strings. Can be 'colour' and 'rotation'
         :param max_samples: The maximum samples for each augmentation
         :param load_step: The number of examples to parallel load in a single go before their augmentations are returned
+        :param with_black: If True (default) then the colour permutations are done using the value 1 (black) also. Otherwise the black colour doesn't change
         """
         challenges_names, challenges_tasks, solutions_tasks = ld.from_json(group)
         self.names = challenges_names
@@ -42,11 +43,13 @@ class ArcExampleData(Iterator):
         self.buffer_outputs = [None]*len(self.tasks)
 
         self.load_step = load_step
+        self.with_black = with_black
 
     def fill_buffer(self, example_index):
         current_example = ARCExample(arc_data=[self.names[example_index], self.tasks[example_index],
                                                self.solutions[example_index]])
-        current_example.generate_canvasses(empty=False, augment_with=self.augment_with, max_samples=self.max_samples)
+        current_example.generate_canvasses(empty=False, augment_with=self.augment_with, max_samples=self.max_samples,
+                                           with_black=self.with_black)
         if self.augment_with is None:
             inputs = []
             outputs = []
