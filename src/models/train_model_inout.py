@@ -14,7 +14,7 @@ from tqdm import tqdm
 @click.argument('eval_data', type=click.Path())
 @click.argument('output_filepath', type=click.Path())
 def main(train_data, eval_data, output_filepath):
-    encoder_units = 514
+    encoder_units = 1024
     programme_units = 32
 
     print("Loading data...")
@@ -43,8 +43,8 @@ def main(train_data, eval_data, output_filepath):
         train_x = np.eye(11)[train_x]
         train_y = np.eye(11)[train_y]
 
-        tr_x = [[0] for _ in range(len(train_x))]
-        tr_y = [[batch] for _ in range(len(train_x))]
+        tr_x = [[1] for _ in range(len(train_x))]
+        tr_y = [[batch+2] for _ in range(len(train_x))]
         #tr_x = np.array(tr)
 
         X.append(train_x)
@@ -61,11 +61,11 @@ def main(train_data, eval_data, output_filepath):
     programmes = programmes[:, np.newaxis]
 
     encoder, decoder, autoencoder, ttt = build_NMF(encoder_units, programme_units,
-                                              len(train_train_x) + 1,
+                                              len(train_train_x) + 3,
                                               X.shape[1:])
 
     autoencoder.summary()
-    decoder.summary()
+    #decoder.summary()
 
     print(X.shape, y.shape, programmes.shape)
     models = {
@@ -76,7 +76,7 @@ def main(train_data, eval_data, output_filepath):
     }
 
     autoencoder.fit([X, programmes], y, epochs=10000, verbose=0, batch_size=128,
-                    callbacks=[CustomModelCheckpoint(models, "./models", 100),
+                    callbacks=[CustomModelCheckpoint(models, output_filepath, 100),
                                TqdmCallback()])
 
 

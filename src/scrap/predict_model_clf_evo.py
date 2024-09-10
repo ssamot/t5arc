@@ -30,6 +30,7 @@ from visualization.visualse_training_data_sets import visualise_training_data
 from tqdm.keras import TqdmCallback
 from data.augment.colour import generate_consistent_combinations_2d
 from keras import layers
+from cma import CMAEvolutionStrategy
 
 from sklearn.linear_model import MultiTaskLassoCV
 from sklearn.linear_model import MultiTaskElasticNetCV, LinearRegression
@@ -40,46 +41,6 @@ from sklearn.kernel_ridge import KernelRidge
 
 
 
-
-
-
-
-# def build_model(encoder, decoder, n_neurons):
-#     #encoder.summary()
-#     #decoder.summary()
-#     input = keras.layers.Input([32,32,1])
-#     encoded = encoder(input)
-#     decoded = decoder(encoded)
-#     #print(encoded)
-#     #exit()
-#     keras.ops.svd
-#     ttx_input = keras.layers.Input((n_neurons,))
-#     ttt_x = keras.layers.Dense(n_neurons, "relu")(ttx_input)
-#     ttt_output = keras.layers.Dense(n_neurons)(ttt_x)
-#
-#
-#     ttx_model = keras.models.Model(ttx_input, ttt_output, name = "ttx")
-#
-#     ttt_x_decoded = decoder(ttx_model(encoded))
-#
-#     ttt_autoencoder = keras.models.Model(input, ttt_x_decoded)
-#     ttt_autoencoder.summary()
-#
-#     autoencoder = keras.models.Model(input, decoded)
-#
-#     ttt_autoencoder.compile(optimizer="AdamW",
-#
-#                         loss='categorical_crossentropy',
-#                         metrics=["acc", batch_acc])
-#     autoencoder.compile(optimizer="AdamW",
-#
-#                         loss='categorical_crossentropy',
-#                         metrics=["acc", batch_acc])
-#
-#     ttx_model.compile(optimizer="AdamW", loss = "mse")
-#
-#
-#     return ttt_autoencoder, autoencoder, ttx_model
 
 
 @click.command()
@@ -158,21 +119,21 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         test_x_one_hot = np.eye(11)[np.array(test_x, dtype=np.int32)]
 
 
-        input = keras.layers.Input([32,32,1])
+        input = keras.layers.Input([32])
         input_dec = keras.layers.Input([n_neurons,])
 
 
         ttt_input = keras.Input((1,1))
 
-        ttt_emb = layers.Activation("sigmoid")(layers.Flatten()(layers.Embedding(2,
-                                                                                 32,
-                                                                                 name="embeddings_programmes",
-                                                                                 # embeddings_regularizer="l2",
-                                                                                 # embeddings_constraint=keras.constraints.NonNeg()
-                                                                                 )(ttt_input)))
+        # ttt_emb = layers.Activation("sigmoid")(layers.Flatten()(layers.Embedding(2,
+        #                                                                          32,
+        #                                                                          name="embeddings_programmes",
+        #                                                                          # embeddings_regularizer="l2",
+        #                                                                          # embeddings_constraint=keras.constraints.NonNeg()
+        #                                                                          )(ttt_input)))
 
-        decoded =  decoder([input_dec, ttt_emb])
-        ttt_decoder = keras.models.Model([input_dec, ttt_input],decoded)
+        decoded =  decoder([input_dec, input])
+        ttt_decoder = keras.models.Model([input_dec, input],decoded)
 
         ttt_decoder.compile(optimizer="AdamW",
 
@@ -192,9 +153,49 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
         print(train_x_a_h.shape,programme_train_a.shape )
 
-        ttt_decoder.fit([train_x_a_h, programme_train_a], train_y_one_hot_a,
-                        validation_data=([test_x_h, programme_test], test_y_one_hot),
-                        verbose=True, epochs=1000)
+        # ttt_decoder.fit([train_x_a_h, programme_train_a], train_y_one_hot_a,
+        #                 validation_data=([test_x_h, programme_test], test_y_one_hot),
+        #                 verbose=True, epochs=100000)
+
+        initial_mean = np.array([0.5] * 32)
+        initial_sigma = 0.3  # Initial standard deviation
+
+        # Create an instance of the CMAEvolutionStrategy
+        opts = {}
+        #opts['CMA_diagonal'] = True
+        opts['bounds'] =  [0, 1]
+        es = CMAEvolutionStrategy(initial_mean, initial_sigma,inopts = opts)
+
+        # Optimization loop using the ask-tell API
+        while not es.stop():
+            # Generate a new population of candidate solutions
+            solutions = es.ask(500)
+
+            # Evaluate the objective function for each candidate solution
+            fitnesses = []
+            print(len(solutions))
+            for x in solutions:
+                #print(x.shape, train_x_a_h.shape)
+                x_new = x[np.newaxis, :]
+                programmes = np.repeat(x_new, repeats=len(train_x_a_h), axis=0)
+                #print(train_x_a_h.shape,programmes.shape,  train_y_one_hot_a.shape)
+
+                score = ttt_decoder.evaluate([train_x_a_h, programmes], train_y_one_hot_a,
+                                             return_dict=True, verbose=False)["acc"]
+
+                fitnesses.append(-score)
+                #print(score)
+                #exit()
+
+
+
+
+            # Tell the optimizer the fitnesses of the candidate solutions
+            es.tell(solutions, fitnesses)
+
+            # Optional: Print the current best solution and its fitness
+            print(f"Best solution so far: {es.result.xbest}")
+            print(f"Best fitness so far: {es.result.fbest}")
 
         train_output = ttt_decoder.predict([train_x_a_h,programme_train_a]).argmax(axis = -1)
         test_output = ttt_decoder.predict([test_x_h, programme_test]).argmax(axis = -1)
@@ -208,7 +209,6 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
         r["output"] = np.concatenate([train_output, test_output])
         # #print(r["output"].shape)
         visualise_training_data(r, f"./plots/{r['name']}_predicted.pdf", )
-        exit()
         #
         # #exit()
 

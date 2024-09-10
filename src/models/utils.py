@@ -13,7 +13,7 @@ def build_NMF(n_image_embeddings, n_programme_embeddings, n_programmes,
 
     x = keras.layers.Flatten()(input_img)
 
-    n_neurons = 256
+    n_neurons = n_image_embeddings
     x = keras.layers.Dense(n_neurons, activation=activation, )(x)
     x = keras.layers.LayerNormalization()(x)
 
@@ -38,27 +38,31 @@ def build_NMF(n_image_embeddings, n_programme_embeddings, n_programmes,
     encoder = keras.Model(input_img, encoded, name = "encoded")
     #####
 
-    ttt_emb = layers.Flatten()(layers.Embedding(n_programmes,
+    ttt_emb = layers.Activation("sigmoid")(layers.Flatten()(layers.Embedding(n_programmes,
                                                       n_programme_embeddings,
                                                       name = "embeddings_programmes",
-                                                embeddings_regularizer="l2",
-                                                embeddings_constraint=keras.constraints.NonNeg())(input_programme))
+                                                #embeddings_regularizer="l2",
+                                                #embeddings_constraint=keras.constraints.NonNeg()
+                                                )(input_programme)))
+
+
 
     programme_emb_input = keras.Input((n_programme_embeddings,))
 
     ttt = keras.Model(input_programme, ttt_emb, name = "ttt")
     x = keras.layers.concatenate([input_decoder, programme_emb_input])
-    x = keras.layers.Dense(n_neurons, activation=activation, )(x)
 
-    xs = [x]
-    for i in range(7):
-        # skip connections
-        x_new = keras.layers.Dense(n_neurons, activation=activation,
-                                   )(x)
-        x_new = keras.layers.LayerNormalization()(x_new)
 
-        xs.append(x_new)
-        x = keras.layers.add(xs)
+    # x = keras.layers.Dense(n_neurons, activation=activation, )(x)
+    # xs = [x]
+    # for i in range(7):
+    #     # skip connections
+    #     x_new = keras.layers.Dense(n_neurons, activation=activation,
+    #                                )(x)
+    #     x_new = keras.layers.LayerNormalization()(x_new)
+    #
+    #     xs.append(x_new)
+    #     x = keras.layers.add(xs)
 
     decoded = layers.Dense(total_features, name = "dense_decoded")(x)
     decoded = layers.Reshape(input_shape)(decoded)
