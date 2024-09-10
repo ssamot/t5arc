@@ -194,7 +194,7 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
         ttt_decoder.fit([train_x_a_h, programme_train_a], train_y_one_hot_a,
                         validation_data=([test_x_h, programme_test], test_y_one_hot),
-                        verbose=True, epochs=1000)
+                        verbose=False, epochs=10000, callbacks=[TqdmCallback(verbose=0)])
 
         train_output = ttt_decoder.predict([train_x_a_h,programme_train_a]).argmax(axis = -1)
         test_output = ttt_decoder.predict([test_x_h, programme_test]).argmax(axis = -1)
@@ -207,8 +207,8 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
 
         r["output"] = np.concatenate([train_output, test_output])
         # #print(r["output"].shape)
-        visualise_training_data(r, f"./plots/{r['name']}_predicted.pdf", )
-        exit()
+        #visualise_training_data(r, f"./plots/{r['name']}_predicted.pdf", )
+        #exit()
         #
         # #exit()
 

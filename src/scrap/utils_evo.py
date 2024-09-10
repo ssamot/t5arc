@@ -49,11 +49,8 @@ def build_NMF(n_image_embeddings, n_programme_embeddings, n_programmes,
 
     programme_emb_input = keras.Input((n_programme_embeddings,))
 
-    emb_mul = layers.Dense(total_features)(programme_emb_input)
-    decoded_large = layers.Dense(total_features)(input_decoder)
-
     ttt = keras.Model(input_programme, ttt_emb, name = "ttt")
-    x = keras.layers.multiply([decoded_large, emb_mul])
+    x = keras.layers.concatenate([input_decoder, programme_emb_input])
 
 
     # x = keras.layers.Dense(n_neurons, activation=activation, )(x)
@@ -67,8 +64,8 @@ def build_NMF(n_image_embeddings, n_programme_embeddings, n_programmes,
     #     xs.append(x_new)
     #     x = keras.layers.add(xs)
 
-    #decoded = layers.Dense(total_features, name = "dense_decoded")(x)
-    decoded = layers.Reshape(input_shape)(x)
+    decoded = layers.Dense(total_features, name = "dense_decoded")(x)
+    decoded = layers.Reshape(input_shape)(decoded)
     decoded = layers.Activation("softmax")(decoded)
     decoder = keras.Model([input_decoder, programme_emb_input],
                           decoded,
