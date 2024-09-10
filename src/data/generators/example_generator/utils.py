@@ -41,10 +41,12 @@ def random_permutation(possible_values, num_unique_nums):
     return random.sample(possible_values, num_unique_nums)
 
 
-def colours_permutations(colours: List[int], max_samples: int = 1000) -> List[dict[int, int]]:
+def colours_permutations(colours: List[int], max_samples: int = 1000, with_black: bool = True) -> List[dict[int, int]]:
     colours = set(colours)
-    colours.update({1})
-    all_colours = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+    all_colours = {2, 3, 4, 5, 6, 7, 8, 9, 10}
+    if with_black:
+        colours.update({1})
+        all_colours.update({1})
 
     n_mappings = math.perm(len(all_colours), len(colours))
     if (n_mappings > max_samples):
