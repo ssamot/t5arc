@@ -20,34 +20,7 @@ from data.augment.colour import generate_consistent_combinations_2d
 augmented = "augmented"
 
 
-def process_batch(batch, max_perms):
-    return apply_colour_augmentation_whole_dataset(batch, max_perms)
 
-
-def augment_batch_inout(batch, max_perms):
-    train_x_a = []
-    train_y_a = []
-
-    for i in range(len(batch[0])):
-
-        merged_array = np.concatenate((batch[0][i],
-                                       batch[1][i]), axis=1)
-        # print(merged_array.shape)
-
-        augmented = generate_consistent_combinations_2d(merged_array, max_perms)
-        augmented = np.array(augmented)
-        # print(augmented.shape)
-
-        augmented_train_x, augmented_train_y = np.split(augmented, 2, axis=2)
-        train_x_a.extend(augmented_train_x)
-        train_y_a.extend(augmented_train_y)
-        # print(np.array(augmented_train)[0])
-        # exit()
-
-    train_x_a = np.array(train_x_a)
-    train_y_a = np.array(train_y_a)
-
-    return [train_x_a, train_y_a]
 
 
 @click.command()
@@ -55,90 +28,46 @@ def augment_batch_inout(batch, max_perms):
 @click.argument('augment', type=click.Choice(['pure', augmented]))
 @click.argument('max_perms', type=click.INT)
 @click.argument('type', type=click.STRING)
-@click.argument('inout', type=click.Choice(['inout', "single"]))
-def main(output_filepath, augment, max_perms, type, inout):
-
-    if(inout == "inout"):
-        it = ArcExampleData('train')
-        all_train_x = []
-        all_test_x = []
-        all_train_y = []
-        all_test_y = []
-        for r in tqdm(it):
-
-            # visualise_training_data(r, f"./plots/{r['name']}.pdf",)
-
-            train_x = np.array(r["input"][:-1], dtype=np.int8)
-            test_x = np.array(r["input"][-1:], dtype=np.int8)
-
-            train_y = np.array(r["output"][:-1], dtype=np.int8)
-            test_y = np.array(r["output"][-1:], dtype=np.int8)
-
-            all_train_x.append(train_x)
-            all_test_x.append(test_x)
-            all_train_y.append(train_y)
-            all_test_y.append(test_y)
+def main(output_filepath, augment, max_perms, type):
 
 
-        #print(all_train_x.shape)
-
-        if(augment == augmented):
-            pairs_train = list(zip(all_train_x, all_train_y))
-            pairs_test = list(zip(all_test_x, all_test_y))
-
-
-
-            def parallel_process(pairs):
-                with Pool() as pool:
-                    results = pool.map(partial(augment_batch_inout, max_perms=max_perms), pairs)
-                return results
-
-
-            pairs_train_a = parallel_process(pairs_train)
-            pairs_test_a = parallel_process(pairs_test)
-
-            all_train_x, all_train_y = list(zip(*pairs_train_a))
-            all_test_x, all_test_y = list(zip(*pairs_test_a))
-
-        all_train_x = np.array(all_train_x, dtype=object)
-        all_test_x = np.array(all_test_x, dtype=object)
-        all_train_y = np.array(all_train_y, dtype=object)
-        all_test_y = np.array(all_test_y, dtype=object)
-
-        output_filepath = f"{output_filepath}/{type}_{augment}_{inout}.npz"
-        np.savez_compressed(output_filepath, train_x = all_train_x,
-                            test_x = all_test_x, train_y = all_train_y, test_y = all_test_y)
-
-        return
-
-
-
-
-
-    def parallel_process(arr, n_batches):
-        splits = np.array_split(arr, n_batches)
-        with Pool() as pool:
-            results = pool.map(partial(process_batch, max_perms = max_perms), splits)
-        return np.concatenate(results)
-
-
-
-    X = np.array(get_all_arc_data(group=type), dtype=np.int8)
+    it = ArcExampleData(type)
 
     if(augment == augmented):
-        X  = parallel_process(X, 50)
+        it = ArcExampleData(type,
+                            augment_with=['colour', 'rotation'],
+                            max_samples=max_perms,
+                            with_black=False)
 
+    all_train_x = []
+    all_test_x = []
+    all_train_y = []
+    all_test_y = []
+    for r in tqdm(it):
 
+        train_x = np.array(r["input"][:-1], dtype=np.int8)
+        test_x = np.array(r["input"][-1:], dtype=np.int8)
 
-    print(f"Dataset shape {X.shape} ")
+        train_y = np.array(r["output"][:-1], dtype=np.int8)
+        test_y = np.array(r["output"][-1:], dtype=np.int8)
 
-    # X_validation = np.array(get_all_arc_data(group='eval'), dtype=np.int32)
-    # y_validation = np.eye(11)[X_validation]
-    # X_validation = np.array(X_validation, dtype=np.int32)
+        all_train_x.append(train_x)
+        all_test_x.append(test_x)
+        all_train_y.append(train_y)
+        all_test_y.append(test_y)
 
+    all_train_x = np.array(all_train_x, dtype=object)
+    all_test_x = np.array(all_test_x, dtype=object)
+    all_train_y = np.array(all_train_y, dtype=object)
+    all_test_y = np.array(all_test_y, dtype=object)
 
     output_filepath = f"{output_filepath}/{type}_{augment}.npz"
-    np.savez_compressed(output_filepath, X = X)
+    np.savez_compressed(output_filepath, train_x = all_train_x,
+                        test_x = all_test_x, train_y = all_train_y, test_y = all_test_y)
+
+
+
+
 
 
 if __name__ == '__main__':

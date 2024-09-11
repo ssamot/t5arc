@@ -60,23 +60,6 @@ train_generator:
 data_pure_train:
 	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 train
 
-data_pure_train_inout:
-	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 train inout
-
-data_pure_eval_inout:
-	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 eval inout
-
-data_augmented_train_inout:
-	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ augmented 1000 train inout
-
-data_augmented_eval_inout:
-	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ augmented 1000 eval inout
-
-
-
-data_pure_inout: data_pure_train_inout data_pure_eval_inout
-data_augmented_inout: data_augmented_train_inout data_augmented_eval_inout
-
 data_augmented_train:
 	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ augmented 1000 train
 

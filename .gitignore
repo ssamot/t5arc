@@ -168,3 +168,4 @@ deploy.sh
 deployIADS4.sh
 logs/
 scratch/
+data/processed
