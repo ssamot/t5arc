@@ -94,7 +94,6 @@ class ARCExample(Example):
         """
         self.number_of_io_pairs = len(self.task_data['train'])
         self.number_of_canvasses = self.number_of_io_pairs * 2 + 2
-        self.number_of_rotations_for_augmentation = 4 if 'rotation' in augment_with else 1
 
         for pair in range(self.number_of_io_pairs):
             input_data = np.flipud(np.array(self.task_data['train'][pair]['input']) + 1)
@@ -150,6 +149,7 @@ class ARCExample(Example):
         self.test_output_canvas_augmented.append(a)
 
     def augment_with_rotation(self):
+        self.number_of_rotations_for_augmentation = 4
         j = 0
         while j < len(self.input_canvases_augmented):
 
