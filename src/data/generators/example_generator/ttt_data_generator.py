@@ -61,7 +61,8 @@ class ArcExampleData(Iterator):
         else:
             inputs = []
             outputs = []
-            for augment_index in range(len(current_example.colour_mappings_for_augmentation)):
+            for augment_index in range(len(current_example.colour_mappings_for_augmentation) *
+                                       current_example.number_of_rotations_for_augmentation):
                 temp_im = []
                 temp_out = []
                 for p in range(current_example.number_of_io_pairs):

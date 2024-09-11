@@ -77,6 +77,7 @@ class ARCExample(Example):
         self.test_input_canvas_augmented = []
         self.test_output_canvas_augmented = []
         self.colour_mappings_for_augmentation = []
+        self.number_of_rotations_for_augmentation = 1
 
     def generate_canvasses(self, empty: bool = True, augment_with: List[str] | None = None, max_samples: int = 10000,
                            with_black: bool = True):
@@ -93,6 +94,7 @@ class ARCExample(Example):
         """
         self.number_of_io_pairs = len(self.task_data['train'])
         self.number_of_canvasses = self.number_of_io_pairs * 2 + 2
+        self.number_of_rotations_for_augmentation = 4 if 'rotation' in augment_with else 1
 
         for pair in range(self.number_of_io_pairs):
             input_data = np.flipud(np.array(self.task_data['train'][pair]['input']) + 1)
