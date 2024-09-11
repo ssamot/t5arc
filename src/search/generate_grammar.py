@@ -57,13 +57,15 @@ def main(problem, output_filepath):
         "object_transform_translate_along_direction",
         "make_new_canvas_as",
         "add_object_to_canvas",
-        "get_distance_origin_to_origin_between_objects"
+        "get_distance_origin_to_origin_between_objects",
+        "select_rest_of_the_objects",
     ]
 
 
     function_per_output_type = defaultdict(lambda:  [])
 
     for func_name, details in functions_info.items():
+        #print(details)
 
         if(func_name in test_functions):
             it_l = list(details['input_types'].values())
@@ -71,6 +73,10 @@ def main(problem, output_filepath):
             #input_types = [t for input_types  ]
             input_types = []
             output_type = details['output_type'].__name__
+            if(output_type == "List"):
+                obj_type = str(details['output_type']).split(".")[-1]
+                output_type = f"{output_type}[{obj_type}"
+
             for it in it_l:
                 #print((it.__name__))
                 it = it.__name__

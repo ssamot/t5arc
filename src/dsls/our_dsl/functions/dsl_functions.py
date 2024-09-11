@@ -185,7 +185,7 @@ def select_smallest_object_by_width(canvas: Canvas) -> Primitive:
     return new_canvas.sort_objects_by_size(used_dim='width')[0]
 
 
-def select_rest_of_the_objects(canvas: Canvas, obj: Primitive | None) -> List[Primitive]:
+def select_rest_of_the_objects(canvas: Canvas, obj: Primitive ) -> List[Primitive]:
     temp_obj_list = [copy(o) for o in canvas.objects]
     if obj is not None:
         temp_obj_list.remove(obj)
