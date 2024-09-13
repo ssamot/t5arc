@@ -53,14 +53,9 @@ class GrammarNode(Node):
         nonterminals = []
         nonterminal_positions = []
         for i,symbol in enumerate(self.current_programme):
-            NT = isinstance(symbol, Nonterminal)
-            if(NT):
+            if(isinstance(symbol, Nonterminal)):
                 nonterminals.append(symbol)
                 nonterminal_positions.append(i)
-
-
-
-
 
         if (self.depth + 1 >= self.max_depth):
             exploded = []
