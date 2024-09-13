@@ -40,7 +40,7 @@ class GrammarNode(Node):
 
         if(self.is_terminal() and depth > 2):
             print("TERMINAL")
-            self.to_pretty_string()
+            print(self.to_pretty_string())
             print("END TERMINAL")
             exit()
 
@@ -65,9 +65,6 @@ class GrammarNode(Node):
         if self.is_terminal():
             return set()
 
-        print("========")
-        print(self.to_pretty_string())
-
         for nt in to_be_expanded:
             exploded.append([p.rhs() for p in grammar.productions(nt)])
 
@@ -86,6 +83,7 @@ class GrammarNode(Node):
             actions.append(new_x)
 
         children = [GrammarNode(s,self.grammar, self.depth+1) for s in actions]
+        print("Len Children", len(children), self.depth)
         return children
 
     def find_random_child(self):
