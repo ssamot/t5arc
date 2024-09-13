@@ -6,6 +6,7 @@ import numpy as np
 from black import format_str, FileMode
 import itertools
 from nltk.parse.generate import generate
+from tqdm import tqdm
 
 
 
@@ -35,12 +36,12 @@ class GrammarNode(Node):
 
 
         #print(self.to_pretty_string())
-
-        if(self.is_terminal() and depth > 2):
-            print("TERMINAL")
-            print(self.to_pretty_string())
-            print("END TERMINAL")
-            exit()
+        #
+        # if(self.is_terminal() and depth > 2):
+        #     print("TERMINAL")
+        #     print(self.to_pretty_string())
+        #     print("END TERMINAL")
+        #     exit()
 
 
 
@@ -68,6 +69,7 @@ class GrammarNode(Node):
                         for element in full_products_max_depth:
                             final.append(" ".join(element))
                         break
+                #print(len(final))
                 exploded.append(final)
         else:
             exploded = []
@@ -77,7 +79,8 @@ class GrammarNode(Node):
         if(random):
             products = [[choice(t) for t in exploded]]
         else:
-            products = itertools.product(*exploded)
+            products = list(itertools.product(*exploded))
+            #print(len(products), self.depth, nonterminals)
 
 
         actions = []
@@ -94,7 +97,7 @@ class GrammarNode(Node):
             actions.append(new_action)
 
         children = [GrammarNode(s,self.grammar, self.depth+1, self.max_depth) for s in actions]
-        print("Len Children", len(children), self.depth)
+        #print("Len Children", len(children), self.depth)
         return children
 
     def find_random_child(self):
@@ -127,13 +130,15 @@ class GrammarNode(Node):
         out = format_str(" ".join(converted), mode=FileMode())
         return out
 
+    def prog_to_string(self,prog):
+        return " ".join([str(f) for f in prog])
 
     def __hash__(self):
-        return hash(" ".join(str(self.current_programme)))
+        return hash(self.prog_to_string(self.current_programme))
 
     def __eq__(node1, node2):
-        string1 = " ".join(" ".join(str(node1.current_programme)))
-        string2 = " ".join(" ".join(str(node2.current_programme)))
+        string1 = node1.prog_to_string(node1.current_programme)
+        string2 = node2.prog_to_string(node2.current_programme)
         return string1 == string2
 
 def play_game():
@@ -141,7 +146,7 @@ def play_game():
 
     board = GrammarNode([grammar.start()], grammar, 0, max_depth=10 )
 
-    for _ in range(50):
+    for _ in tqdm(range(5000)):
         tree.do_rollout(board)
 
 
