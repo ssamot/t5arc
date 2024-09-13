@@ -5,6 +5,7 @@ from nltk.grammar import Nonterminal
 import numpy as np
 from black import format_str, FileMode
 import itertools
+from nltk.parse.generate import generate
 
 
 
@@ -22,15 +23,12 @@ grammar = CFG.fromstring(
 
 class GrammarNode(Node):
 
-    def __init__(self, symbol,grammar, depth):
+    def __init__(self, symbol,grammar, depth, max_depth):
 
         self.grammar = grammar
         self.symbol = symbol
         self.depth = depth
-
-        #print(self.depth)
-
-
+        self.max_depth = max_depth
 
 
 
@@ -47,7 +45,7 @@ class GrammarNode(Node):
 
 
 
-    def find_children(self):
+    def find_children(self, random = False):
 
 
 
@@ -61,14 +59,37 @@ class GrammarNode(Node):
                 nonterminal_positions.append(i)
 
 
-        exploded = []
+
         if self.is_terminal():
             return set()
 
-        for nt in to_be_expanded:
-            exploded.append([p.rhs() for p in grammar.productions(nt)])
+        if (self.depth + 1 >= self.max_depth):
+            exploded = []
+            for nt in to_be_expanded:
+                for max_depth in range(1, 100):
+                    full_products_max_depth = list(generate(self.grammar, nt,  depth = max_depth))
 
-        products = itertools.product(*exploded)
+                    if(full_products_max_depth!=[]):
+                        final = []
+                        for element in full_products_max_depth:
+                            final.append(" ".join(element))
+                        break
+                exploded.append(final)
+                #print(len(list(al)), max_depth)
+
+                #exploded.append([p.rhs() for p in grammar.productions(nt)])
+            #exit()
+        else:
+            exploded = []
+            for nt in to_be_expanded:
+                exploded.append([p.rhs() for p in grammar.productions(nt)])
+
+        if(random):
+            products = [[choice(t) for t in exploded]]
+        else:
+            products = itertools.product(*exploded)
+
+
         actions = []
         for p in products:
             action = list(self.symbol[:])
@@ -82,12 +103,12 @@ class GrammarNode(Node):
                     new_x.append(x)
             actions.append(new_x)
 
-        children = [GrammarNode(s,self.grammar, self.depth+1) for s in actions]
+        children = [GrammarNode(s,self.grammar, self.depth+1, self.max_depth) for s in actions]
         print("Len Children", len(children), self.depth)
         return children
 
     def find_random_child(self):
-        return choice(self.find_children())
+        return choice(self.find_children(True))
 
     def reward(self):
         if not self.is_terminal():
@@ -99,8 +120,6 @@ class GrammarNode(Node):
 
 
     def is_terminal(self):
-
-
 
         to_be_expanded = []
         for symbol in self.symbol:
@@ -130,7 +149,7 @@ class GrammarNode(Node):
 def play_game():
     tree = MCTS()
 
-    board = GrammarNode([grammar.start()], grammar, 0 )
+    board = GrammarNode([grammar.start()], grammar, 0, max_depth=6 )
 
     for _ in range(50):
         tree.do_rollout(board)
