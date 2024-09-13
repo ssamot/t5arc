@@ -87,6 +87,9 @@ generate_grammar:
 generate_dsl_programmes:
 	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/search/generate_grammar.py test ./data
 
+run_mcts:
+	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/search/run_mcts.py test ./data
+
 
 
 
