@@ -23,10 +23,10 @@ grammar = CFG.fromstring(
 
 class GrammarNode(Node):
 
-    def __init__(self, symbol,grammar, depth, max_depth):
+    def __init__(self, current_programme, grammar, depth, max_depth):
 
         self.grammar = grammar
-        self.symbol = symbol
+        self.current_programme = current_programme
         self.depth = depth
         self.max_depth = max_depth
 
@@ -47,25 +47,24 @@ class GrammarNode(Node):
 
     def find_children(self, random = False):
 
+        if self.is_terminal():
+            return set()
 
-
-        to_be_expanded = []
-
+        nonterminals = []
         nonterminal_positions = []
-        for i,symbol in enumerate(self.symbol):
+        for i,symbol in enumerate(self.current_programme):
             NT = isinstance(symbol, Nonterminal)
             if(NT):
-                to_be_expanded.append(symbol)
+                nonterminals.append(symbol)
                 nonterminal_positions.append(i)
 
 
 
-        if self.is_terminal():
-            return set()
+
 
         if (self.depth + 1 >= self.max_depth):
             exploded = []
-            for nt in to_be_expanded:
+            for nt in nonterminals:
                 for max_depth in range(1, 100):
                     full_products_max_depth = list(generate(self.grammar, nt,  depth = max_depth))
 
@@ -75,13 +74,9 @@ class GrammarNode(Node):
                             final.append(" ".join(element))
                         break
                 exploded.append(final)
-                #print(len(list(al)), max_depth)
-
-                #exploded.append([p.rhs() for p in grammar.productions(nt)])
-            #exit()
         else:
             exploded = []
-            for nt in to_be_expanded:
+            for nt in nonterminals:
                 exploded.append([p.rhs() for p in grammar.productions(nt)])
 
         if(random):
@@ -92,16 +87,16 @@ class GrammarNode(Node):
 
         actions = []
         for p in products:
-            action = list(self.symbol[:])
+            action = list(self.current_programme[:])
             for i,nt in enumerate(nonterminal_positions):
                 action[nt] = p[i]
-            new_x = []
+            new_action = []
             for x in action:
                 if(type(x) == tuple):
-                    new_x.extend(x)
+                    new_action.extend(x)
                 else:
-                    new_x.append(x)
-            actions.append(new_x)
+                    new_action.append(x)
+            actions.append(new_action)
 
         children = [GrammarNode(s,self.grammar, self.depth+1, self.max_depth) for s in actions]
         print("Len Children", len(children), self.depth)
@@ -122,7 +117,7 @@ class GrammarNode(Node):
     def is_terminal(self):
 
         to_be_expanded = []
-        for symbol in self.symbol:
+        for symbol in self.current_programme:
                 NT = isinstance(symbol, Nonterminal)
                 if (NT):
                     to_be_expanded.append(symbol)
@@ -133,23 +128,23 @@ class GrammarNode(Node):
 
 
     def to_pretty_string(self):
-        converted = [str(e) for e in self.symbol]
+        converted = [str(e) for e in self.current_programme]
         out = format_str(" ".join(converted), mode=FileMode())
         return out
 
 
     def __hash__(self):
-        return hash(" ".join(str(self.symbol)))
+        return hash(" ".join(str(self.current_programme)))
 
     def __eq__(node1, node2):
-        string1 = " ".join(" ".join(str(node1.symbol)))
-        string2 = " ".join(" ".join(str(node2.symbol)))
+        string1 = " ".join(" ".join(str(node1.current_programme)))
+        string2 = " ".join(" ".join(str(node2.current_programme)))
         return string1 == string2
 
 def play_game():
     tree = MCTS()
 
-    board = GrammarNode([grammar.start()], grammar, 0, max_depth=6 )
+    board = GrammarNode([grammar.start()], grammar, 0, max_depth=10 )
 
     for _ in range(50):
         tree.do_rollout(board)
