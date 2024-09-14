@@ -10,16 +10,6 @@ from tqdm import tqdm
 
 
 
-grammar_str = """
-Canvas -> "add_object_to_canvas (" Canvas "," Primitive  ")" | " make_new_canvas_as (" Canvas  ")" | "canvas"
-Vector -> "get_distance_origin_to_origin_between_objects (" Primitive "," Primitive  ")" | " get_distance_touching_between_objects (" Primitive "," Primitive  ")"
-Primitive -> "object_transform_translate_along_direction (" Primitive "," Vector  ")" | " select_object_of_colour (" Canvas "," int  ")"
-int -> "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10"
-"""
-
-grammar = CFG.fromstring(
-    grammar_str
-)
 
 
 class GrammarNode(Node):
@@ -36,7 +26,7 @@ class GrammarNode(Node):
 
 
         #print(self.to_pretty_string())
-        #
+
         # if(self.is_terminal() and depth > 2):
         #     print("TERMINAL")
         #     print(self.to_pretty_string())
@@ -69,18 +59,20 @@ class GrammarNode(Node):
                         for element in full_products_max_depth:
                             final.append(" ".join(element))
                         break
-                #print(len(final))
+                #print(len(final), max_depth, self.depth)
                 exploded.append(final)
         else:
             exploded = []
             for nt in nonterminals:
-                exploded.append([p.rhs() for p in grammar.productions(nt)])
+                exploded.append([p.rhs() for p in self.grammar.productions(nt)])
 
         if(random):
             products = [[choice(t) for t in exploded]]
         else:
             products = list(itertools.product(*exploded))
-            #print(len(products), self.depth, nonterminals)
+            print(len(products), self.depth, nonterminals)
+            if(len(products) > 10000):
+                print(self.to_pretty_string())
 
 
         actions = []
@@ -95,6 +87,8 @@ class GrammarNode(Node):
                 else:
                     new_action.append(x)
             actions.append(new_action)
+
+
 
         children = [GrammarNode(s,self.grammar, self.depth+1, self.max_depth) for s in actions]
         #print("Len Children", len(children), self.depth)
@@ -114,15 +108,10 @@ class GrammarNode(Node):
 
     def is_terminal(self):
 
-        to_be_expanded = []
         for symbol in self.current_programme:
-                NT = isinstance(symbol, Nonterminal)
-                if (NT):
-                    to_be_expanded.append(symbol)
-        if(to_be_expanded == []):
-            return True
-        else:
-            return False
+                if(isinstance(symbol, Nonterminal)):
+                    return False
+        return True
 
 
     def to_pretty_string(self):
@@ -143,6 +132,17 @@ class GrammarNode(Node):
 
 def play_game():
     tree = MCTS()
+
+    grammar_str = """
+    Canvas -> "add_object_to_canvas (" Canvas "," Primitive  ")" | " make_new_canvas_as (" Canvas  ")" | "canvas"
+    Vector -> "get_distance_origin_to_origin_between_objects (" Primitive "," Primitive  ")" | " get_distance_touching_between_objects (" Primitive "," Primitive  ")"
+    Primitive -> "object_transform_translate_along_direction (" Primitive "," Vector  ")" | " select_object_of_colour (" Canvas "," int  ")"
+    int -> "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10"
+    """
+
+    grammar = CFG.fromstring(
+        grammar_str
+    )
 
     board = GrammarNode([grammar.start()], grammar, 0, max_depth=10 )
 
