@@ -49,6 +49,12 @@ class Orientation(Enum):
     def __repr__(self) -> str:
         return f'Orientation(name={self.name}, value={self.value})'
 
+    @staticmethod
+    def get_orientation_from_name(name: str) -> Orientation:
+        for i in range(len(Orientation)):
+            if Orientation(i).name == name:
+                return Orientation(i)
+
 class OrientationZ(Enum):
     Away: int = -1
     Towards: int = 1

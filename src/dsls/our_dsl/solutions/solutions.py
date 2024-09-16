@@ -72,6 +72,7 @@ def solution_b775ac94(canvas: Canvas) -> Canvas:
 
 #  7 funcs
 def solution_05f2a901(canvas: Canvas) -> Canvas:
+    '''
     blue = dsl.select_object_of_colour(canvas, 9)
     red = dsl.select_object_of_colour(canvas, 3)
     dist = dsl.get_distance_touching_between_objects(red, blue)
@@ -80,12 +81,15 @@ def solution_05f2a901(canvas: Canvas) -> Canvas:
     out_canvas = dsl.make_new_canvas_as(canvas)
     out_canvas = dsl.add_object_to_canvas(out_canvas, updated_red)
     out_canvas = dsl.add_object_to_canvas(out_canvas, blue)
+    '''
 ####
+    out_canvas = \
     dsl.add_object_to_canvas(
         dsl.add_object_to_canvas(
             dsl.make_new_canvas_as(canvas),
             dsl.object_transform_translate_along_direction(
-                dsl.select_object_of_colour(canvas, 3), dsl.get_distance_touching_between_objects(red, blue))),
-                             dsl.select_object_of_colour(canvas, 9))
+                dsl.select_object_of_colour(canvas, 3), dsl.get_distance_touching_between_objects(
+                    dsl.select_object_of_colour(canvas, 3),  dsl.select_object_of_colour(canvas, 9)))),
+        dsl.select_object_of_colour(canvas, 9))
 
     return out_canvas

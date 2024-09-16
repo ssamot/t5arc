@@ -12,6 +12,7 @@ import skimage
 from visualization import visualize_data as vis
 from data.generators.object_recognition.basic_geometry import Point, Vector, Orientation, Surround, Bbox, \
     Dimension2D, RelativePoint
+from data.generators.object_recognition import utils
 
 from data.generators import constants as const
 
@@ -19,15 +20,18 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
 class Transformations(int, Enum):
-    translate: int = 0
-    rotate: int = 1
-    scale: int = 2
-    shear: int = 3
-    mirror: int = 4
-    flip: int = 5
-    randomise_colour: int = 6
-    randomise_shape: int = 7
-    swap_colours: int = 8
+    translate_to: int = 0
+    translate_by: int = 1
+    translate_along: int = 2
+    rotate: int = 3
+    scale: int = 4
+    shear: int = 5
+    mirror: int = 6
+    flip: int = 7
+    randomise_colour: int = 8
+    randomise_shape: int = 9
+    replace_colour: int = 10
+    replace_all_colours: int = 11
 
     def get_random_parameters(self, random_obj_or_not: str = 'Random'):
         args = {}
@@ -60,30 +64,52 @@ class Transformations(int, Enum):
             else:
                 args['ratio'] = int(np.random.gamma(shape=3, scale=5) + 2)  # Mainly between 0.1 and 0.3
                 args['ratio'] = 50 if args['ratio'] > 50 else args['ratio']
-        if self.name == 'swap_colours':
+        if self.name == 'replace_colour':
+            args['initial_colour'] = np.random.choice(np.arange(2, 11))
+            args['final_colour'] = np.random.choice(np.arange(2, 11))
+        if self.name == 'replace_all_colours':
             args['colour_swap_hash'] = {2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 2}
         return args
 
     @staticmethod
-    def get_specific_parameters(transformation_index, values):
+    def get_specific_parameters(transformation_name, values):
         args = {}
-        if transformation_index == 1:
-            args['factor'] = values
-        elif transformation_index == 2:
+        if transformation_name == 'translate_to':
+            args['target_point'] = Point(values[0][0], values[0][1])
+            args['object_point'] = Point(values[1][0], values[1][1])
+        if transformation_name == 'translate_by':
+            args['distance'] = Dimension2D(values[0], values[1])
+        if transformation_name == 'translate_along':
+            args['direction'] = Vector(Orientation.get_orientation_from_name(values[0]), values[1],
+                                       Point(values[2][0], values[2][0]))
+        if transformation_name == 'rotate':
             args['times'] = values
-        elif transformation_index == 3:
+        elif transformation_name == 'scale':
+            args['factor'] = values
+        elif transformation_name == 'shear':
             args['_shear'] = values
-        elif transformation_index == 4:
-            args['axis'] = values[0]
+        elif transformation_name == 'mirror':
+            args['axis'] = Orientation.get_orientation_from_name(values[0])
             args['on_axis'] = values[1]
-        elif transformation_index == 6:
+        elif transformation_name == 'flip':
+            args['axis'] = Orientation.get_orientation_from_name(values)
+        elif transformation_name == 'randomise_colour':
             args['ratio'] = values
-        elif transformation_index == 7:
+        elif transformation_name == 'randomise_shape':
             args['ratio'] = values
-        elif transformation_index == 7:
-            args['colour_swap_hash'] = values
+        elif transformation_name == 'replace_colour':
+            args['initial_colour'] = values[0]
+            args['final_colour'] = values[1]
+        elif transformation_name == 'replace_all_colours':
+            args['colours_hash'] = values
 
         return args
+
+    @staticmethod
+    def get_transformation_from_name(name: str) -> Transformations:
+        for i in range(len(Transformations)):
+            if Transformations(i).name == name:
+                return Transformations(i)
 
 
 class Object:
@@ -171,6 +197,70 @@ class Object:
                                                                        self.canvas_pos.y + self.dimensions.dy // 2)
 
         return self._relative_points
+
+    @staticmethod
+    def _match(obj_a: Object, obj_b: Object, padding: Surround | None = None, match_shape_only: bool = False):
+
+        if padding is None:
+            padding = Surround(0, 0, 0, 0)
+
+        obj_a_dimensions = Dimension2D(obj_a.dimensions.dx + padding.Left + padding.Right,
+                                       obj_a.dimensions.dy + padding.Up + padding.Down)
+
+        obj_b_dimensions = Dimension2D(obj_b.dimensions.dx + padding.Left + padding.Right,
+                                       obj_b.dimensions.dy + padding.Up + padding.Down)
+
+        x_base_dim = obj_a_dimensions.dx + 2 * obj_b_dimensions.dx - 2
+        y_base_dim = obj_a_dimensions.dy + 2 * obj_b_dimensions.dy - 2
+        base = np.zeros((y_base_dim, x_base_dim))
+
+        x_res_dim = obj_a_dimensions.dx + obj_b_dimensions.dx - 1
+        y_res_dim = obj_a_dimensions.dy + obj_b_dimensions.dy - 1
+        result = np.zeros((y_res_dim, x_res_dim))
+
+        base_pixels = np.zeros((obj_a_dimensions.dy, obj_a_dimensions.dx))
+        base_pixels[padding.Down: obj_a_dimensions.dy - padding.Up,
+                    padding.Left: obj_a_dimensions.dx - padding.Right] = obj_a.actual_pixels
+        base[obj_b_dimensions.dy - 1: obj_b_dimensions.dy - 1 + obj_a_dimensions.dy,
+        obj_b_dimensions.dx - 1: obj_b_dimensions.dx - 1 + obj_a_dimensions.dx] = base_pixels
+
+        for x in range(x_res_dim):
+            for y in range(y_res_dim):
+                temp = copy(base[y: obj_b_dimensions.dy + y, x: obj_b_dimensions.dx + x])
+                obj_b_pixels = np.ones((obj_b_dimensions.dy, obj_b_dimensions.dx))
+                obj_b_pixels[padding.Down: obj_b_dimensions.dy - padding.Up,
+                padding.Left: obj_b_dimensions.dx - padding.Right] = copy(obj_b.actual_pixels)
+                if match_shape_only:
+                    temp[np.where(temp == 1)] = 0
+                    temp[np.where(temp > 1)] = 1
+                    obj_b_pixels[np.where(obj_b_pixels == 1)] = 0
+                    obj_b_pixels[np.where(obj_b_pixels > 1)] = 1
+                comp = (temp == obj_b_pixels).astype(int)
+                result[y, x] = comp.sum()
+
+        print(np.amax(result))
+        best_relative_positions = np.argwhere(result == np.amax(result))
+        best_positions = [Point(x=obj_b.dimensions.dx - brp[1] - 1 + obj_b.canvas_pos.x + 2 * padding.Left,
+                                y=obj_b.dimensions.dy - brp[0] - 1 + obj_b.canvas_pos.y + 2 * padding.Down)
+                          for brp in best_relative_positions]
+        return best_positions
+
+    def __copy__(self):
+        new_obj = Object(actual_pixels=self.actual_pixels, _id=self.id, border_size=self.border_size,
+                         canvas_pos=self.canvas_pos)
+        new_obj.dimensions = copy(self.dimensions)
+        new_obj.border_size = copy(self.border_size)
+        new_obj.bbox = copy(self.bbox)
+        new_obj.rotation_axis = copy(self.rotation_axis)
+        for sym in self.symmetries:
+            new_obj.symmetries.append(copy(sym))
+        return new_obj
+
+    def __add__(self, other: Object):
+        pass
+
+    def __sub__(self, other: Object):
+        pass
 
     # Transformation methods
     def scale(self, factor: int):
@@ -399,7 +489,7 @@ class Object:
         if object_point is None:
             object_point = self.canvas_pos
 
-        self.transformations.append([Transformations.translate.name,
+        self.transformations.append([Transformations.translate_to.name,
                                      {'distance': (target_point - object_point).to_numpy().tolist()}])
 
         object_point = self.canvas_pos - object_point
@@ -408,10 +498,10 @@ class Object:
     def translate_by(self, distance: Dimension2D):
         self.canvas_pos += Point(distance.dx, distance.dy)
 
-        self.transformations.append([Transformations.translate.name,
+        self.transformations.append([Transformations.translate_by.name,
                                      {'distance': distance.to_numpy().tolist()}])
 
-    def translate_along_direction(self, direction: Vector):
+    def translate_along(self, direction: Vector):
         """
         Translate the Object along a given Vector
         :param direction: The Vector to translate along
@@ -428,7 +518,7 @@ class Object:
         if orient in [Orientation.Right, Orientation.Up_Right, Orientation.Down_Right]:
             self.canvas_pos.x += direction.length
 
-        self.transformations.append([Transformations.translate.name,
+        self.transformations.append([Transformations.translate_along.name,
                                      {'distance': (self.canvas_pos - initial_canvas_pos).to_numpy().tolist()}])
 
         self.reset_dimensions()
@@ -575,23 +665,6 @@ class Object:
         bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self._canvas_pos.y, self._canvas_pos.z)
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
-
-    def __copy__(self):
-        new_obj = Object(actual_pixels=self.actual_pixels, _id=self.id, border_size=self.border_size,
-                         canvas_pos=self.canvas_pos)
-        new_obj.dimensions = copy(self.dimensions)
-        new_obj.border_size = copy(self.border_size)
-        new_obj.bbox = copy(self.bbox)
-        new_obj.rotation_axis = copy(self.rotation_axis)
-        for sym in self.symmetries:
-            new_obj.symmetries.append(copy(sym))
-        return new_obj
-
-    def __add__(self, other: Object):
-        pass
-
-    def __sub__(self, other: object):
-        pass
     
     def distance_to_object(self, other: Object, dist_type: str = 'min') -> Vector:
         """
@@ -695,7 +768,8 @@ class Object:
         self.actual_pixels[np.where(self.actual_pixels == initial_colour)] = final_colour
         if self.colour == initial_colour:
             self.colour = final_colour
-        self.transformations.append([Transformations.swap_colours, {'colour_swap_hash': {initial_colour: final_colour}}])
+        self.transformations.append([Transformations.replace_colour, {'initial_colour': initial_colour,
+                                                                      'final_colour': final_colour}])
 
     def replace_all_colours(self, colours_hash: dict[int, int]):
         """
@@ -711,7 +785,7 @@ class Object:
                 if self.colour == c:
                     self.colour = colours_hash[c]
         self.actual_pixels = copy(temp_pixels)
-        self.transformations.append([Transformations.swap_colours, {'colour_swap_hash': colours_hash}])
+        self.transformations.append([Transformations.replace_all_colours, {'colours_hash': colours_hash}])
 
     def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: int = 10) -> None | np.ndarray:
         """
@@ -762,6 +836,17 @@ class Object:
         holes, n = ndi.label(connected_components)
 
         return holes, n
+
+    def match(self, other: Object, check_over_transformations: List = []) -> dict[str, int, List[Point]]:
+
+        if len(check_over_transformations) != 0:
+            for trans in check_over_transformations:
+                if trans == 'rotation':
+                    for rot in range(4):
+                        obj_a = copy(self)
+                        obj_a.rotate(rot)
+                        obj_b = copy(other)
+                        match_res = utils.match(obj_a=obj_a, obj_b=obj_b, )
 
     def match(self, other: Object, after_rotation: bool = False, match_shape_only: bool = False,
               padding: Surround = Surround(0, 0, 0, 0)) -> Tuple[List[Point], List[int]]:

@@ -83,7 +83,7 @@ class ARCExample(Example):
                            with_black: bool = True):
         """
         Generate the ARC task Canvasses using the self.task_name, self.task_data and self.solution_data.
-        :param with_black: If True augment the data by permuting also the black (0) colour.
+        :param with_black: If True, augment the data by permuting also the black (0) colour.
         :param max_samples: The maximum sample to create if augmentation is on.
         :param empty: If empty is True then make the Canvasses the correct size but keep them empty (canvas.actual_pixels = 1).
         If False then copy onto the Canvasses the loaded data (this generates the correct looking Canvasses but they
@@ -198,6 +198,9 @@ class ARCExample(Example):
     def reset_object_colours(self):
         for o in self.objects:
             o.set_colour_to_most_common()
+
+    def generate_objects_from_description(self, unique_objects: List):
+        super().generate_objects_from_output(unique_objects)
 
     def show_augmented(self, index):
         temp_example = Example(run_generate_canvasses=False, number_of_io_pairs=self.number_of_io_pairs)

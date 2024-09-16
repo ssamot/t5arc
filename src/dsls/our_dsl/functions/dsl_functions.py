@@ -219,7 +219,7 @@ def object_transform_translate_by_distance(obj: Primitive, distance: Dimension2D
 
 def object_transform_translate_along_direction(obj: Primitive, direction: Vector) -> Primitive:
     new_obj = copy(obj)
-    new_obj.translate_along_direction(direction=direction)
+    new_obj.translate_along(direction=direction)
     return new_obj
 
 

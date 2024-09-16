@@ -1,6 +1,9 @@
+from copy import copy
 
 import numpy as np
 from typing import List
+
+from data.generators.object_recognition.basic_geometry import Surround, Dimension2D
 
 
 def union2d(self, ar1: List | np.ndarray, ar2: List | np.ndarray) -> np.ndarray:
@@ -12,3 +15,5 @@ def union2d(self, ar1: List | np.ndarray, ar2: List | np.ndarray) -> np.ndarray:
     ar1 = np.delete(ar1, delete_indices, axis=0)
 
     return np.concatenate((ar1, ar2), axis=0)
+
+
