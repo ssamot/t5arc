@@ -1,8 +1,7 @@
 
 from data.generators.task_generator.arc_task_generator import ARCTask
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
-from dsls.our_dsl.functions import task_solving_utils as utils
-from dsls.our_dsl.solutions import solutions as sols
+
 
 
 task = ARCTask('b775ac94')
@@ -181,7 +180,7 @@ unique_objects = [
 
     {'primitive': 'Random', 'colour': 3, 'id': 24, 'actual_pixels_id': 24, 'dimensions': Dimension2D(3, 3),
      'canvas_and_position': [6, Point(11, 4, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(6, Point(11, 4, 0), Dimension2D(3, 3)),
+     'actual_pixels': task.get_object_pixels_from_data(6, Point(11, 4, 0), Dimension2D(3, 3)),
      'on_canvas_transformations': [],
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
@@ -202,7 +201,7 @@ unique_objects = [
 
     {'primitive': 'Random', 'colour': 2, 'id': 27, 'actual_pixels_id': 27, 'dimensions': Dimension2D(3, 2),
      'canvas_and_position': [6, Point(15, 15, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(6, Point(15, 15, 0), Dimension2D(3, 2)),
+     'actual_pixels': task.get_object_pixels_from_data(6, Point(15, 15, 0), Dimension2D(3, 2)),
      'on_canvas_transformations': [],
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
@@ -228,9 +227,9 @@ unique_objects = [
      'symmetries': []},
 ]
 
-example.generate_objects_from_output(unique_objects=unique_objects)
+task.generate_objects_from_output(unique_objects=unique_objects)
 
-example.show()
+task.show()
 
 
 

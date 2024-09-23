@@ -1,9 +1,7 @@
 
-from copy import copy
 
 from data.generators.task_generator.arc_task_generator import ARCTask
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
-from dsls.our_dsl.functions import dsl_functions as dsl
 
 task = ARCTask('05269061')
 

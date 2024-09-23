@@ -184,7 +184,7 @@ def select_smallest_object_by_width(canvas: Canvas) -> Primitive:
     return new_canvas.sort_objects_by_size(used_dim='width')[0]
 
 
-def select_rest_of_the_objects(canvas: Canvas, obj: Primitive ) -> List[Primitive]:
+def select_rest_of_the_objects(canvas: Canvas, obj: Primitive | None) -> List[Primitive]:
     temp_obj_list = [copy(o) for o in canvas.objects]
     if obj is not None:
         temp_obj_list.remove(obj)
@@ -220,7 +220,7 @@ def object_transform_rotate(obj: Primitive, rotation: int) -> Primitive:
 def object_transform_translate_to_point(obj: Primitive, target_point: Point,
                                         object_point: Point | None = None) -> Primitive:
     new_obj = copy(obj)
-    new_obj.translate_to(target_point=target_point, object_point=object_point)
+    new_obj.translate_to_coordinates(target_point=target_point, object_point=object_point)
     return new_obj
 
 

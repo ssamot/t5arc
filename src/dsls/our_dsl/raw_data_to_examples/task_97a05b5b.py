@@ -88,29 +88,29 @@ unique_objects = [
      'symmetries': []},
     {'primitive': 'Random', 'colour': 1, 'id': 13, 'actual_pixels_id': 13, 'dimensions': Dimension2D(3, 3),
      'canvas_and_position': [6, Point(3, 0, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(6, Point(3, 0, 0), Dimension2D(3, 3)),
+     'actual_pixels': task.get_object_pixels_from_data(6, Point(3, 0, 0), Dimension2D(3, 3)),
      'on_canvas_transformations': [],
      'in_out_transformations': [],
      'symmetries': []},
     {'primitive': 'Random', 'colour': 1, 'id': 12, 'actual_pixels_id': 12, 'dimensions': Dimension2D(3, 3),
      'canvas_and_position': [6, Point(8, 5, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(6, Point(8, 5, 0), Dimension2D(3, 3)),
+     'actual_pixels': task.get_object_pixels_from_data(6, Point(8, 5, 0), Dimension2D(3, 3)),
      'on_canvas_transformations': [],
      'in_out_transformations': [],
      'symmetries': []},
     {'primitive': 'Random', 'colour': 1, 'id': 12, 'actual_pixels_id': 12, 'dimensions': Dimension2D(3, 3),
      'canvas_and_position': [6, Point(11, 1, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(6, Point(11, 1, 0), Dimension2D(3, 3)),
+     'actual_pixels': task.get_object_pixels_from_data(6, Point(11, 1, 0), Dimension2D(3, 3)),
      'on_canvas_transformations': [],
      'in_out_transformations': [],
      'symmetries': []},
 ]
 
 
-example.generate_objects_from_output(unique_objects=unique_objects)
-example.reset_object_colours()
+task.generate_objects_from_output(unique_objects=unique_objects)
+task.reset_object_colours()
 
-example = utils.solve_canvas_pairs(example=example, solution=sols.solution_97a05b5b, which_pair='all')
+example = utils.solve_canvas_pairs(task=task, solution=sols.solution_97a05b5b, which_pair='all')
 
 example.show()
 

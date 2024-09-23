@@ -66,13 +66,13 @@ unique_objects = [
 ]
 
 task.generate_objects_from_output(unique_objects=unique_objects)
-task = utils.solve_canvas_pairs(task=example, solution=sols.solution_b775ac94, which_pair='all')
+task = utils.solve_canvas_pairs(task=task, solution=sols.solution_b775ac94, which_pair='all')
 
-example.show()
+task.show()
 
 
-#canvas = example.input_canvases[0]
-#canvas = example.test_input_canvas
+#canvas = task.input_canvases[0]
+#canvas = task.test_input_canvas
 #out_canvas = sols.solution_b775ac94(canvas)
 #out_canvas.show()
 
