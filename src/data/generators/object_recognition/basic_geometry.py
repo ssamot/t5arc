@@ -55,9 +55,11 @@ class Orientation(Enum):
             if Orientation(i).name == name:
                 return Orientation(i)
 
+
 class OrientationZ(Enum):
     Away: int = -1
     Towards: int = 1
+
 
 class RelativePoint(Enum):
     Top_Left: int = 0
@@ -70,9 +72,10 @@ class RelativePoint(Enum):
     Bottom_Center: int = 7
     Bottom_Right: int = 8
 
+
 @dataclass
 class RelativePoints:
-    def __init__(self, a_point: Point, which_point: RelativePoint, dimensions: Dimension2D):
+    def __init__(self, a_point: Point, which_point: RelativePoint):
         if which_point == RelativePoint.Top_Left: self.Top_Left = a_point
         if which_point == RelativePoint.Top_Center: self.Top_Center = a_point
         if which_point == RelativePoint.Top_Right: self.Top_Right = a_point
@@ -82,8 +85,6 @@ class RelativePoints:
         if which_point == RelativePoint.Bottom_Left: self.Bottom_Left = a_point
         if which_point == RelativePoint.Bottom_Center: self.Bottom_Center = a_point
         if which_point == RelativePoint.Bottom_Right: self.Bottom_Right = a_point
-
-
 
 
 @dataclass
@@ -375,11 +376,11 @@ class Point:
 
 class Vector:
     def __init__(self, orientation: Orientation | None = Orientation.Up,
-                 length: None | int = 0,
+                 length: None | float = 0,
                  origin: Point = Point(0, 0, 0)):
         self.orientation = orientation
-        self.length = int(np.round(length)) if length is not None else None
-        self.origin = Point(int(np.round(origin.x)), int(np.round(origin.y)), int(np.round(origin.z)))
+        self.length = length if length is not None else None
+        self.origin = Point(origin.x, origin.y, origin.z)
 
     def __repr__(self):
         return f'Vector(Orientation: {self.orientation}, Length: {self.length}, Origin Point: {self.origin})'
