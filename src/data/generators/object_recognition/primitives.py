@@ -95,7 +95,7 @@ class Primitive(Object):
     def get_str_type(self):
         return str(type(self)).split('.')[-1].split("'")[0]
 
-    def generate_actual_pixels(self, array: np.ndarray | int):
+    def generate_actual_pixels(self, array: np.ndarray | int) -> np.ndarray:
         """
         Embeds the array into the objects actual_pixels
         :param array:
@@ -106,9 +106,10 @@ class Primitive(Object):
         self.dimensions = self.size
         background_size = np.array([self.border_size.Up + self.size.dy + self.border_size.Down,
                                     self.border_size.Left + self.size.dx + self.border_size.Right])
-        self.actual_pixels = np.ones(background_size)
-        self.actual_pixels[self.border_size.Down: self.size.dy + self.border_size.Down,
-                           self.border_size.Left: self.size.dx + self.border_size.Left] = array
+        actual_pixels = np.ones(background_size)
+        actual_pixels[self.border_size.Down: self.size.dy + self.border_size.Down,
+                      self.border_size.Left: self.size.dx + self.border_size.Left] = array
+        return actual_pixels
 
     def generate_symmetries(self, dirs: str = 'both'):
         """
@@ -136,9 +137,9 @@ class Primitive(Object):
             x_symmetry = Vector(orientation=x_sym_or, length=x_sym_length, origin=x_sym_origin)
             self.symmetries.append(x_symmetry)
 
-    def reset_dimensions(self):
-        Object.reset_dimensions(self)
-        self.size = self.dimensions
+    #def _reset_dimensions(self):
+    #    Object._reset_dimensions(self)
+    #    self.size = self.dimensions
 
     def json_output(self):
         args = self.__dict__.copy()
@@ -201,7 +202,7 @@ class Primitive(Object):
         object.border_size = Surround(Up=self.border_size.Up, Down=self.border_size.Down, Left=self.border_size.Left,
                                       Right=self.border_size.Right)
         object.rotation_axis = Point(self.rotation_axis.x, self.rotation_axis.y, self.rotation_axis.z)
-        object.reset_dimensions()
+        #object._reset_dimensions()
         return object
 
     def __repr__(self):
@@ -250,9 +251,8 @@ class Random(Primitive):
                 if np.random.random() < occupancy_prob:
                     array[y, x] = self.colour
 
-        self.generate_actual_pixels(array=array)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, border_size=border_size, canvas_pos=canvas_pos,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=array), border_size=border_size,
+                        canvas_pos=canvas_pos,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
@@ -273,9 +273,9 @@ class Parallelogram(Primitive):
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
         array = np.ones((self.size.dy, self.size.dx)) * self.colour
-        self.generate_actual_pixels(array=array)
 
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size,
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.generate_actual_pixels(array=array),
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         self.generate_symmetries()
@@ -308,9 +308,9 @@ class Cross(Primitive):
                 temp *= self.colour
             cross.append(temp)
         cross = np.transpose(cross)
-        self.generate_actual_pixels(array=cross)
 
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos,  border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=cross), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         self.generate_symmetries()
@@ -336,7 +336,9 @@ class Hole(Primitive):
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
         array = np.ones((self.size.dy, self.size.dx)) * self.colour
-        self.generate_actual_pixels(array=array)
+        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.generate_actual_pixels(array=array),
+                        border_size=border_size,
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id=canvas_id)
 
         th_up = thickness.Up
         th_down = thickness.Down
@@ -350,9 +352,6 @@ class Hole(Primitive):
 
         self.hole_bbox = Bbox(top_left=Point(self.border_size.Left + th_left, self.size.dy + self.border_size.Down - th_up - 1),
                               bottom_right=Point(self.size.dx + self.border_size.Left - th_right - 1, self.border_size.Down + th_down))
-
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels,  border_size=border_size,
-                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         sym = None
         if th_up == th_down:
@@ -394,8 +393,8 @@ class Pi(Primitive):
             pi.append(temp)
         pi = np.array(pi)
 
-        self.generate_actual_pixels(array=pi)
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=pi), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         self.generate_symmetries('y')
@@ -452,9 +451,8 @@ class InverseCross(Primitive):
             cross.append(temp)
         cross = np.array(cross)
 
-        self.generate_actual_pixels(array=cross)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=cross), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         self.generate_symmetries()
@@ -475,9 +473,9 @@ class Dot(Primitive):
         Primitive.__init__(self, size=Dimension2D(1, 1), border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
-        self.generate_actual_pixels(array=np.array([[self.colour]]))
-
-        Object.__init__(self, canvas_pos=canvas_pos, actual_pixels=self.actual_pixels, border_size=border_size,
+        Object.__init__(self, canvas_pos=canvas_pos,
+                        actual_pixels=self.generate_actual_pixels(array=np.array([[self.colour]])),
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
@@ -507,9 +505,8 @@ class Angle(Primitive):
             angle.append(temp)
         angle = np.array(angle)
 
-        self.generate_actual_pixels(array=angle)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=angle), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
@@ -535,9 +532,8 @@ class Diagonal(Primitive):
 
         diagonal = self.create_diagonal_pixels(height)
 
-        self.generate_actual_pixels(array=diagonal)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=diagonal), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         # TODO: Add diagonal symmetries
@@ -567,7 +563,7 @@ class Diagonal(Primitive):
 
         new_pixels = self.create_diagonal_pixels(new_height)
         self.generate_actual_pixels(array=new_pixels)
-        self.reset_dimensions()
+        #self._reset_dimensions()
 
         transformations = copy(self.transformations)
         for tr in transformations:
@@ -607,9 +603,8 @@ class Steps(Primitive):
             zigzag.append(temp)
         zigzag = np.flipud(zigzag)
 
-        self.generate_actual_pixels(array=zigzag)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=zigzag), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
@@ -634,9 +629,8 @@ class Fish(Primitive):
                          [self.colour, center_colour, self.colour],
                          [1, self.colour, self.colour]])
 
-        self.generate_actual_pixels(array=fish)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=sself.generate_actual_pixels(array=fish), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
@@ -663,9 +657,8 @@ class Bolt(Primitive):
                          [self.colour, center_colour, self.colour],
                          [self.colour, self.colour, 1]])
 
-        self.generate_actual_pixels(array=bolt)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=bolt), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
     @property
@@ -698,9 +691,7 @@ class Tie(Primitive):
                          [1, self.colour, self.colour],
                          [self.colour, 1, 1]])
 
-        self.generate_actual_pixels(array=tie)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=tie), canvas_pos=canvas_pos, border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
@@ -755,9 +746,8 @@ class Spiral(Primitive):
             bottom -= gap
             turn += 1
 
-        self.generate_actual_pixels(array=spiral)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=spiral), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
 
@@ -797,9 +787,8 @@ class Pyramid(Primitive):
             pyramid.append(temp)
         pi = np.flipud(np.array(pyramid))
 
-        self.generate_actual_pixels(array=pi)
-
-        Object.__init__(self, actual_pixels=self.actual_pixels, canvas_pos=canvas_pos, border_size=border_size,
+        Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=pi), canvas_pos=canvas_pos,
+                        border_size=border_size,
                         _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
 
         self.generate_symmetries('y')

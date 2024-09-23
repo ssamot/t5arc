@@ -133,25 +133,27 @@ class Object:
         self.id = _id
         self.actual_pixels_id = actual_pixels_id
         self.canvas_id = canvas_id
-        self.actual_pixels = actual_pixels
+        self._actual_pixels = actual_pixels
         self.border_size = border_size
 
         self._canvas_pos = canvas_pos
         self._holes = None
         self._relative_points = {}
+        self._perimeter = {}
+        self._coloured_bbox = None
 
         if type(canvas_pos) != Point:
             self._canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
 
         self.rotation_axis = deepcopy(self._canvas_pos)
 
-        self.dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
+        self._dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 
         self.symmetries: List = []
 
         self.transformations: List = []
 
-        self.reset_dimensions()
+        self._reset_dimensions()
 
     @property
     def canvas_pos(self):
@@ -163,7 +165,7 @@ class Object:
         self._canvas_pos = new_pos
         for sym in self.symmetries:
             sym.origin += move
-        self.reset_dimensions()
+        self._reset_dimensions()
 
     @property
     def number_of_coloured_pixels(self):
@@ -221,6 +223,23 @@ class Object:
                                                                        self.canvas_pos.y + self.dimensions.dy // 2)
         '''
         return self._relative_points
+
+    @property
+    def actual_pixels(self) -> np.ndarray:
+        return self._actual_pixels
+
+    @actual_pixels.setter
+    def actual_pixels(self, new_pixels: np.ndarray):
+        self._actual_pixels = new_pixels
+        self._reset_dimensions()
+
+    @property
+    def dimensions(self) -> Dimension2D:
+        return self._dimensions
+
+    @dimensions.setter
+    def dimensions(self, new_dim: Dimension2D):
+        self._dimensions = new_dim
 
     @staticmethod
     def _match(obj_a: Object, obj_b: Object, padding: Surround | None = None, match_shape_only: bool = False):
@@ -323,7 +342,7 @@ class Object:
         self.transformations.append([Transformations.translate_along.name,
                                      {'distance': (self.canvas_pos - initial_canvas_pos).to_numpy().tolist()}])
 
-        self.reset_dimensions()
+        self._reset_dimensions()
 
     def touch(self, other: Object, orientation: Orientation):
         pass
@@ -362,7 +381,7 @@ class Object:
 
         self.actual_pixels = scaled
 
-        self.reset_dimensions()
+        self._reset_dimensions()
 
         for sym in self.symmetries:
             if factor > 0:
@@ -380,7 +399,7 @@ class Object:
             else:
                 sym.length /= np.abs(factor)
                 factor = 1/np.abs(factor)
-                sym.origin = (sym.origin - self._canvas_pos) * factor + self._canvas_pos
+                sym.origin = (sym.origin - self.canvas_pos) * factor + self.canvas_pos
 
         self.transformations.append([Transformations.scale.name, {'factor': factor}])
 
@@ -404,8 +423,8 @@ class Object:
         self.bbox.transform(translation=-center)
         self.bbox.transform(rotation=radians)
         self.bbox.transform(translation=center)
-        self._canvas_pos.x = int(self.bbox.top_left.x)
-        self._canvas_pos.y = int(self.bbox.bottom_right.y)
+        self.canvas_pos.x = int(self.bbox.top_left.x)
+        self.canvas_pos.y = int(self.bbox.bottom_right.y)
 
         for sym in self.symmetries:
             sym.transform(translation=-center)
@@ -449,7 +468,7 @@ class Object:
                                self.border_size.Right: new_pixels.shape[1] + self.border_size.Right] = new_pixels
 
         self.flip(Orientation.Right)
-        self.reset_dimensions()
+        self._reset_dimensions()
         self.symmetries = []  # Loose any symmetries
 
     def mirror(self, axis: Orientation, on_axis=False):
@@ -468,8 +487,8 @@ class Object:
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=0) \
                 if axis == Orientation.Down else np.concatenate((concat_pixels, self.actual_pixels), axis=0)
 
-            new_symmetry_axis_origin = Point(self._canvas_pos.x, self.actual_pixels.shape[0] / 2 + self._canvas_pos.y) \
-                if axis == Orientation.Up else Point(self._canvas_pos.x, self._canvas_pos.y)
+            new_symmetry_axis_origin = Point(self.canvas_pos.x, self.actual_pixels.shape[0] / 2 + self.canvas_pos.y) \
+                if axis == Orientation.Up else Point(self.canvas_pos.x, self.canvas_pos.y)
 
             new_symmetry_axis_origin.y -= 0.5
             if on_axis and axis == Orientation.Down:
@@ -491,8 +510,8 @@ class Object:
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=1) if axis == Orientation.Right else \
                 np.concatenate((concat_pixels, self.actual_pixels), axis=1)
 
-            new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self._canvas_pos.x, self._canvas_pos.y)\
-                if axis == Orientation.Right else Point(self._canvas_pos.x, self._canvas_pos.y)
+            new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self.canvas_pos.x, self.canvas_pos.y)\
+                if axis == Orientation.Right else Point(self.canvas_pos.x, self.canvas_pos.y)
 
             new_symmetry_axis_origin.x -= 0.5
             if on_axis and axis == Orientation.Left:
@@ -507,13 +526,13 @@ class Object:
                                      length=self.actual_pixels.shape[0] - 1)
 
         if axis == Orientation.Left:
-            self._canvas_pos.x -= self.dimensions.dx
+            self.canvas_pos.x -= self.dimensions.dx
         if axis == Orientation.Down:
-            self._canvas_pos.y -= self.dimensions.dy
+            self.canvas_pos.y -= self.dimensions.dy
 
         self.symmetries.append(symmetry_vector)
 
-        self.reset_dimensions()
+        self._reset_dimensions()
 
         self.transformations.append([Transformations.mirror.name, {'axis': axis}])
 
@@ -566,7 +585,7 @@ class Object:
             self.transformations.append([Transformations.translate.name,
                                          {'distance': difference.to_numpy().tolist()}])
 
-        self.reset_dimensions()
+        self._reset_dimensions()
 
     def delete(self):
         c = self.get_coloured_pixels_positions()
@@ -692,7 +711,7 @@ class Object:
     # </editor-fold>
 
     # <editor-fold desc="UTILITY METHODS">
-    def reset_dimensions(self):
+    def _reset_dimensions(self):
         """
         Reset the self.dimensions and the self.bbox top left and bottom right points to fit the updated actual_pixels
         :return:
@@ -700,15 +719,15 @@ class Object:
         self.dimensions.dx = self.actual_pixels.shape[1]
         self.dimensions.dy = self.actual_pixels.shape[0]
 
-        bb_top_left = Point(self._canvas_pos.x, self._canvas_pos.y + self.dimensions.dy - 1, self._canvas_pos.z)
-        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self._canvas_pos.y, self._canvas_pos.z)
+        bb_top_left = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy - 1, self.canvas_pos.z)
+        bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self.canvas_pos.y, self.canvas_pos.z)
 
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
-    
+
     def distance_to_object(self, other: Object, dist_type: str = 'min') -> Vector:
         """
-        Calculates the Vector that defines the distance (in pixels) between this and the obj Object. The exact 
-        calculation depends on the type asked for. If type is 'min' then this is the distance between the two nearest 
+        Calculates the Vector that defines the distance (in pixels) between this and the obj Object. The exact
+        calculation depends on the type asked for. If type is 'min' then this is the distance between the two nearest
         pixels of the Objects. If it is 'max' it is between the two furthest_point_to_point. If it is 'canvas_pos' then it is the
         distance between the two canvas positions of the Objects.
         If the two Points that are being compared lie along a Direction then the returned Vector also has this Direction.
@@ -716,8 +735,8 @@ class Object:
         a preference to Directions Up, Down, Left and Right).
         :param obj: The other Object
         :param dist_type: str. Can be 'max', 'min' or 'canvas_pos'
-        :return: A Vector whose length is the distance calculated, whose origin in the Point in this Object used to 
-        calculate the distance and whose orientation is the Orientation between the two Points used if it exists 
+        :return: A Vector whose length is the distance calculated, whose origin in the Point in this Object used to
+        calculate the distance and whose orientation is the Orientation between the two Points used if it exists
         (otherwise it is None).
         """
         if dist_type == 'min' or dist_type == 'max':
@@ -760,7 +779,7 @@ class Object:
             result = np.argwhere(self.actual_pixels > 1).astype(int)
         else:
             result = np.argwhere(self.actual_pixels == col).astype(int)
-        canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
+        canv_pos = np.array([self.canvas_pos.to_numpy()[1], self.canvas_pos.to_numpy()[0]]).astype(int)
         return canv_pos + result
 
     def get_background_pixels_positions(self) -> np.ndarray:
@@ -768,7 +787,7 @@ class Object:
 
     def get_used_colours(self) -> np.ndarray:
         coloured_pos = self.get_coloured_pixels_positions().astype(int)
-        canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
+        canv_pos = np.array([self.canvas_pos.to_numpy()[1], self.canvas_pos.to_numpy()[0]]).astype(int)
         coloured_pos -= canv_pos
         return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
 
@@ -834,7 +853,7 @@ class Object:
         """
         if coloured_or_background == 'coloured':
             pixels_pos = self.get_coloured_pixels_positions()
-            canv_pos = np.array([self._canvas_pos.to_numpy()[1], self._canvas_pos.to_numpy()[0]]).astype(int)
+            canv_pos = np.array([self.canvas_pos.to_numpy()[1], self.canvas_pos.to_numpy()[0]]).astype(int)
             pixels_pos -= canv_pos
         elif coloured_or_background == 'background':
             pixels_pos = self.get_background_pixels_positions()
