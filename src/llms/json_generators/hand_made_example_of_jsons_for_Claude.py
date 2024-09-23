@@ -41,7 +41,7 @@ for p in range(number_of_pairs):
 
     random_out = copy(random_in)
     random_out.canvas_id = 2*p + 2
-    random_out.translate_to(target_point=end_points[p])
+    random_out.translate_to_coordinates(target_point=end_points[p])
     dot_out = Dot(colour=transition_colours[p], _id=3 * p + 2, actual_pixels_id=3 * p + 2, canvas_pos=Point(0, 0),
                   canvas_id=2*p + 2)
     output_objs.append(random_out)

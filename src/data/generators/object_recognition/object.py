@@ -20,7 +20,7 @@ MAX_PAD_SIZE = const.MAX_PAD_SIZE
 
 
 class Transformations(int, Enum):
-    translate_to: int = 0
+    translate_to_coordinates: int = 0
     translate_by: int = 1
     translate_along: int = 2
     rotate: int = 3
@@ -28,10 +28,13 @@ class Transformations(int, Enum):
     shear: int = 5
     mirror: int = 6
     flip: int = 7
-    randomise_colour: int = 8
-    randomise_shape: int = 9
-    replace_colour: int = 10
-    replace_all_colours: int = 11
+    grow: int = 8
+    randomise_colour: int = 9
+    randomise_shape: int = 10
+    replace_colour: int = 11
+    replace_all_colours: int = 12
+    delete: int = 13
+    fill: int = 14
 
     def get_random_parameters(self, random_obj_or_not: str = 'Random'):
         args = {}
@@ -68,13 +71,20 @@ class Transformations(int, Enum):
             args['initial_colour'] = np.random.choice(np.arange(2, 11))
             args['final_colour'] = np.random.choice(np.arange(2, 11))
         if self.name == 'replace_all_colours':
-            args['colour_swap_hash'] = {2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 2}
+            new_colours = np.arange(2, 11)
+            np.random.shuffle(new_colours)
+            args['colour_swap_hash'] = {2: new_colours[0], 3: new_colours[1], 4: new_colours[2], 5: new_colours[3],
+                                        6: new_colours[4], 7: new_colours[5], 8: new_colours[6], 9: new_colours[7],
+                                        10: new_colours[8]}
+        if self.name == 'fill':
+            args['colour'] = np.random.randint(2, 10)
+
         return args
 
     @staticmethod
     def get_specific_parameters(transformation_name, values):
         args = {}
-        if transformation_name == 'translate_to':
+        if transformation_name == 'translate_to_coordinates':
             args['target_point'] = Point(values[0][0], values[0][1])
             args['object_point'] = Point(values[1][0], values[1][1])
         if transformation_name == 'translate_by':
@@ -102,6 +112,8 @@ class Transformations(int, Enum):
             args['final_colour'] = values[1]
         elif transformation_name == 'replace_all_colours':
             args['colours_hash'] = values
+        elif transformation_name == 'fill':
+            args['colour'] = values
 
         return args
 
@@ -122,10 +134,11 @@ class Object:
         self.actual_pixels_id = actual_pixels_id
         self.canvas_id = canvas_id
         self.actual_pixels = actual_pixels
-        self._canvas_pos = canvas_pos
         self.border_size = border_size
 
+        self._canvas_pos = canvas_pos
         self._holes = None
+        self._relative_points = {}
 
         if type(canvas_pos) != Point:
             self._canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
@@ -138,7 +151,6 @@ class Object:
 
         self.transformations: List = []
 
-        self._relative_points = {}
         self.reset_dimensions()
 
     @property
@@ -177,11 +189,23 @@ class Object:
         self._relative_points[RelativePoint.Top_Left] = self.bbox.top_left
         self._relative_points[RelativePoint.Top_Right] = Point(self.bbox.bottom_right.x, self.bbox.top_left.y)
 
+        self._relative_points[RelativePoint.Top_Center] = Point(self.canvas_pos.x + self.dimensions.dx / 2 - 0.5,
+                                                                self.bbox.top_left.y)
+        self._relative_points[RelativePoint.Bottom_Center] = Point(self.canvas_pos.x + self.dimensions.dx / 2 - 0.5,
+                                                                   self.canvas_pos.y)
+        self._relative_points[RelativePoint.Middle_Left] = Point(self.canvas_pos.x,
+                                                                 self.canvas_pos.y + self.dimensions.dy / 2 - 0.5)
+        self._relative_points[RelativePoint.Middle_Right] = Point(self.bbox.bottom_right.x,
+                                                                  self.canvas_pos.y + self.dimensions.dy / 2 - 0.5)
+        self._relative_points[RelativePoint.Middle_Center] = Point(self.canvas_pos.x + self.dimensions.dx / 2 - 0.5,
+                                                                   self.canvas_pos.y + self.dimensions.dy / 2 - 0.5)
+        '''
         self._relative_points[RelativePoint.Top_Center] = None
         self._relative_points[RelativePoint.Bottom_Center] = None
         self._relative_points[RelativePoint.Middle_Left] = None
         self._relative_points[RelativePoint.Middle_Right] = None
         self._relative_points[RelativePoint.Middle_Center] = None
+        
         if self.dimensions.dx % 2 == 1:
             self._relative_points[RelativePoint.Top_Center] = Point(self.canvas_pos.x + self.dimensions.dx // 2,
                                                                     self.bbox.top_left.y)
@@ -195,7 +219,7 @@ class Object:
         if self.dimensions.dx % 2 == 1 and self.dimensions.dy % 2 == 1:
             self._relative_points[RelativePoint.Middle_Center] = Point(self.canvas_pos.x + self.dimensions.dx // 2,
                                                                        self.canvas_pos.y + self.dimensions.dy // 2)
-
+        '''
         return self._relative_points
 
     @staticmethod
@@ -262,7 +286,48 @@ class Object:
     def __sub__(self, other: Object):
         pass
 
-    # Transformation methods
+    # <editor-fold desc="TRANSFORMATION METHODS">
+    def translate_to_coordinates(self, target_point: Point, object_point: Point | None = None):
+        if object_point is None:
+            object_point = self.canvas_pos
+
+        self.transformations.append([Transformations.translate_to.name,
+                                     {'distance': (target_point - object_point).to_numpy().tolist()}])
+
+        object_point = self.canvas_pos - object_point
+        self.canvas_pos = target_point - object_point
+
+    def translate_by(self, distance: Dimension2D):
+        self.canvas_pos += Point(distance.dx, distance.dy)
+
+        self.transformations.append([Transformations.translate_by.name,
+                                     {'distance': distance.to_numpy().tolist()}])
+
+    def translate_along(self, direction: Vector):
+        """
+        Translate the Object along a given Vector
+        :param direction: The Vector to translate along
+        :return:
+        """
+        initial_canvas_pos = copy(self.canvas_pos)
+        orient = direction.orientation
+        if orient in [Orientation.Up, Orientation.Up_Left, Orientation.Up_Right]:
+            self.canvas_pos.y += direction.length
+        if orient in [Orientation.Down, Orientation.Down_Left, Orientation.Down_Right]:
+            self.canvas_pos.y -= direction.length
+        if orient in [Orientation.Left, Orientation.Up_Left, Orientation.Down_Left]:
+            self.canvas_pos.x -= direction.length
+        if orient in [Orientation.Right, Orientation.Up_Right, Orientation.Down_Right]:
+            self.canvas_pos.x += direction.length
+
+        self.transformations.append([Transformations.translate_along.name,
+                                     {'distance': (self.canvas_pos - initial_canvas_pos).to_numpy().tolist()}])
+
+        self.reset_dimensions()
+
+    def touch(self, other: Object, orientation: Orientation):
+        pass
+
     def scale(self, factor: int):
         """
         Scales the object. A positive factor adds pixels and a negative factor removes pixels.
@@ -485,44 +550,6 @@ class Object:
 
         self.transformations.append([Transformations.flip.name, {'axis': axis}])
 
-    def translate_to(self, target_point: Point, object_point: Point | None = None):
-        if object_point is None:
-            object_point = self.canvas_pos
-
-        self.transformations.append([Transformations.translate_to.name,
-                                     {'distance': (target_point - object_point).to_numpy().tolist()}])
-
-        object_point = self.canvas_pos - object_point
-        self.canvas_pos = target_point - object_point
-
-    def translate_by(self, distance: Dimension2D):
-        self.canvas_pos += Point(distance.dx, distance.dy)
-
-        self.transformations.append([Transformations.translate_by.name,
-                                     {'distance': distance.to_numpy().tolist()}])
-
-    def translate_along(self, direction: Vector):
-        """
-        Translate the Object along a given Vector
-        :param direction: The Vector to translate along
-        :return:
-        """
-        initial_canvas_pos = copy(self.canvas_pos)
-        orient = direction.orientation
-        if orient in [Orientation.Up, Orientation.Up_Left, Orientation.Up_Right]:
-            self.canvas_pos.y += direction.length
-        if orient in [Orientation.Down, Orientation.Down_Left, Orientation.Down_Right]:
-            self.canvas_pos.y -= direction.length
-        if orient in [Orientation.Left, Orientation.Up_Left, Orientation.Down_Left]:
-            self.canvas_pos.x -= direction.length
-        if orient in [Orientation.Right, Orientation.Up_Right, Orientation.Down_Right]:
-            self.canvas_pos.x += direction.length
-
-        self.transformations.append([Transformations.translate_along.name,
-                                     {'distance': (self.canvas_pos - initial_canvas_pos).to_numpy().tolist()}])
-
-        self.reset_dimensions()
-
     def translate_relative_point_to_point(self, relative_point: RelativePoint, other_point: Point):
         """
         Translate the Object so that its relative point with key RelativePoint ends up on other_point.
@@ -541,6 +568,17 @@ class Object:
 
         self.reset_dimensions()
 
+    def delete(self):
+        c = self.get_coloured_pixels_positions()
+        self.actual_pixels[c[:, 0], c[:, 1]] = 1
+
+    def fill(self, colour: int):
+        h = np.argwhere(self.holes==1)
+        self.actual_pixels[h[:, 0], h[:, 1]] = colour
+
+    # </editor-fold>
+
+    # <editor-fold desc="RANDOMISATION METHODS">
     def randomise_colour(self, ratio: int = 10, colour: str = 'random'):
         """
         Changes the colour of ratio of the coloured pixels (picked randomly) to a new random (not already there) colour
@@ -651,8 +689,9 @@ class Object:
                     return True
 
         return False
+    # </editor-fold>
 
-    # Utility methods
+    # <editor-fold desc="UTILITY METHODS">
     def reset_dimensions(self):
         """
         Reset the self.dimensions and the self.bbox top left and bottom right points to fit the updated actual_pixels
@@ -715,9 +754,6 @@ class Object:
             distance = self.canvas_pos.euclidean_distance(other.canvas_pos)
 
         return distance
-
-    def superimpose(self, other: Object, z_order: int = 1):
-        pass
 
     def get_coloured_pixels_positions(self, col: int | None = None) -> np.ndarray:
         if col is None:
@@ -837,7 +873,8 @@ class Object:
 
         return holes, n
 
-    def match(self, other: Object, check_over_transformations: List = []) -> dict[str, int, List[Point]]:
+    '''
+    def match(self, other: Object, check_over_transformations: List = ()) -> dict[str, int, List[Point]]:
 
         if len(check_over_transformations) != 0:
             for trans in check_over_transformations:
@@ -846,7 +883,8 @@ class Object:
                         obj_a = copy(self)
                         obj_a.rotate(rot)
                         obj_b = copy(other)
-                        match_res = utils.match(obj_a=obj_a, obj_b=obj_b, )
+                        match_res = self._match(obj_a=obj_a, obj_b=obj_b)
+    '''
 
     def match(self, other: Object, after_rotation: bool = False, match_shape_only: bool = False,
               padding: Surround = Surround(0, 0, 0, 0)) -> Tuple[List[Point], List[int]]:
@@ -956,6 +994,7 @@ class Object:
                     plt_lines = ax.hlines
 
                 plt_lines(line_at, line_min, line_max, linewidth=2)
+    # </editor-fold>
 
 
 
