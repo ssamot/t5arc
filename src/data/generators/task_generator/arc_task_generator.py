@@ -210,6 +210,6 @@ class ARCTask(Task):
             temp_task.input_canvases[i] = self.input_canvases_augmented[index][i]
             temp_task.output_canvases[i] = self.output_canvases_augmented[index][i]
         temp_task.test_input_canvas = self.test_input_canvas_augmented[index]
-        temp_example.test_output_canvas = self.test_output_canvas_augmented[index]
+        temp_task.test_output_canvas = self.test_output_canvas_augmented[index]
 
-        temp_example.show()
+        temp_task.show()
