@@ -1,11 +1,11 @@
 
 from copy import copy
 
-from data.generators.example_generator.arc_example_generator import ARCExample
+from data.generators.task_generator.arc_task_generator import ARCTask
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from dsls.our_dsl.functions import dsl_functions as dsl
 
-example = ARCExample('05269061')
+task = ARCTask('05269061')
 
 # [1, Point(0, 6, 10)], [1, Point(6, 0, 10)],
 #                             [3, Point(0, 6, 10)], [3, Point(6, 0, 10)]
@@ -53,4 +53,4 @@ unique_objects = [
      'symmetries': []},
 ]
 
-example.generate_objects_from_output(unique_objects=unique_objects)
+task.generate_objects_from_output(unique_objects=unique_objects)

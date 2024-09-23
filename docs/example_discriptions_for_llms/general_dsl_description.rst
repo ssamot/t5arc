@@ -65,13 +65,13 @@ grid. It has methods to:
 6) Return the Object with specific colour properties.
 7) Return all of the Pixel coordinates that are Coloured in the actual_pixels array of teh Canvas.
 
-Class Example.
-An Example is a Class that consists of a number of Input - Output pairs of Canvasses. These are saved in the
-input_canvasses and output_canvasses lists of the Example. There is a specific logic common to all the pairs which
+Class Task.
+An Task is a Class that consists of a number of Input - Output pairs of Canvasses. These are saved in the
+input_canvasses and output_canvasses lists of the Task. There is a specific logic common to all the pairs which
 allows the transformation of each Input Canvas to its corresponding Output Canvas.
 
-The Example Logic.
-Each Example's Logic has one or two elements.
+The Task Logic.
+Each Task's Logic has one or two elements.
 First, the Transformations. These are Object Transformations of some of the Objects in an Input Canvas that lead to
 the Input Canvas looking like the Output one.
 Secondly (but not always) the triggers. These are attributes or combinations of attributes of the Input Canvas and

@@ -4,27 +4,27 @@ from typing import List, Dict
 import numpy as np
 
 from data import load_data as ld
-from data.generators.example_generator.example import Example
+from data.generators.task_generator.task import Task
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from data.generators.object_recognition.canvas import Canvas
-from data.generators.example_generator import utils
+from data.generators.task_generator import utils
 from data.generators import constants as const
 
 from_json = ld.from_json
 
 
-class ARCExample(Example):
+class ARCTask(Task):
 
     def __init__(self, arc_name: str | None = None, arc_group_and_index: List | None = None,
                  arc_data: List | Dict | None = None):
         """
-        Generates an Example using specific data from an ARC task
+        Generates an Task using specific data from an ARC task
         :param arc_name: The name of the task to be loaded
         :param arc_group_and_index: OR the group ('train' or 'eval') and the index of the task in that group
         :param arc_data: OR the actual data sets (a List of [name, task_data, solution_data] as returned from ld.from_json()
         """
         assert not(arc_name is None and arc_group_and_index is None and arc_data is None), \
-            print(f'Making ARC Example. arc_name, arc_group_and_index and arc_data cannot all be None!')
+            print(f'Making ARC Task. arc_name, arc_group_and_index and arc_data cannot all be None!')
 
         if arc_group_and_index is not None:
             group = arc_group_and_index[0]
@@ -48,7 +48,7 @@ class ARCExample(Example):
                 self.task_data = task
                 self.solution_data = solution
             except:
-                print(f'No name {arc_name} in the ARC data set. The ARCExample Example will be empty.')
+                print(f'No name {arc_name} in the ARC data set. The ARCTask Task will be empty.')
 
         if arc_data is not None:
             if type(arc_data) == list:
@@ -99,6 +99,7 @@ class ARCExample(Example):
             input_data = np.flipud(np.array(self.task_data['train'][pair]['input']) + 1)
             output_data = np.flipud(np.array(self.task_data['train'][pair]['output']) + 1)
             if not empty:
+                print('hello')
                 self.input_canvases.append(Canvas(actual_pixels=input_data, _id=pair * 2))
                 self.output_canvases.append(Canvas(actual_pixels=output_data, _id=pair * 2 + 1))
             else:
@@ -203,12 +204,12 @@ class ARCExample(Example):
         super().generate_objects_from_output(unique_objects)
 
     def show_augmented(self, index):
-        temp_example = Example(run_generate_canvasses=False, number_of_io_pairs=self.number_of_io_pairs)
-        temp_example.generate_canvasses()
+        temp_task = Task(run_generate_canvasses=False, number_of_io_pairs=self.number_of_io_pairs)
+        temp_task.generate_canvasses()
         for i in range(self.number_of_io_pairs):
-            temp_example.input_canvases[i] = self.input_canvases_augmented[index][i]
-            temp_example.output_canvases[i] = self.output_canvases_augmented[index][i]
-        temp_example.test_input_canvas = self.test_input_canvas_augmented[index]
+            temp_task.input_canvases[i] = self.input_canvases_augmented[index][i]
+            temp_task.output_canvases[i] = self.output_canvases_augmented[index][i]
+        temp_task.test_input_canvas = self.test_input_canvas_augmented[index]
         temp_example.test_output_canvas = self.test_output_canvas_augmented[index]
 
         temp_example.show()

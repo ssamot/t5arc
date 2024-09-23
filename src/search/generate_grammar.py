@@ -52,7 +52,7 @@ def main(problem, output_filepath):
 
 
     test_functions = [
-        "select_object_of_colour",
+        "select_only_object_of_colour",
         "get_distance_touching_between_objects",
         "object_transform_translate_along_direction",
         "make_new_canvas_as",
@@ -152,7 +152,7 @@ if __name__ == '__main__':
 
 
 
-# Example usage:
+# Task usage:
 # Assuming you have a module named 'mypackage.mymodule' with some functions
 
 # Print the function names, input types, and output types

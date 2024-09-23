@@ -1,12 +1,12 @@
 
-from data.generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
-from data.generators.example_generator.arc_data_generator import get_all_arc_data
-from data.generators.example_generator.ttt_data_generator import ArcExampleData
+from data.generators.task_generator.auto_encoder_data_generator import AutoEncoderDataTask
+from data.generators.task_generator.arc_data_generator import get_all_arc_data
+from data.generators.task_generator.ttt_data_generator import ArcTaskData
 from visualization.visualse_training_data_sets import visualise_training_data
 
 
 # Usage of Random Data Generation for the auto-encoder training
-e = AutoEncoderDataExample(number_of_canvases=20, percentage_of_arc_canvases=1, train_or_eval_arc='train')
+e = AutoEncoderDataTask(number_of_canvases=20, percentage_of_arc_canvases=1, train_or_eval_arc='train')
 array = e.get_canvases_as_numpy_array()
 string = e.get_canvasses_as_string()
 
@@ -27,7 +27,7 @@ e.show(canvas_index=1)
 arc_array = get_all_arc_data(group='train')  # group can be 'train' or 'eval'
 
 # Usage of using the ARC data iterator
-it = ArcExampleData('train')
+it = ArcTaskData('train')
 result = []
 for c in it:
     result.append(c)

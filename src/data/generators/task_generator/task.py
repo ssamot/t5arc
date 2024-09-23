@@ -16,7 +16,7 @@ from data.generators.object_recognition.object import Transformations
 from data.generators import constants as const
 
 
-class Example:
+class Task:
 
     def __init__(self, min_canvas_size_for_background_object: int = 10, prob_of_background_object: float = 0.1,
                  run_generate_canvasses: bool = True, number_of_io_pairs: int | None = None):
@@ -319,9 +319,9 @@ class Example:
             for new_obj_trans in obj_discr['in_out_transformations']:
                 new_obj = copy(obj)
                 for tr in new_obj_trans:
-                    transform_name = Transformations.get_transformation_from_name(tr[0])
-                    tr_args = transform_name.get_specific_parameters(tr[0], tr[1])
-                    transform_method = getattr(new_obj, transform_name.name)
+                    transformation = Transformations.get_transformation_from_name(tr[0])
+                    tr_args = transformation.get_specific_parameters(tr[0], tr[1])
+                    transform_method = getattr(new_obj, transformation.name)
                     transform_method(**tr_args)
                 if int(new_obj.canvas_id / 2) <= self.number_of_io_pairs - 1:
                     out_canvas = self.output_canvases[int(new_obj.canvas_id / 2)]
@@ -372,7 +372,7 @@ class Example:
 
     def randomly_position_object_in_all_canvases(self, obj: Primitive):
         """
-        It takes an object and places it in random (but allowed) positions in all the Canvases of the Example
+        It takes an object and places it in random (but allowed) positions in all the Canvases of the Task
         :param obj: The object to position
         :return:
         """

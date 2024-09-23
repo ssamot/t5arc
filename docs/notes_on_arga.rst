@@ -3,8 +3,8 @@
  There are only two such processes used:
   a. non-background single-color connected pixels
   b. non-background single-color vertically-connected pixels
- My assumption is that there will be many tens that would cover all of the 800 Examples.
- Take for example the first Example 007bbfb7. There defining the whole input canvas as an object makes the problem tracktable.
+ My assumption is that there will be many tens that would cover all of the 800 Tasks.
+ Take for example the first Task 007bbfb7. There defining the whole input canvas as an object makes the problem tracktable.
 
 2. Overlapping objects.
  The paper allows object overlapping only on the Output Canvas, because only through a known transformation the algorithm

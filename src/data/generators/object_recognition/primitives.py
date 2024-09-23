@@ -804,3 +804,8 @@ class Pyramid(Primitive):
         self.generate_symmetries('y')
 
 
+# TODO: Create a Primitive that looks like a snake defined by the corners it has and its front and back end
+class Snake(Primitive):
+    pass
+
+

@@ -25,7 +25,7 @@ from tqdm import tqdm
 import keras
 from utils import b_acc
 
-from data.generators.example_generator.ttt_data_generator import ArcExampleData
+from data.generators.task_generator.ttt_data_generator import ArcTaskData
 from visualization.visualse_training_data_sets import visualise_training_data
 from tqdm.keras import TqdmCallback
 from data.augment.colour import generate_consistent_combinations_2d
@@ -59,7 +59,7 @@ def main(data_filepath, model_filepath, output_filepath, data_type):
     #ttt.compile(optimizer="AdamW", loss="mse")
     # Freeze the weights
 
-    it = ArcExampleData('train')
+    it = ArcTaskData('train')
 
     decoder.trainable = False
     encoder.trainable = False

@@ -48,7 +48,7 @@ def find_min_pca_components(X, n_splits=5, tolerance=0.999999999):
     # If no perfect reconstruction found, return the full number of components
     return X.shape[1]
 
-# Example usage with dummy data
+# Task usage with dummy data
 if __name__ == "__main__":
     # Generate a random dataset (replace with actual data)
     X = np.random.rand(100, 10)

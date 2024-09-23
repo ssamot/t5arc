@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from copy import copy
 
-from data.generators.example_generator.example import Example
+from data.generators.task_generator.task import Task
 from data.generators.object_recognition.basic_geometry import Dimension2D
 from data.generators.object_recognition.primitives import Primitive, Parallelogram
 from data.generators import constants as const
@@ -32,7 +32,7 @@ MAX_SIZE_OF_OBJECT = 15
 MAX_NUMBER_OF_MIRRORS = 10
 
 
-class RandomObjectsExample(Example):
+class RandomObjectsTask(Task):
     def __init__(self, number_of_io_pairs: int | None = None):
         super().__init__(min_canvas_size_for_background_object=MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
                          prob_of_background_object=PROB_OF_BACKGROUND_OBJ, number_of_io_pairs=number_of_io_pairs)
@@ -67,12 +67,12 @@ class RandomObjectsExample(Example):
     def place_new_object_on_canvases(self):
         """
         Create a new object and put it on different canvases. The process is as follows.
-        If the Example is of type 'Object:
+        If the Task is of type 'Object:
         1) Randomly create a Primitive.
         2) Copy that Primitive random n number of times (all of these will have the same id)
         3) Randomly do a number of Transformations to every one of the cobjects.
         4) Randomly pick the canvasses to place each of the object in (of the possible ones given the other objects)
-        If the Example is of type 'Symmetry':
+        If the Task is of type 'Symmetry':
         1) Randomly create a Primitive
         2) Mirror it random times (with random Orientations)
         3) Randomly pick the canvasses to place it

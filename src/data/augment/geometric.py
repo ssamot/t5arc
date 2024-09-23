@@ -120,7 +120,7 @@ def scale(array: np.ndarray, scale_factor: float) -> np.ndarray:
 
 
 def main():
-    # Example usage
+    # Task usage
     n = 10
     array = np.zeros((n, n), dtype=int)
     image = np.random.randint(1, 11, size=(4, 2))  # Using a 4x2 image to demonstrate size changes

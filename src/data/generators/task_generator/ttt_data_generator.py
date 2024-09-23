@@ -5,20 +5,20 @@ from typing import List
 import numpy as np
 from collections.abc import Iterator
 from data import load_data as ld
-from data.generators.example_generator.arc_example_generator import ARCExample
+from data.generators.task_generator.arc_task_generator import ARCTask
 
 
-class ArcExampleData(Iterator):
+class ArcTaskData(Iterator):
     def __init__(self, group: str = 'train', augment_with: List[str] | None = None,
                  max_samples: int = 10000, load_step: int = 100, with_black: bool = True):
         """
-        The Iterator that generates numpy arrays from the Canvasses of the ARC examples. It returns a dict with the name
-        of the example, the augmentation index, the input numpy array of size (number of example pairs + 1 x 32 x 32) and
-        the output array (same size as input). If augment_with is None it iterates per ARC Example. If it is a list of
+        The Iterator that generates numpy arrays from the Canvasses of the ARC tasks. It returns a dict with the name
+        of the task, the augmentation index, the input numpy array of size (number of task pairs + 1 x 32 x 32) and
+        the output array (same size as input). If augment_with is None it iterates per ARC Task. If it is a list of
         strings (e.g. ['colour', 'rotation']) it then augments the datawith the appropriate logic invariant operations
-        and it then iterates over each augmented data set. In this case it will return all of the augmented examples of
-        each ARC Example before it moves to the next one. The number of augmented examples per ARC Example is variable
-        (it is specified by the ARC Example itself).
+        and it then iterates over each augmented data set. In this case it will return all of the augmented tasks of
+        each ARC Task before it moves to the next one. The number of augmented tasks per ARC Task is variable
+        (it is specified by the ARC Task itself).
         :param group: 'train' or 'eval'
         :param augment_with: None for no augmented data or a List of strings. Can be 'colour' and 'rotation'
         :param max_samples: The maximum samples for each augmentation
@@ -46,7 +46,7 @@ class ArcExampleData(Iterator):
         self.with_black = with_black
 
     def fill_buffer(self, example_index):
-        current_example = ARCExample(arc_data=[self.names[example_index], self.tasks[example_index],
+        current_example = ARCTask(arc_data=[self.names[example_index], self.tasks[example_index],
                                                self.solutions[example_index]])
         current_example.generate_canvasses(empty=False, augment_with=self.augment_with, max_samples=self.max_samples,
                                            with_black=self.with_black)

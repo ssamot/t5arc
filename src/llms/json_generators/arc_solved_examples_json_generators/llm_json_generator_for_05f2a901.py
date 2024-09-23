@@ -4,11 +4,11 @@ from copy import copy
 
 from data.generators.object_recognition.basic_geometry import Dimension2D
 from data.generators.object_recognition.primitives import Random, Parallelogram
-from dsls.our_dsl.raw_data_to_examples.task_05f2a901 import example
+from dsls.our_dsl.raw_data_to_tasks.task_05f2a901 import task
 
-json_dict = example.create_example_json()
+json_dict = task.create_task_json()
 
-json.dump(json_dict, fp=open(fr'E:/tmp/example_05f2a901.json', mode='w'), indent=2)
+json.dump(json_dict, fp=open(fr'E:/tmp/task_05f2a901.json', mode='w'), indent=2)
 
 
 # CLAUDE's solution
@@ -173,6 +173,6 @@ def transform_canvas(input_canvas):
 # </editor-fold>
 
 i = 0
-example.input_canvases[i].show()
-output_canvas = transform_canvas(example.input_canvases[i])
+task.input_canvases[i].show()
+output_canvas = transform_canvas(task.input_canvases[i])
 output_canvas.show()

@@ -7,7 +7,7 @@ def total_combinations(depth, num_functions, arity):
 
 
 def main():
-    # Example parameters
+    # Task parameters
     depth = 9
     num_functions = 14
     arity = 1

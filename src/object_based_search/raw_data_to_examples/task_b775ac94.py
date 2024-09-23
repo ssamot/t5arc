@@ -1,17 +1,17 @@
 
-from data.generators.example_generator.arc_example_generator import ARCExample
+from data.generators.task_generator.arc_task_generator import ARCTask
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from dsls.our_dsl.functions import task_solving_utils as utils
 from dsls.our_dsl.solutions import solutions as sols
 
 
-example = ARCExample('b775ac94')
-example.generate_canvasses()
+task = ARCTask('b775ac94')
+task.generate_canvasses()
 
 unique_objects = [
     {'primitive': 'Random', 'colour': 2, 'id': 0, 'actual_pixels_id': 0, 'dimensions': Dimension2D(5, 5),
      'canvas_and_position': [0, Point(3, 14, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(0, Point(3, 14, 0), Dimension2D(4, 4)),
+     'actual_pixels': task.get_object_pixels_from_data(0, Point(3, 14, 0), Dimension2D(4, 4)),
      'on_canvas_transformations': [],
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
@@ -36,14 +36,14 @@ unique_objects = [
      'in_out_transformations': [],
      'symmetries': []},
 
-    {'primitive': 'Random', 'colour': 8, 'id': 4, 'actual_pixels_id': 4, 'dimensions': Dimension2D(3, 3),
+    {'primitive': 'Random', 'colour': 8, 'id': 0, 'actual_pixels_id': 4, 'dimensions': Dimension2D(3, 3),
      'canvas_and_position': [0, Point(14, 17, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(0, Point(14, 17, 0), Dimension2D(3, 3)),
+     'actual_pixels': task.get_object_pixels_from_data(0, Point(14, 17, 0), Dimension2D(3, 3)),
      'on_canvas_transformations': [],
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
                                 [['flip', 'Right'], ['translate_by', [3, 0]], ['replace_colour', [8, 5]]],
-                                [['flip', 'Up'], ['flip', 'Right'], ['translate_by', [3, 3]], ['replace_colour', [8, 2]]],
+                                [['flip', 'Up_Right'], ['translate_by', [3, 3]], ['replace_colour', [8, 2]]],
                                 [['flip', 'Up'], ['translate_by', [0, 3]], ['replace_colour', [8, 3]]]
                                ],
      'symmetries': []},
@@ -65,12 +65,12 @@ unique_objects = [
 
     {'primitive': 'Random', 'colour': 4, 'id': 7, 'actual_pixels_id': 7, 'dimensions': Dimension2D(3, 3),
      'canvas_and_position': [0, Point(14, 5, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(0, Point(14, 5, 0), Dimension2D(3, 3)),
+     'actual_pixels': task.get_object_pixels_from_data(0, Point(14, 5, 0), Dimension2D(3, 3)),
      'on_canvas_transformations': [],
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
                                 [['flip', 'Left'], ['translate_by', [-3, 0]], ['replace_colour', [4, 3]]],
-                                [['flip', 'Up'], ['flip', 'Left'], ['translate_by', [-3, 3]], ['replace_colour', [4, 9]]]
+                                [['flip', 'Up_Left'], ['translate_by', [-3, 3]], ['replace_colour', [4, 9]]]
                                ],
      'symmetries': []},
    {'primitive': 'Dot', 'colour': 3, 'id': 8, 'actual_pixels_id': 8, 'dimensions': Dimension2D(1, 1),
@@ -86,12 +86,12 @@ unique_objects = [
 
     {'primitive': 'Random', 'colour': 3, 'id': 10, 'actual_pixels_id': 10, 'dimensions': Dimension2D(5, 3),
      'canvas_and_position': [2, Point(3, 11, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(2, Point(3, 11, 0), Dimension2D(5, 3)),
+     'actual_pixels': task.get_object_pixels_from_data(2, Point(3, 11, 0), Dimension2D(5, 3)),
      'on_canvas_transformations': [],
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
                                 [['flip', 'Right'], ['translate_by', [5, 0]], ['replace_colour', [3, 9]]],
-                                [['flip', 'Down'], ['flip', 'Right'], ['translate_by', [5, -3]], ['replace_colour', [3, 4]]],
+                                [['flip', 'Down_Right'], ['translate_by', [5, -3]], ['replace_colour', [3, 4]]],
                                 [['flip', 'Down'], ['translate_by', [0, -3]], ['replace_colour', [3, 5]]]
                                ],
      'symmetries': []},
@@ -113,12 +113,12 @@ unique_objects = [
 
     {'primitive': 'Random', 'colour': 3, 'id': 14, 'actual_pixels_id': 14, 'dimensions': Dimension2D(4, 3),
      'canvas_and_position': [4, Point(1, 3, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(4, Point(1, 3, 0), Dimension2D(4, 3)),
+     'actual_pixels': task.get_object_pixels_from_data(4, Point(1, 3, 0), Dimension2D(4, 3)),
      'on_canvas_transformations': [],
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
                                 [['flip', 'Right'], ['translate_by', [4, 0]], ['replace_colour', [3, 4]]],
-                                [['flip', 'Up'], ['flip', 'Right'], ['translate_by', [4, 3]], ['replace_colour', [3, 2]]]
+                                [['flip', 'Up_Right'], ['translate_by', [4, 3]], ['replace_colour', [3, 2]]]
                                ],
      'symmetries': []},
     {'primitive': 'Dot', 'colour': 5, 'id': 15, 'actual_pixels_id': 15, 'dimensions': Dimension2D(1, 1),
@@ -138,7 +138,7 @@ unique_objects = [
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
                                 [['flip', 'Right'], ['translate_by', [3, 0]], ['replace_colour', [9, 5]]],
-                                [['flip', 'Down'], ['flip', 'Right'], ['translate_by', [3, -3]], ['replace_colour', [9, 7]]]
+                                [['flip', 'Down_Right'], ['translate_by', [3, -3]], ['replace_colour', [9, 7]]]
                                ],
      'symmetries': []},
     {'primitive': 'Dot', 'colour': 7, 'id': 18, 'actual_pixels_id': 18, 'dimensions': Dimension2D(1, 1),
@@ -154,12 +154,12 @@ unique_objects = [
 
     {'primitive': 'Random', 'colour': 9, 'id': 20, 'actual_pixels_id': 20, 'dimensions': Dimension2D(4, 4),
      'canvas_and_position': [6, Point(4, 17, 0)],
-     'actual_pixels': example.get_object_pixels_from_data(6, Point(4, 17, 0), Dimension2D(4, 4)),
+     'actual_pixels': task.get_object_pixels_from_data(6, Point(4, 17, 0), Dimension2D(4, 4)),
      'on_canvas_transformations': [],
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
                                 [['flip', 'Right'], ['translate_by', [4, 0]], ['replace_colour', [9, 3]]],
-                                [['flip', 'Down'], ['flip', 'Right'], ['translate_by', [4, -4]], ['replace_colour', [9, 4]]],
+                                [['flip', 'Down_Right'], ['translate_by', [4, -4]], ['replace_colour', [9, 4]]],
                                 [['flip', 'Down'], ['translate_by', [0, -4]], ['replace_colour', [9, 5]]]
                                ],
      'symmetries': []},
@@ -207,7 +207,7 @@ unique_objects = [
      'in_out_transformations': [
                                 [['translate_by', [0, 0]]],
                                 [['flip', 'Right'], ['translate_by', [3, 0]], ['replace_colour', [2, 9]]],
-                                [['flip', 'Up'], ['flip', 'Right'], ['translate_by', [3, 2]], ['replace_colour', [2, 3]]],
+                                [['flip', 'Up_Right'], ['translate_by', [3, 2]], ['replace_colour', [2, 3]]],
                                 [['flip', 'Up'], ['translate_by', [0, 2]], ['replace_colour', [2, 4]]]
                                ],
      'symmetries': []},

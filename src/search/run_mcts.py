@@ -136,7 +136,7 @@ def play_game():
     grammar_str = """
     Canvas -> "add_object_to_canvas (" Canvas "," Primitive  ")" | " make_new_canvas_as (" Canvas  ")" | "canvas"
     Vector -> "get_distance_origin_to_origin_between_objects (" Primitive "," Primitive  ")" | " get_distance_touching_between_objects (" Primitive "," Primitive  ")"
-    Primitive -> "object_transform_translate_along_direction (" Primitive "," Vector  ")" | " select_object_of_colour (" Canvas "," int  ")"
+    Primitive -> "object_transform_translate_along_direction (" Primitive "," Vector  ")" | " select_only_object_of_colour (" Canvas "," int  ")"
     int -> "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10"
     """
 

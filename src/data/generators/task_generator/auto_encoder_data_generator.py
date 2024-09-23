@@ -5,7 +5,7 @@ import numpy as np
 from copy import copy
 from matplotlib import pyplot as plt
 
-from data.generators.example_generator.example import Example
+from data.generators.task_generator.task import Task
 from data.generators.object_recognition.basic_geometry import Dimension2D
 from data.generators.object_recognition.canvas import Canvas
 from data.generators.object_recognition.primitives import Primitive, Parallelogram, Random
@@ -35,9 +35,9 @@ MAX_SIZE_OF_OBJECT = 30
 MAX_NUMBER_OF_MIRRORS = 6
 
 
-class AutoEncoderDataExample(Example):
+class AutoEncoderDataTask(Task):
     """
-    The Example subclass that generates canvasses for the auto-encoder training.
+    The Task subclass that generates canvasses for the auto-encoder training.
 
     :param number_of_canvases: The number of Canvasses to generate. The same as Batch.
     :param percentage_of_arc_canvases: The percentage of canvasses that will be drawn from the actual ARC data.
@@ -104,7 +104,7 @@ class AutoEncoderDataExample(Example):
 
     def randomly_position_object_in_canvas(self, obj: Primitive, canvas: Canvas) -> bool:
         """
-        It takes an object and places it in random (but allowed) positions in a Canvas of the Example
+        It takes an object and places it in random (but allowed) positions in a Canvas of the Task
         :param canvas: The Canvas to place the object in.
         :param obj: The object to position.
         :return: True if successful. False otherwise.
@@ -122,12 +122,12 @@ class AutoEncoderDataExample(Example):
     def place_new_object_on_canvas(self, canvas: Canvas):
         """
         Create a new object and put it on different canvases. The process is as follows.
-        If the Example is of type 'Object:
+        If the Task is of type 'Object:
         1) Randomly create a Primitive.
         2) Copy that Primitive random n number of times (all of these will have the same id)
         3) Randomly do a number of Transformations to every one of the cobjects.
         4) Randomly pick the canvasses to place each of the object in (of the possible ones given the other objects)
-        If the Example is of type 'Symmetry':
+        If the Task is of type 'Symmetry':
         1) Randomly create a Primitive
         2) Mirror it random times (with random Orientations)
         3) Randomly pick the canvasses to place it

@@ -91,7 +91,7 @@ def print_sample_combinations_dual(original_1, original_2, combinations_1, combi
 
 
 if __name__ == '__main__':
-    # Example usage for single input
+    # Task usage for single input
     original_array_2d = [
         [3, 7, 8, 0],
         [1, 2, 3, 0],
@@ -99,10 +99,10 @@ if __name__ == '__main__':
     ]
 
     combinations = generate_consistent_combinations_2d(original_array_2d)
-    print("Single Input Example:")
+    print("Single Input Task:")
     print_sample_combinations(original_array_2d, combinations)
 
-    # Example usage for dual input
+    # Task usage for dual input
     original_array_2d_1 = [
         [1, 2, 3, 0],
         [0, 1, 2, 3],
@@ -115,6 +115,6 @@ if __name__ == '__main__':
         [0, 3, 2, 1]
     ]
 
-    print("\n\nDual Input Example:")
+    print("\n\nDual Input Task:")
     combinations_1, combinations_2 = generate_consistent_combinations_2d_dual(original_array_2d_1, original_array_2d_2)
     print_sample_combinations_dual(original_array_2d_1, original_array_2d_2, combinations_1, combinations_2)

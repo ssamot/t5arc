@@ -2,8 +2,8 @@ import keras
 import numpy as np
 
 
-from data.generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
-from data.generators.example_generator.arc_data_generator import get_all_arc_data
+from data.generators.task_generator.auto_encoder_data_generator import AutoEncoderDataTask
+from data.generators.task_generator.arc_data_generator import get_all_arc_data
 
 
 
@@ -45,7 +45,7 @@ class CanvasDataGenerator(keras.utils.PyDataset):
     def __data_generation(self):
         """Generates data containing batch_size images."""
 
-        e = AutoEncoderDataExample(self.batch_size, percentage_of_arc_canvases=0.0)
+        e = AutoEncoderDataTask(self.batch_size, percentage_of_arc_canvases=0.0)
         batch_targets = e.get_canvases_as_numpy_array()
         batch_targets = np.concatenate([batch_targets, self.arc_array])
 

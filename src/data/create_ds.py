@@ -4,9 +4,9 @@ import logging
 from tqdm import tqdm
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
-from data.generators.example_generator.auto_encoder_data_generator import AutoEncoderDataExample
-from data.generators.example_generator.arc_data_generator import get_all_arc_data
-from data.generators.example_generator.ttt_data_generator import ArcExampleData
+from data.generators.task_generator.auto_encoder_data_generator import AutoEncoderDataTask
+from data.generators.task_generator.arc_data_generator import get_all_arc_data
+from data.generators.task_generator.ttt_data_generator import ArcTaskData
 
 
 import numpy as np
@@ -31,10 +31,10 @@ augmented = "augmented"
 def main(output_filepath, augment, max_perms, type):
 
 
-    it = ArcExampleData(type)
+    it = ArcTaskData(type)
 
     if(augment == augmented):
-        it = ArcExampleData(type,
+        it = ArcTaskData(type,
                             augment_with=['colour', 'rotation'],
                             max_samples=max_perms,
                             with_black=False)

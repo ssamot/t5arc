@@ -7,7 +7,7 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
 
-from data.generators.example_generator.utils import do_two_objects_overlap
+from data.generators.task_generator.utils import do_two_objects_overlap
 from data.generators.object_recognition.object import Object
 from data.generators.object_recognition.utils import union2d
 from data.generators import constants as const

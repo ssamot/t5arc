@@ -7,7 +7,6 @@ import numpy as np
 from data.generators.object_recognition.basic_geometry import Point, Vector, Dimension2D, RelativePoint, Orientation, \
     Surround
 from data.generators.object_recognition.canvas import Canvas
-from data.generators.object_recognition.object import Object
 from data.generators.object_recognition.primitives import Primitive
 
 
@@ -192,9 +191,23 @@ def select_rest_of_the_objects(canvas: Canvas, obj: Primitive ) -> List[Primitiv
     return temp_obj_list
 
 
-def select_object_of_colour(canvas: Canvas, colour: int) -> Primitive:
+def select_all_objects_of_colour(canvas: Canvas, colour: int) -> List[Primitive]:
     new_canvas = copy(canvas)
-    return new_canvas.find_objects_of_colour(colour)[0]
+    return new_canvas.find_objects_of_colour(colour)
+
+
+def select_only_object_of_colour(canvas: Canvas, colour: int) -> Primitive:
+    return select_all_objects_of_colour(canvas, colour=colour)[0]
+
+
+def select_objects_of_type(canvas: Canvas, primitive_type: type[Primitive]) -> List[Primitive]:
+    new_canvas = copy(canvas)
+    objs_of_type = []
+    for obj in new_canvas.objects:
+        if isinstance(obj, primitive_type):
+            objs_of_type.append(copy(obj))
+
+    return objs_of_type
 
 
 # Funcs to transform Primitives

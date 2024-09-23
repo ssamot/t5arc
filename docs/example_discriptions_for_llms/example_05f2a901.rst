@@ -1,7 +1,7 @@
 
-Example 05f2a901
+Task 05f2a901
 
-The Example has 3 pairs of Input- Output Canvasses.
+The Task has 3 pairs of Input- Output Canvasses.
 
 Pair 1.
 Input Canvas has size [9, 14]

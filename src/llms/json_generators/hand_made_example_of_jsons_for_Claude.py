@@ -4,7 +4,7 @@ import json
 
 import numpy as np
 
-from data.generators.example_generator.example import Example
+from data.generators.task_generator.task import Task
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from data.generators.object_recognition.canvas import Canvas
 from data.generators.object_recognition.primitives import Random, Dot
@@ -13,7 +13,7 @@ randint = np.random.randint
 
 number_of_pairs = 6
 
-e = Example(number_of_io_pairs=number_of_pairs, prob_of_background_object=0, run_generate_canvasses=False)
+e = Task(number_of_io_pairs=number_of_pairs, prob_of_background_object=0, run_generate_canvasses=False)
 e.experiment_type = 'other'
 e.generate_canvasses()
 
@@ -74,7 +74,7 @@ with_pixels = False
 for j, (i, o) in enumerate(zip(e.input_canvases, e.output_canvases)):
     ic = i.json_output(with_pixels=with_pixels)
     oc = o.json_output(with_pixels=with_pixels)
-    pair = {'Example': j, 'Input': ic, 'Output': oc}
+    pair = {'Task': j, 'Input': ic, 'Output': oc}
     json.dump(pair, fp=open(fr'E:/tmp/canvasses/example_{j}.json', mode='w'), indent=2)
 
 test_input = e.test_input_canvas.json_output(with_pixels=with_pixels)
