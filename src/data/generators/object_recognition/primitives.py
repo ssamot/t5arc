@@ -234,6 +234,7 @@ class Primitive(Object):
 
         return result
 
+
 class Random(Primitive):
     def __init__(self, size: Dimension2D | np.ndarray | List, border_size: Surround = Surround(0, 0, 0, 0),
                  canvas_pos: Point = Point(0, 0), colour: None | int = None, occupancy_prob: float = 0.5,

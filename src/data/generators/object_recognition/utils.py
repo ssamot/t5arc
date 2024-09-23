@@ -15,5 +15,3 @@ def union2d(self, ar1: List | np.ndarray, ar2: List | np.ndarray) -> np.ndarray:
     ar1 = np.delete(ar1, delete_indices, axis=0)
 
     return np.concatenate((ar1, ar2), axis=0)
-
-

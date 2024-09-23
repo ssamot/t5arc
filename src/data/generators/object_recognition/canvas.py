@@ -175,16 +175,14 @@ class Canvas:
             bbox_to_embed_in = copy(self.actual_pixels[ymin_canv: ymax_canv, xmin_canv: xmax_canv])
             bbox_to_embed_in[np.where(bbox_to_embed > 1)] = bbox_to_embed[np.where(bbox_to_embed > 1)]
             self.actual_pixels[ymin_canv: ymax_canv, xmin_canv: xmax_canv] = bbox_to_embed_in
-            #self.actual_pixels[ymin_canv: ymax_canv, xmin_canv: xmax_canv] = \
-            #    obj.actual_pixels[ymin:ymax, xmin:xmax]
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
 
-    def add_new_object(self, obj: Object):
+    def add_new_object(self, obj: Primitive):
         self.objects.append(obj)
         obj.canvas_id = self.id
         self.embed_objects()
 
-    def remove_object(self, obj: Object):
+    def remove_object(self, obj: Primitive):
         self.objects.remove(obj)
         self.embed_objects()
 
@@ -256,7 +254,7 @@ class Canvas:
         :param canvas_pos: The Point specifying the coordinates on the canvas of the bottom left pixel of the object
         :return:
         """
-        self.objects[index]._canvas_pos = canvas_pos
+        self.objects[index].canvas_pos = canvas_pos
         self.embed_objects()
 
     def json_output(self, with_pixels: bool = False) -> dict:
