@@ -133,24 +133,18 @@ class Object:
         self.id = _id
         self.actual_pixels_id = actual_pixels_id
         self.canvas_id = canvas_id
-        self._actual_pixels = actual_pixels
         self.border_size = border_size
 
-        self._canvas_pos = canvas_pos
+        self._actual_pixels = actual_pixels
+        self._canvas_pos = Point.point_from_numpy(np.array(canvas_pos)) if type(canvas_pos) != Point else canvas_pos
         self._holes = None
         self._relative_points = {}
         self._perimeter = {}
         self._coloured_bbox = None
-
-        if type(canvas_pos) != Point:
-            self._canvas_pos = Point.point_from_numpy(np.array(canvas_pos))
-
-        self.rotation_axis = deepcopy(self._canvas_pos)
-
         self._dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 
+        self.rotation_axis = deepcopy(self._canvas_pos)
         self.symmetries: List = []
-
         self.transformations: List = []
 
         self._reset_dimensions()
@@ -354,9 +348,6 @@ class Object:
         :return: Nothing
         """
 
-        def length_multiplier(factor):
-            return factor + factor - 2
-
         if factor == 0:  # Factor cannot be 0 so in this case nothing happens
             return
 
@@ -385,7 +376,8 @@ class Object:
 
         for sym in self.symmetries:
             if factor > 0:
-                sym.length *= 2 * factor - 0.5 * (factor + 1)
+                #sym.length *= 2 * factor - 0.5 * (factor + 1)
+                sym.length = sym.length * factor + (factor - 1)
 
                 d = np.abs(sym.origin - self.canvas_pos)
                 multiplier = Point(factor, factor) if sym.orientation == Orientation.Up else Point(factor + 1, factor)
@@ -397,13 +389,13 @@ class Object:
                 sym.origin.y += (factor - 1) * 0.5 if sym.orientation == Orientation.Left\
                     else (factor - 1) * 0.5 - (factor - 2) * 0.5 - 0.5
             else:
-                sym.length /= np.abs(factor)
+                sym.length = sym.length / np.abs(factor) - 1/np.abs(factor)
                 factor = 1/np.abs(factor)
                 sym.origin = (sym.origin - self.canvas_pos) * factor + self.canvas_pos
 
         self.transformations.append([Transformations.scale.name, {'factor': factor}])
 
-    def rotate(self, times: Union[1, 2, 3], center: np.ndarray | List | Point = (0, 0)):
+    def rotate(self, times: Union[1, 2, 3], center: np.ndarray | List = (0, 0)):
         """
         Rotate the object counter-clockwise by times multiple of 90 degrees
         :param times: 1, 2 or 3 times
@@ -412,27 +404,23 @@ class Object:
         """
         radians = np.pi/2 * times
         degrees = -(90 * times)
-        self.actual_pixels = skimage.transform.rotate(self.actual_pixels, degrees, resize=True, order=0, center=center)
 
-        if type(center) == Point:
-            center = center.to_numpy()
-        if len(center) == 2:
-            center = np.array([center[0], center[1], 0])
+        old_canvas_pos = copy(self.canvas_pos).to_numpy()
 
-        center += np.array([self.rotation_axis.x, self.rotation_axis.y, 0]).astype(int)
-        self.bbox.transform(translation=-center)
-        self.bbox.transform(rotation=radians)
-        self.bbox.transform(translation=center)
-        self.canvas_pos.x = int(self.bbox.top_left.x)
-        self.canvas_pos.y = int(self.bbox.bottom_right.y)
+        if times == 1:
+            self.canvas_pos.x = self.canvas_pos.x - self.dimensions.dy + 1
+        elif times == 2:
+            self.canvas_pos.x = self.canvas_pos.x - self.dimensions.dx + 1
+            self.canvas_pos.y = self.canvas_pos.y - self.dimensions.dy + 1
+        elif times == 3:
+            self.canvas_pos.y = self.canvas_pos.y - self.dimensions.dx + 1
+
+        self.actual_pixels = skimage.transform.rotate(self.actual_pixels, degrees, resize=True, order=0, center=[0, 0])
 
         for sym in self.symmetries:
-            sym.transform(translation=-center)
+            sym.transform(translation=-old_canvas_pos)
             sym.transform(rotation=radians)
-            sym.transform(translation=center)
-
-        self.dimensions.dx = self.actual_pixels.shape[1]
-        self.dimensions.dy = self.actual_pixels.shape[0]
+            sym.transform(translation=old_canvas_pos)
 
         self.transformations.append([Transformations.rotate.name, {'times': times}])
 
@@ -482,19 +470,21 @@ class Object:
         if axis == Orientation.Up or axis == Orientation.Down:
             concat_pixels = np.flipud(self.actual_pixels)
             if on_axis:
-                concat_pixels = concat_pixels[:-1, :] if axis == Orientation.Up else concat_pixels[1:, :]
+                concat_pixels = concat_pixels[:-1, :] if axis == Orientation.Down else concat_pixels[1:, :]
 
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=0) \
-                if axis == Orientation.Down else np.concatenate((concat_pixels, self.actual_pixels), axis=0)
+                if axis == Orientation.Up else np.concatenate((concat_pixels, self.actual_pixels), axis=0)
+            if axis == Orientation.Down:
+                self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y - self.dimensions.dy // 2)
 
-            new_symmetry_axis_origin = Point(self.canvas_pos.x, self.actual_pixels.shape[0] / 2 + self.canvas_pos.y) \
-                if axis == Orientation.Up else Point(self.canvas_pos.x, self.canvas_pos.y)
+            new_symmetry_axis_origin = Point(self.canvas_pos.x, self.dimensions.dy / 2 + self.canvas_pos.y) \
+                #if axis == Orientation.Down else Point(self.canvas_pos.x, self.canvas_pos.y)
 
             new_symmetry_axis_origin.y -= 0.5
-            if on_axis and axis == Orientation.Down:
-                new_symmetry_axis_origin.y -= 0.5
+            #if on_axis and axis == Orientation.Up:
+            #    new_symmetry_axis_origin.y -= 0.5
 
-            if on_axis and axis == Orientation.Down:
+            if on_axis and axis == Orientation.Up:
                 for sym in self.symmetries:
                     if sym.orientation == Orientation.Right and sym.origin.y > new_symmetry_axis_origin.y:
                         sym.origin.y -= 1
@@ -509,13 +499,15 @@ class Object:
 
             self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=1) if axis == Orientation.Right else \
                 np.concatenate((concat_pixels, self.actual_pixels), axis=1)
+            if axis == Orientation.Left:
+                self.canvas_pos = Point(self.canvas_pos.x - self.dimensions.dx // 2, self.canvas_pos.y)
 
-            new_symmetry_axis_origin = Point(self.actual_pixels.shape[1] / 2 + self.canvas_pos.x, self.canvas_pos.y)\
-                if axis == Orientation.Right else Point(self.canvas_pos.x, self.canvas_pos.y)
+            new_symmetry_axis_origin = Point(self.dimensions.dx / 2 + self.canvas_pos.x, self.canvas_pos.y)\
+               # if axis == Orientation.Right else Point(self.canvas_pos.x, self.canvas_pos.y)
 
             new_symmetry_axis_origin.x -= 0.5
-            if on_axis and axis == Orientation.Left:
-                new_symmetry_axis_origin.x -= 0.5
+            #if on_axis and axis == Orientation.Left:
+            #    new_symmetry_axis_origin.x -= 0.5
 
             if on_axis and axis == Orientation.Left:
                 for sym in self.symmetries:
@@ -531,41 +523,38 @@ class Object:
             self.canvas_pos.y -= self.dimensions.dy
 
         self.symmetries.append(symmetry_vector)
-
-        self._reset_dimensions()
-
         self.transformations.append([Transformations.mirror.name, {'axis': axis}])
 
     def flip(self, axis: Orientation, translate: bool = False):
         """
         Flips the object along an axis. If the Orientation is diagonal it will flip twice
         :param axis: The direction to flip towards. The edge of the bbox toward that direction becomes the axis of the flip.
-        :param translate:
+        :param translate: If True then move the Object by its flip, otherwise keep it where it was.
         :return: Nothing
         """
 
         if axis == Orientation.Up or axis == Orientation.Down:
             self.actual_pixels = np.flipud(self.actual_pixels)
             if translate:
-                self.canvas_pos.y = self.canvas_pos.y + self.dimensions.dy if axis == Orientation.Up else \
-                    self.canvas_pos.y - self.dimensions.dy
+                self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy) \
+                    if axis == Orientation.Up else Point(self.canvas_pos.x, self.canvas_pos.y - self.dimensions.dy)
         elif axis == Orientation.Left or axis == Orientation.Right:
             self.actual_pixels = np.fliplr(self.actual_pixels)
             if translate:
-                self.canvas_pos.x = self.canvas_pos.x + self.dimensions.dx if axis == Orientation.Right else \
-                    self.canvas_pos.x - self.dimensions.dx
+                self.canvas_pos = Point(self.canvas_pos.x+ self.dimensions.dx, self.canvas_pos.y) \
+                    if axis == Orientation.Right else Point(self.canvas_pos.x - self.dimensions.dx, self.canvas_pos.y)
         else:
             self.actual_pixels = np.flipud(self.actual_pixels)
             self.actual_pixels = np.fliplr(self.actual_pixels)
             if translate:
                 if axis in [Orientation.Up_Right, Orientation.Up_Left]:
-                    self.canvas_pos.y += self.dimensions.dy
+                    self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy)
                 elif axis in [Orientation.Down_Right, Orientation.Down_Left]:
-                    self.canvas_pos.y -= self.dimensions.dy
+                    self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y - self.dimensions.dy)
                 if axis in [Orientation.Up_Right, Orientation.Down_Right]:
-                    self.canvas_pos.x += self.dimensions.dx
+                    self.canvas_pos = Point(self.canvas_pos.x + self.dimensions.dx, self.canvas_pos.y)
                 elif axis in [Orientation.Up_Left, Orientation.Down_Left]:
-                    self.canvas_pos.x -= self.dimensions.dx
+                    self.canvas_pos = Point(self.canvas_pos.x - self.dimensions.dx, self.canvas_pos.y)
 
         self.transformations.append([Transformations.flip.name, {'axis': axis}])
 
@@ -592,7 +581,7 @@ class Object:
         self.actual_pixels[c[:, 0], c[:, 1]] = 1
 
     def fill(self, colour: int):
-        h = np.argwhere(self.holes==1)
+        h = np.argwhere(self.holes == 1)
         self.actual_pixels[h[:, 0], h[:, 1]] = colour
 
     # </editor-fold>

@@ -367,8 +367,8 @@ class Point:
             self.y = scale_x * x * (np.sin(rotation) - np.tan(shear_y) * np.cos(rotation)) - \
                      scale_y * y * (np.tan(shear_x) * np.sin(rotation) - np.cos(rotation)) + translation_y
 
-            self.x = int(self.x)
-            self.y = int(self.y)
+            #self.x = int(self.x)
+            #self.y = int(self.y)
 
     def copy(self) -> Point:
         return Point(self.x, self.y, self.z)

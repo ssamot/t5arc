@@ -137,10 +137,6 @@ class Primitive(Object):
             x_symmetry = Vector(orientation=x_sym_or, length=x_sym_length, origin=x_sym_origin)
             self.symmetries.append(x_symmetry)
 
-    #def _reset_dimensions(self):
-    #    Object._reset_dimensions(self)
-    #    self.size = self.dimensions
-
     def json_output(self):
         args = self.__dict__.copy()
         for arg in ['border_size', '_canvas_pos', 'rotation_axis', 'number_of_coloured_pixels', 'actual_pixels',
