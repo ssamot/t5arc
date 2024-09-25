@@ -137,6 +137,9 @@ class Canvas:
         self.objects = sorted(self.objects, key=lambda obj: obj.canvas_pos.z)
 
         for i, obj in enumerate(self.objects):
+            obj.canvas_pos = Point(obj.canvas_pos.x, obj.canvas_pos.y, i)
+
+        for i, obj in enumerate(self.objects):
             xmin = 0
             xmin_canv = obj.canvas_pos.x
             if xmin_canv >= self.actual_pixels.shape[1]:

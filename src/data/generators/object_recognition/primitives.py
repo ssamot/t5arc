@@ -172,9 +172,9 @@ class Primitive(Object):
 
     def __copy__(self):
         args = self.__dict__.copy()
-        for arg in ['actual_pixels', 'border_size', '_canvas_pos', 'id', 'actual_pixels_id', 'rotation_axis',
-                    'dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox', '_holes',
-                    '_center_on', '_relative_points']:
+        for arg in ['_actual_pixels', 'border_size', '_canvas_pos', 'id', 'actual_pixels_id', 'rotation_axis',
+                    '_dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox', '_holes',
+                    '_relative_points', '_visible_bbox', '_perimeter']:
             args.pop(arg, None)
         args['_id'] = self.id
         args['actual_pixels_id'] = self.actual_pixels_id
@@ -192,6 +192,7 @@ class Primitive(Object):
         object.dimensions = Dimension2D(self.dimensions.dx, self.dimensions.dy)
         object.actual_pixels = np.ndarray.copy(self.actual_pixels)
         object.transformations = copy(self.transformations)
+        object._visible_bbox = copy(self._visible_bbox)
         object.symmetries = []
         for sym in self.symmetries:
             object.symmetries.append(copy(sym))

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Union
+from typing import List, Union, Dict, Set
 from copy import copy, deepcopy
 from typing import Tuple
 
@@ -140,7 +140,8 @@ class Object:
         self._holes = None
         self._relative_points = {}
         self._perimeter = {}
-        self._coloured_bbox = None
+        self._inside = {}
+        self._visible_bbox = None
         self._dimensions = Dimension2D(self.actual_pixels.shape[1], self.actual_pixels.shape[0])
 
         self.rotation_axis = deepcopy(self._canvas_pos)
@@ -151,10 +152,19 @@ class Object:
 
     @property
     def canvas_pos(self):
+        """
+        The getter of the canvas_pos
+        :return: the canvas_pos
+        """
         return self._canvas_pos
 
     @canvas_pos.setter
     def canvas_pos(self, new_pos: Point):
+        """
+        The setter of the canvas_pos
+        :param new_pos: The new canvas_pos
+        :return:
+        """
         move = new_pos - self._canvas_pos
         self._canvas_pos = new_pos
         for sym in self.symmetries:
@@ -163,10 +173,18 @@ class Object:
 
     @property
     def number_of_coloured_pixels(self):
+        """
+        The getter of the number_of_coloured_pixels
+        :return: the number_of_coloured_pixels
+        """
         return int(np.sum([1 for i in self.actual_pixels for k in i if k > 1]))
 
     @property
     def holes(self):
+        """
+        The getter of the holes of the Object.
+        :return: the holes
+        """
         holes, n = self.detect_holes(self.actual_pixels)
         if n == 0:
             return None
@@ -176,8 +194,8 @@ class Object:
     @property
     def relative_points(self):
         """
-        Generates the _relative_points for the Object
-        :return: the self._relative_points
+        Generates the relative_points for the Object, that is the coordinates of the 9 RelativePoints.
+        :return: the relative_points
         """
         self._relative_points[RelativePoint.Bottom_Left] = self.canvas_pos
         self._relative_points[RelativePoint.Bottom_Right] = Point(self.canvas_pos.x + self.dimensions.dx,
@@ -195,49 +213,136 @@ class Object:
                                                                   self.canvas_pos.y + self.dimensions.dy / 2 - 0.5)
         self._relative_points[RelativePoint.Middle_Center] = Point(self.canvas_pos.x + self.dimensions.dx / 2 - 0.5,
                                                                    self.canvas_pos.y + self.dimensions.dy / 2 - 0.5)
-        '''
-        self._relative_points[RelativePoint.Top_Center] = None
-        self._relative_points[RelativePoint.Bottom_Center] = None
-        self._relative_points[RelativePoint.Middle_Left] = None
-        self._relative_points[RelativePoint.Middle_Right] = None
-        self._relative_points[RelativePoint.Middle_Center] = None
-        
-        if self.dimensions.dx % 2 == 1:
-            self._relative_points[RelativePoint.Top_Center] = Point(self.canvas_pos.x + self.dimensions.dx // 2,
-                                                                    self.bbox.top_left.y)
-            self._relative_points[RelativePoint.Bottom_Center] = Point(self.canvas_pos.x + self.dimensions.dx // 2,
-                                                                       self.canvas_pos.y)
-        if self.dimensions.dy % 2 == 1:
-            self._relative_points[RelativePoint.Middle_Left] = Point(self.canvas_pos.x,
-                                                                     self.canvas_pos.y + self.dimensions.dy // 2)
-            self._relative_points[RelativePoint.Middle_Right] = Point(self.bbox.bottom_right.x,
-                                                                      self.canvas_pos.y + self.dimensions.dy // 2)
-        if self.dimensions.dx % 2 == 1 and self.dimensions.dy % 2 == 1:
-            self._relative_points[RelativePoint.Middle_Center] = Point(self.canvas_pos.x + self.dimensions.dx // 2,
-                                                                       self.canvas_pos.y + self.dimensions.dy // 2)
-        '''
+
         return self._relative_points
 
     @property
     def actual_pixels(self) -> np.ndarray:
+        """
+        The getter of the actual_pixels
+        :return: he actual_pixels
+        """
         return self._actual_pixels
 
     @actual_pixels.setter
     def actual_pixels(self, new_pixels: np.ndarray):
+        """
+        The setter of the actual_pixels
+        :param new_pixels: The new actual_pixels
+        :return:
+        """
         self._actual_pixels = new_pixels
         self._reset_dimensions()
 
     @property
     def dimensions(self) -> Dimension2D:
+        """
+        Getter of the dimensions property
+        :return: The dimensions property
+        """
         return self._dimensions
 
     @dimensions.setter
     def dimensions(self, new_dim: Dimension2D):
+        """
+        Setter of the dimensions property
+        :param new_dim:
+        :return:
+        """
         self._dimensions = new_dim
 
-    @staticmethod
-    def _match(obj_a: Object, obj_b: Object, padding: Surround | None = None, match_shape_only: bool = False):
+    @property
+    def visible_bbox(self) -> Bbox:
+        """
+        This returns the bbox that encompasses only the visible pixels of the object.
+        :return: The visible bbox
+        """
+        self._reset_dimensions()
+        return self._visible_bbox
 
+    @property
+    def perimeter(self) -> Dict[str, Set]:
+        """
+        Creates a dictionary with keys 'Left', 'Right', 'Top' and 'Bottom'. The value of each key is a set of k 2-element
+        Lists. Each 2-element List is a position (on the Canvas - (x,y)) of the pixels that have a colour and would be
+        accessible from the key side of the Object. This generates a dictionary holding the positions of the surround
+        (perimeter) pixels of the Object.
+        :return: The perimeter dictionary.
+        """
+        pixs = self.actual_pixels
+
+        result = {'Left': [], 'Right': [], 'Top': [], 'Bottom': []}
+        pos_indices = []
+        for left_to_right in range(self.dimensions.dx):
+            pos = np.argwhere(pixs[:, left_to_right] > 1).squeeze()
+            if len(pos.shape) == 0:
+                pos = np.array([pos])
+            good_pos = [p for p in pos if p not in pos_indices]
+            for gp in good_pos:
+                result['Left'].append((left_to_right + self.canvas_pos.x, gp + self.canvas_pos.y))
+                pos_indices.append(gp)
+
+        pos_indices = []
+        for right_to_left in range(self.dimensions.dx):
+            pos = np.argwhere(pixs[:, self.dimensions.dx - right_to_left - 1] > 1).squeeze()
+            if len(pos.shape) == 0:
+                pos = np.array([pos])
+            good_pos = [p for p in pos if p not in pos_indices]
+            for gp in good_pos:
+                result['Right'].append((self.dimensions.dx - right_to_left - 1 + self.canvas_pos.x, gp + self.canvas_pos.y))
+                pos_indices.append(gp)
+
+        pos_indices = []
+        for top_to_bottom in range(self.dimensions.dy):
+            pos = np.argwhere(pixs[top_to_bottom, :] > 1).squeeze()
+            if len(pos.shape) == 0:
+                pos = np.array([pos])
+            good_pos = [p for p in pos if p not in pos_indices]
+            for gp in good_pos:
+                result['Bottom'].append((gp + self.canvas_pos.x, top_to_bottom + self.canvas_pos.y))
+                pos_indices.append(gp)
+
+        pos_indices = []
+        for bottom_to_top in range(self.dimensions.dy):
+            pos = np.argwhere(pixs[self.dimensions.dy - bottom_to_top - 1, :] > 1).squeeze()
+            if len(pos.shape) == 0:
+                pos = np.array([pos])
+            good_pos = [p for p in pos if p not in pos_indices]
+            for gp in good_pos:
+                result['Top'].append((gp + self.canvas_pos.x, self.dimensions.dy - bottom_to_top - 1 + self.canvas_pos.y))
+                pos_indices.append(gp)
+
+        for dir in result:
+            temp = result[dir]
+            set_temp = set(tuple(i) for i in temp)
+            result[dir] = set_temp
+
+        self._perimeter = result
+        return result
+
+    @property
+    def inside(self) -> Set:
+        """
+        Returns a set of the positions (x, y) of all the visible pixels of the Object that are not part of the perimeter.
+        :return: The inside pixels set
+        """
+        all_coloured_pixels = set((i[1], i[0]) for i in self.get_coloured_pixels_positions())
+        result = all_coloured_pixels - self.perimeter['Left'] - self.perimeter['Right'] - self.perimeter['Top'] - \
+                    self.perimeter['Bottom']
+        return result
+
+    @staticmethod
+    def _match(obj_a: Object, obj_b: Object, padding: Surround | None = None, match_shape_only: bool = False) -> List[Point]:
+        """
+        The basic match between Objects obj_a and obj_b. It calculates the list of coordinates (Points) that the obj_b
+        should move to (its canvas_pos) so that it gives the best match with obj_a. This is a list if multiple
+        positions result in the same match quality.
+        :param obj_a: The object to be macth
+        :param obj_b: The object to match
+        :param padding: Any padding (Surround) that would help with the matching. If (0, 0, 0, 0) doesn't work try (1, 1, 1, 1)
+        :param match_shape_only: If True then ignore colours and match only for the shapes the visible pixels generates.
+        :return: The best position(s) obj_b should move to to match obj_a
+        """
         if padding is None:
             padding = Surround(0, 0, 0, 0)
 
@@ -301,6 +406,12 @@ class Object:
 
     # <editor-fold desc="TRANSFORMATION METHODS">
     def translate_to_coordinates(self, target_point: Point, object_point: Point | None = None):
+        """
+        Moves the Object's canvas_pos or object_point (if not None) to the target_point coordinates
+        :param target_point: The target point to move the object point (or the canvas position)
+        :param object_point: The point of the object to move to target point (becomes equal to canvas position if set to None).
+        :return:
+        """
         if object_point is None:
             object_point = self.canvas_pos
 
@@ -311,6 +422,11 @@ class Object:
         self.canvas_pos = target_point - object_point
 
     def translate_by(self, distance: Dimension2D):
+        """
+        Move the Object by distance.
+        :param distance: The distance to move the Object by.
+        :return:
+        """
         self.canvas_pos += Point(distance.dx, distance.dy)
 
         self.transformations.append([Transformations.translate_by.name,
@@ -338,7 +454,25 @@ class Object:
 
         self._reset_dimensions()
 
-    def touch(self, other: Object, orientation: Orientation):
+    def translate_relative_point_to_point(self, relative_point: RelativePoint, other_point: Point):
+        """
+        Translate the Object so that its relative point with key RelativePoint ends up on other_point.
+        :param relative_point: The RelativePoint
+        :param other_point: The target point
+        :return:
+        """
+
+        this_point = self.relative_points[relative_point]
+        if this_point is not None:
+            difference = other_point - this_point
+            self.canvas_pos += difference
+
+            self.transformations.append([Transformations.translate.name,
+                                         {'distance': difference.to_numpy().tolist()}])
+
+        self._reset_dimensions()
+
+    def translate_until_touch(self, other: Object):
         pass
 
     def scale(self, factor: int):
@@ -558,29 +692,20 @@ class Object:
 
         self.transformations.append([Transformations.flip.name, {'axis': axis}])
 
-    def translate_relative_point_to_point(self, relative_point: RelativePoint, other_point: Point):
+    def delete(self):
         """
-        Translate the Object so that its relative point with key RelativePoint ends up on other_point.
-        :param relative_point: The RelativePoint
-        :param other_point: The target point
+        Set all the pixels of the object to 1 (black).
         :return:
         """
-
-        this_point = self.relative_points[relative_point]
-        if this_point is not None:
-            difference = other_point - this_point
-            self.canvas_pos += difference
-
-            self.transformations.append([Transformations.translate.name,
-                                         {'distance': difference.to_numpy().tolist()}])
-
-        self._reset_dimensions()
-
-    def delete(self):
         c = self.get_coloured_pixels_positions()
         self.actual_pixels[c[:, 0], c[:, 1]] = 1
 
     def fill(self, colour: int):
+        """
+        Fill all holes of the Object with colour
+        :param colour: The colour to fill with
+        :return:
+        """
         h = np.argwhere(self.holes == 1)
         self.actual_pixels[h[:, 0], h[:, 1]] = colour
 
@@ -710,19 +835,23 @@ class Object:
 
         bb_top_left = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy - 1, self.canvas_pos.z)
         bb_bottom_right = Point(bb_top_left.x + self.dimensions.dx - 1, self.canvas_pos.y, self.canvas_pos.z)
-
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
+
+        coloured_pixels = self.get_coloured_pixels_positions()
+        bb_top_left = Point(np.min(coloured_pixels, axis=0)[1], np.max(coloured_pixels, axis=0)[0])
+        bb_bottom_right = Point(np.max(coloured_pixels, axis=0)[1], np.min(coloured_pixels, axis=0)[0])
+        self._visible_bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
 
     def distance_to_object(self, other: Object, dist_type: str = 'min') -> Vector:
         """
-        Calculates the Vector that defines the distance (in pixels) between this and the obj Object. The exact
+        Calculates the Vector that defines the distance (in pixels) between this and the other Object. The exact
         calculation depends on the type asked for. If type is 'min' then this is the distance between the two nearest
-        pixels of the Objects. If it is 'max' it is between the two furthest_point_to_point. If it is 'canvas_pos' then it is the
-        distance between the two canvas positions of the Objects.
+        pixels of the Objects. If it is 'max' it is between the two furthest_point_to_point. If it is 'canvas_pos' then
+        it is the distance between the two canvas positions of the Objects.
         If the two Points that are being compared lie along a Direction then the returned Vector also has this Direction.
         If more than two pairs of points qualify to calculate the distance then one with a Direction is chosen (with
         a preference to Directions Up, Down, Left and Right).
-        :param obj: The other Object
+        :param other: The other Object
         :param dist_type: str. Can be 'max', 'min' or 'canvas_pos'
         :return: A Vector whose length is the distance calculated, whose origin in the Point in this Object used to
         calculate the distance and whose orientation is the Orientation between the two Points used if it exists
@@ -763,15 +892,109 @@ class Object:
 
         return distance
 
+    def get_straight_distance_to_object(self, other: Object) -> Vector | None:
+        distance = None
+
+
+        return distance
+
+    def get_direction_to_object(self, other: Object) -> Orientation | None:
+        """
+        Return the Orientation the other Object is with respect to this one.
+        :param other: The other Object
+        :return: The Orientation
+        """
+        if self.is_object_superimposed(other):
+            return None
+
+        if self.canvas_pos.x > other.canvas_pos.x:
+            if self.canvas_pos.y > other.canvas_pos.y:
+                if other.canvas_pos.y + other.dimensions.dy < self.canvas_pos.y:
+                    if other.canvas_pos.x + other.dimensions.dx > self.canvas_pos.x:
+                        return Orientation.Down
+                    else:
+                        return Orientation.Down_Left
+                else:
+                    return Orientation.Left
+            else:
+                if self.canvas_pos.y + self.dimensions.dy < other.canvas_pos.y:
+                    if other.canvas_pos.x + other.dimensions.dx > self.canvas_pos.x:
+                        return Orientation.Up
+                    else:
+                        return Orientation.Up_Left
+                else:
+                    return Orientation.Left
+        else:
+            if self.canvas_pos.y > other.canvas_pos.y:
+                if other.canvas_pos.y + other.dimensions.dy < self.canvas_pos.y:
+                    if self.canvas_pos.x + self.dimensions.dx > other.canvas_pos.x:
+                        return Orientation.Down
+                    else:
+                        return Orientation.Down_Right
+                else:
+                    return Orientation.Right
+            else:
+                if self.canvas_pos.y + self.dimensions.dy < other.canvas_pos.y:
+                    if self.canvas_pos.x + self.dimensions.dx > other.canvas_pos.x:
+                        return Orientation.Up
+                    else:
+                        return Orientation.Up_Right
+                else:
+                    return Orientation.Right
+
+    def is_object_superimposed(self, other: Object) -> bool:
+        """
+        Returns whether some of the visible pixels of this Object and of the other Object are on the same coordinates
+        :param other: The other Object
+        :return: True or False
+        """
+        self_pixs = set((i[1], i[0]) for i in self.get_coloured_pixels_positions())
+        other_pixs = set((i[1], i[0]) for i in other.get_coloured_pixels_positions())
+        if len(self_pixs - other_pixs) == len(self_pixs):
+            return False
+        return True
+
+    def is_object_overlapped(self, other: Object) -> bool:
+        """
+        Returns whether some visible pixels of this Object are in the same coordinates as some of the pixels of the other
+        Object and the pixels of this Object are visible on the Canvas (this Object has a larger canvas_pos.z)
+        :param other: The other Object
+        :return: True or False
+        """
+        if self.is_object_superimposed(other) and self.canvas_pos.z > other.canvas_pos.z:
+            return True
+        return False
+
+    def is_object_underlapped(self, other: Object) -> bool:
+        """
+        Returns whether some visible pixels of this Object are in the same coordinates as some of the pixels of the other
+        Object and the pixels of the other Object are visible on the Canvas (this Object has a smaller canvas_pos.z)
+        :param other: The other Object
+        :return: True or False
+        """
+        if self.is_object_superimposed(other) and self.canvas_pos.z < other.canvas_pos.z:
+            return True
+        return False
+
     def get_coloured_pixels_positions(self, col: int | None = None) -> np.ndarray:
+        """
+        Get a numpy array with the positions (y,x) of all the coloured pixels of the Object
+        :param col: If col is None then get all visible pixels. Otherwise, get only the ones with the col colour
+        :return: A numpy array with the coordinates (y,x).
+        """
         if col is None:
             result = np.argwhere(self.actual_pixels > 1).astype(int)
         else:
             result = np.argwhere(self.actual_pixels == col).astype(int)
         canv_pos = np.array([self.canvas_pos.to_numpy()[1], self.canvas_pos.to_numpy()[0]]).astype(int)
-        return canv_pos + result
+        result = canv_pos + result
+        return result
 
     def get_background_pixels_positions(self) -> np.ndarray:
+        """
+        Get a numpy array with the positions (y,x) of all the black pixels of the Object
+        :return: A numpy array with the coordinates (y,x).
+        """
         return np.argwhere(self.actual_pixels == 1)
 
     def get_used_colours(self) -> np.ndarray:
