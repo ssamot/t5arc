@@ -84,15 +84,15 @@ def add_object_to_canvas(canvas: Canvas, obj: Primitive) -> Canvas:
 
 # Funcs to get Primitive features
 def get_distance_min_between_objects(first: Primitive, second: Primitive) -> Vector:
-    return first.distance_to_object(other=second, dist_type='min')
+    return first.get_distance_to_object(other=second, dist_type='min')
 
 
 def get_distance_max_between_objects(first: Primitive, second: Primitive) -> Vector:
-    return first.distance_to_object(other=second, dist_type='max')
+    return first.get_distance_to_object(other=second, dist_type='max')
 
 
 def get_distance_origin_to_origin_between_objects(first: Primitive, second: Primitive) -> Vector:
-    return first.distance_to_object(other=second, dist_type='canvas_pos')
+    return first.get_distance_to_object(other=second, dist_type='canvas_pos')
 
 
 def get_distance_touching_between_objects(first: Primitive, second: Primitive) -> Vector:
@@ -279,7 +279,7 @@ def object_transform_new_colour(obj: Primitive, colour: int) -> Primitive:
 
 def object_transform_negate(obj: Primitive) -> Primitive:
     new_obj = copy(obj)
-    new_obj.negative_colour()
+    new_obj.negate_colour()
     return  new_obj
 
 

@@ -174,7 +174,7 @@ class Primitive(Object):
         args = self.__dict__.copy()
         for arg in ['_actual_pixels', 'border_size', '_canvas_pos', 'id', 'actual_pixels_id', 'rotation_axis',
                     '_dimensions', 'number_of_coloured_pixels', 'symmetries', 'transformations', 'bbox', '_holes',
-                    '_relative_points', '_visible_bbox', '_perimeter']:
+                    '_relative_points', '_visible_bbox', '_perimeter', '_inside']:
             args.pop(arg, None)
         args['_id'] = self.id
         args['actual_pixels_id'] = self.actual_pixels_id
@@ -223,12 +223,18 @@ class Primitive(Object):
             result = False
         if self.bbox != other.bbox:
             result = False
+        if self.visible_bbox != other.visible_bbox:
+            return False
         if self.symmetries != other.symmetries:
             result = False
         if self.number_of_coloured_pixels != other.number_of_coloured_pixels:
             result = False
         if self.rotation_axis != other.rotation_axis:
             result = False
+        if self.perimeter != other.perimeter:
+            return False
+        if self.inside != other.inside:
+            return False
 
         return result
 

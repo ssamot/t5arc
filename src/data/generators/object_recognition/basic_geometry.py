@@ -55,6 +55,27 @@ class Orientation(Enum):
             if Orientation(i).name == name:
                 return Orientation(i)
 
+    def get_step_towards_orientation(self) -> Dimension2D:
+        step = Dimension2D(0, 0)
+        if self.name  == 'Left':
+            step = Dimension2D(-1, 0)
+        elif self.name == 'Right':
+            step = Dimension2D(1, 0)
+        if self.name == 'Up':
+            step = Dimension2D(0, 1)
+        elif self.name == 'Down':
+            step = Dimension2D(0, -1)
+        if self.name == 'Left':
+            step = Dimension2D(-1, 1)
+        elif self.name == 'Up_Right':
+            step = Dimension2D(1, 1)
+        if self.name == 'Down_Left':
+            step = Dimension2D(-1, -1)
+        elif self.name == 'Down_Right':
+            step = Dimension2D(1, -1)
+
+        return step
+
 
 class OrientationZ(Enum):
     Away: int = -1
@@ -202,6 +223,8 @@ class Point:
             result = Point(self.x + other[0], self.y + other[1], self.z + other[2])
         if type(other) == int or type(other) == float:
             result = Point(self.x + other, self.y + other, self.z + other)
+        if type(other) == Dimension2D:
+            result = Point(self.x + other.dx, self.y + other.dy, self.z)
         return result
 
     def __sub__(self, other) -> Point:

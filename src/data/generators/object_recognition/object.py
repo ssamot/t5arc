@@ -23,18 +23,21 @@ class Transformations(int, Enum):
     translate_to_coordinates: int = 0
     translate_by: int = 1
     translate_along: int = 2
-    rotate: int = 3
-    scale: int = 4
-    shear: int = 5
-    mirror: int = 6
-    flip: int = 7
-    grow: int = 8
-    randomise_colour: int = 9
-    randomise_shape: int = 10
-    replace_colour: int = 11
-    replace_all_colours: int = 12
-    delete: int = 13
-    fill: int = 14
+    translate_relative_point_to_point: int = 3
+    translate_until_touch: int = 4
+    translate_until_fit: int = 5
+    rotate: int = 6
+    scale: int = 7
+    shear: int = 8
+    mirror: int = 9
+    flip: int = 10
+    grow: int = 11
+    randomise_colour: int = 12
+    randomise_shape: int = 13
+    replace_colour: int = 14
+    replace_all_colours: int = 15
+    delete: int = 16
+    fill: int = 17
 
     def get_random_parameters(self, random_obj_or_not: str = 'Random'):
         args = {}
@@ -92,6 +95,13 @@ class Transformations(int, Enum):
         if transformation_name == 'translate_along':
             args['direction'] = Vector(Orientation.get_orientation_from_name(values[0]), values[1],
                                        Point(values[2][0], values[2][0]))
+        if transformation_name == 'translate_until_touch':
+            args['other'] = values
+        if transformation_name == 'translate_relative_point_to_point':
+            args['relative_point'] = values[0]
+            args['other_point'] = values[1]
+        if transformation_name == 'translate_until_fit':
+            args['other'] = values
         if transformation_name == 'rotate':
             args['times'] = values
         elif transformation_name == 'scale':
@@ -473,7 +483,34 @@ class Object:
         self._reset_dimensions()
 
     def translate_until_touch(self, other: Object):
-        pass
+        """
+        Translates the Object on a straight line (along one of the 8 Orientations) in order to just touch the other
+        Object.
+
+        :param other: The other Object
+        :return:
+        """
+        distance = self.get_straight_distance_to_object(other, up_to_corner=True)
+        if distance is not None:
+            self.translate_along(distance)
+
+            self.transformations.append([Transformations.translate_until_touch.name,
+                                         {'other': other.id}])
+
+    def translate_until_fit(self, other: Object):
+        """
+        Translates the Object on a straight line (along one of the 8 Orientations) in order to touch the other Object in
+        a way that makes the Objects fit as well as possible
+
+        :param other: The other Object
+        :return:
+        """
+        distance = self.get_straight_distance_to_object(other, up_to_corner=False)
+        if distance is not None:
+            self.translate_along(distance)
+
+            self.transformations.append([Transformations.translate_until_fit.name,
+                                         {'other': other.id}])
 
     def scale(self, factor: int):
         """
@@ -532,6 +569,7 @@ class Object:
     def rotate(self, times: Union[1, 2, 3], center: np.ndarray | List = (0, 0)):
         """
         Rotate the object counter-clockwise by times multiple of 90 degrees
+
         :param times: 1, 2 or 3 times
         :param center: The point of the axis of rotation
         :return:
@@ -561,6 +599,7 @@ class Object:
     def shear(self, _shear: np.ndarray | List):
         """
         Shears the actual pixels
+
         :param _shear: Shear percentage (0 to 100)
         :return:
         """
@@ -597,6 +636,7 @@ class Object:
         """
         Mirrors to object (copy, flip and move) along one of the edges (up, down, left or right). If on_axis is True
         the pixels along the mirror axis do not get copied
+
         :param axis: The axis of mirroring (e.g. Orientation.Up means along the top edge of the object)
         :param on_axis: If it is True the pixels along the mirror axis do not get copied
         :return:
@@ -709,6 +749,45 @@ class Object:
         h = np.argwhere(self.holes == 1)
         self.actual_pixels[h[:, 0], h[:, 1]] = colour
 
+    def negate_colour(self):
+        """
+        Swaps between the coloured and the black pixels but uses the self.colour for the new colour (so any colour
+        changes get lost).
+        :return:
+        """
+        temp = copy(self.actual_pixels)
+        self.actual_pixels = np.ones(self.actual_pixels.shape)
+        self.actual_pixels[np.where(temp == 1)] = self.colour
+
+    def replace_colour(self, initial_colour: int, final_colour: int):
+        """
+        Replace one colour with another
+        :param initial_colour: The colour to change
+        :param final_colour: The colour to change to
+        :return:
+        """
+        self.actual_pixels[np.where(self.actual_pixels == initial_colour)] = final_colour
+        if self.colour == initial_colour:
+            self.colour = final_colour
+        self.transformations.append([Transformations.replace_colour, {'initial_colour': initial_colour,
+                                                                      'final_colour': final_colour}])
+
+    def replace_all_colours(self, colours_hash: dict[int, int]):
+        """
+        Swaps all the colours of the Object according to the colours_hash dict
+        :param colours_hash: The dict that defines what colour will become what (old colour = key, new colour = value)
+        :return:
+        """
+        colours = self.get_used_colours()
+        temp_pixels = copy(self.actual_pixels)
+        for c in colours:
+            if c in colours_hash:
+                temp_pixels[np.where(self.actual_pixels == c)] = colours_hash[c]
+                if self.colour == c:
+                    self.colour = colours_hash[c]
+        self.actual_pixels = copy(temp_pixels)
+        self.transformations.append([Transformations.replace_all_colours, {'colours_hash': colours_hash}])
+
     # </editor-fold>
 
     # <editor-fold desc="RANDOMISATION METHODS">
@@ -716,8 +795,7 @@ class Object:
         """
         Changes the colour of ratio of the coloured pixels (picked randomly) to a new random (not already there) colour
         :param ratio: The percentage of the coloured pixels to be recoloured (0 to 100)
-        :param colour: The colour to change the pixels to. 'random' means a random colour (not already on the object),
-        'x' means use the colour number x
+        :param colour: The colour to change the pixels to. 'random' means a random colour (not already on the object), 'x' means use the colour number x
         :return:
         """
         new_pixels_pos = self.pick_random_pixels(coloured_or_background='coloured', ratio=ratio)
@@ -740,8 +818,7 @@ class Object:
         Adds or subtracts coloured pixels to the object
         :param add_or_subtract: To add or subtract pixels. 'add' or 'subtract'
         :param ratio: The percentage (ratio) of pixels to be added or subtracted
-        :param colour: Whether the colour used for added pixels should be the most common one used or a random one or
-        a specific one. 'common' or 'random' or 'x' where x is the colour number (from 2 to 10)
+        :param colour: Whether the colour used for added pixels should be the most common one used or a random one or a specific one. 'common' or 'random' or 'x' where x is the colour number (from 2 to 10)
         :return:
         """
         coloured_or_background = 'background' if add_or_subtract == 'add' else 'coloured'
@@ -842,7 +919,7 @@ class Object:
         bb_bottom_right = Point(np.max(coloured_pixels, axis=0)[1], np.min(coloured_pixels, axis=0)[0])
         self._visible_bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
 
-    def distance_to_object(self, other: Object, dist_type: str = 'min') -> Vector:
+    def get_distance_to_object(self, other: Object, dist_type: str = 'min') -> Vector:
         """
         Calculates the Vector that defines the distance (in pixels) between this and the other Object. The exact
         calculation depends on the type asked for. If type is 'min' then this is the distance between the two nearest
@@ -853,8 +930,7 @@ class Object:
         a preference to Directions Up, Down, Left and Right).
         :param other: The other Object
         :param dist_type: str. Can be 'max', 'min' or 'canvas_pos'
-        :return: A Vector whose length is the distance calculated, whose origin in the Point in this Object used to
-        calculate the distance and whose orientation is the Orientation between the two Points used if it exists
+        :return: A Vector whose length is the distance calculated, whose origin in the Point in this Object used to calculate the distance and whose orientation is the Orientation between the two Points used if it exists
         (otherwise it is None).
         """
         if dist_type == 'min' or dist_type == 'max':
@@ -892,9 +968,33 @@ class Object:
 
         return distance
 
-    def get_straight_distance_to_object(self, other: Object) -> Vector | None:
-        distance = None
+    def get_straight_distance_to_object(self, other: Object, up_to_corner: bool = True) -> Vector | None:
+        """
+        Returns a Vector that show the Orientation and the number of pixels the Object should be moved in a straight
+        line in order to touch the other Object. If the Object cannot touch the other Object by moving along one of the
+        8 Orientations then it returns None. It also returns None if the Objects are on top of each other.
+        :param up_to_corner: If True the distance is calculated for the two Objects to touch up to their corners. If False then up until they fit together.
+        :param other: The other Object
+        :return: The Vector straight line distance
+        """
+        temp_self = copy(self)
 
+        dir = self.get_direction_to_object(other)
+        if dir is None:
+            return None
+
+        step = dir.get_step_towards_orientation()
+
+        func = temp_self.is_object_touching if up_to_corner else temp_self.is_object_superimposed
+        num_of_steps = 0
+        while not func(other):
+            temp_self.translate_by(step)
+            num_of_steps += 1
+            if num_of_steps > 40:
+                return None
+
+        num_of_steps = num_of_steps - 1 if not up_to_corner else num_of_steps
+        distance = Vector(orientation=self.get_direction_to_object(other), length=num_of_steps,  origin=self.canvas_pos)
 
         return distance
 
@@ -976,6 +1076,22 @@ class Object:
             return True
         return False
 
+    def is_object_touching(self, other: Object) -> bool:
+        if self.is_object_superimposed(other):
+            return True
+
+        # Check to see if the Objects touch at a corner
+        steps = [Dimension2D(0, 1), Dimension2D(0, -1), Dimension2D(1, 0), Dimension2D(-1, 0),
+                     Dimension2D(1, 1), Dimension2D(1, -1), Dimension2D(-1, 1), Dimension2D(-1, -1)]
+
+        for step in steps:
+            self_temp = copy(self)
+            self_temp.translate_by(step)
+            if self_temp.is_object_superimposed(other):
+                return True
+
+        return False
+
     def get_coloured_pixels_positions(self, col: int | None = None) -> np.ndarray:
         """
         Get a numpy array with the positions (y,x) of all the coloured pixels of the Object
@@ -997,13 +1113,22 @@ class Object:
         """
         return np.argwhere(self.actual_pixels == 1)
 
-    def get_used_colours(self) -> np.ndarray:
+    def get_used_colours(self) -> Set:
+        """
+        Returns the set of all used colours
+        :return: The set of used colours
+        """
         coloured_pos = self.get_coloured_pixels_positions().astype(int)
         canv_pos = np.array([self.canvas_pos.to_numpy()[1], self.canvas_pos.to_numpy()[0]]).astype(int)
         coloured_pos -= canv_pos
-        return np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]])
+        return set(np.unique(self.actual_pixels[coloured_pos[:, 0], coloured_pos[:, 1]]))
 
-    def get_colour_groups(self):
+    def get_colour_groups(self) -> Dict[int, np.ndarray[List]]:
+        """
+        Returns a dictionary with keys the different colours of the Object and values the array of positions (y, x)of
+        the pixels with the corresponding colours
+        :return: The colour -> positions dict
+        """
         result = {}
         colours = self.get_used_colours()
         for col in colours:
@@ -1012,54 +1137,18 @@ class Object:
         return result
 
     def set_colour_to_most_common(self):
+        """
+        Sets the colour property of the Object to the most common colour (with the most pixels)
+        :return:
+        """
         colours = self.actual_pixels[np.where(self.actual_pixels > 1)]
         self.colour = int(np.median(colours))
-
-    def negative_colour(self):
-        """
-        Swaps between the coloured and the black pixels but uses the self.colour for the new colour (so any colour
-        changes get lost).
-        :return:
-        """
-        temp = copy(self.actual_pixels)
-        self.actual_pixels = np.ones(self.actual_pixels.shape)
-        self.actual_pixels[np.where(temp == 1)] = self.colour
-
-    def replace_colour(self, initial_colour: int, final_colour: int):
-        """
-        Replace one colour with another
-        :param initial_colour:
-        :param final_colour:
-        :return:
-        """
-        self.actual_pixels[np.where(self.actual_pixels == initial_colour)] = final_colour
-        if self.colour == initial_colour:
-            self.colour = final_colour
-        self.transformations.append([Transformations.replace_colour, {'initial_colour': initial_colour,
-                                                                      'final_colour': final_colour}])
-
-    def replace_all_colours(self, colours_hash: dict[int, int]):
-        """
-        Swaps all the colours of the Object according to the colours_hash dict
-        :param colours_hash: The dict that defines what colour will become what (old colour = key, new colour = value)
-        :return:
-        """
-        colours = self.get_used_colours()
-        temp_pixels = copy(self.actual_pixels)
-        for c in colours:
-            if c in colours_hash:
-                temp_pixels[np.where(self.actual_pixels == c)] = colours_hash[c]
-                if self.colour == c:
-                    self.colour = colours_hash[c]
-        self.actual_pixels = copy(temp_pixels)
-        self.transformations.append([Transformations.replace_all_colours, {'colours_hash': colours_hash}])
 
     def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: int = 10) -> None | np.ndarray:
         """
         Returns the positions (in the self.actual_pixels array) of a random number (ratio percentage) of either
         coloured or background pixels
-        :param coloured_or_background: Whether the pixels should come from the coloured group or the background group.
-        'coloured' or 'background'
+        :param coloured_or_background: Whether the pixels should come from the coloured group or the background group. 'coloured' or 'background'
         :param ratio: The ratio (percentage) of the picked pixels over the number of the pixels in their group
         :return:
         """
