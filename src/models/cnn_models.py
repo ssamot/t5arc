@@ -1,6 +1,6 @@
 import math
-
 from keras import layers, models, ops
+import keras
 
 
 def residual_block(x, filters, stride=1, transpose=False):
@@ -129,7 +129,7 @@ def build_autoencoder(input_shape, base_filters=16):
 
 
 
-
+@keras.saving.register_keras_serializable(package="CustomLayers")
 class BatchAverageLayer(layers.Layer):
     def __init__(self, **kwargs):
         super(BatchAverageLayer, self).__init__(**kwargs)
@@ -150,7 +150,7 @@ class BatchAverageLayer(layers.Layer):
         return input_shape
 
 
-def get_components():
+def get_components(squeeze_neurons):
     # Create the models
     input_shape = (32, 32, 11)
     ssprime_input_shape = (32, 32, 22)
@@ -169,7 +169,6 @@ def get_components():
 
     ssprime_decoded = ssprime_encoder(ssprime_input)
 
-    squeeze_neurons = 3
     param_layer, squize_layer = build_parameters(ssprime_decoded.shape, squeeze_neurons)
 
     return s_input, ssprime_input, s_encoder, ssprime_encoder, sprime_decoder, param_layer, squize_layer
