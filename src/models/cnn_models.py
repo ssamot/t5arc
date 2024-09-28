@@ -3,20 +3,21 @@ from keras import layers, models, ops
 import keras
 from cnn_neuron_binarizers import entropy_loss
 
+normalisation = layers.LayerNormalization
 
 def residual_block(x, filters, stride=1, transpose=False):
     conv = layers.Conv2DTranspose if transpose else layers.Conv2D
 
     y = conv(filters, kernel_size=3, strides=stride, padding='same')(x)
-    y = layers.BatchNormalization()(y)
+    y = normalisation()(y)
     y = layers.Activation('relu')(y)
 
     y = conv(filters, kernel_size=3, strides=1, padding='same')(y)
-    y = layers.BatchNormalization()(y)
+    y = normalisation()(y)
 
     if stride != 1 or x.shape[-1] != filters:
         x = conv(filters, kernel_size=1, strides=stride, padding='same')(x)
-        x = layers.BatchNormalization()(x)
+        x = normalisation()(x)
 
     y = layers.Add()([x, y])
     y = layers.Activation('relu')(y)
@@ -31,7 +32,7 @@ def build_dense_block(input_shape, filters, num_layers, stride=1, transpose=Fals
     for i in range(num_layers):
         current_stride = stride if i == 0 else 1
         x = residual_block(x, filters, stride=current_stride, transpose=transpose)
-
+        #print(x.shape, "x.shape", transpose)
     return models.Model(inputs, x, name=name)
 
 
@@ -40,7 +41,7 @@ def build_encoder(input_shape, base_filters=16, name="encoder"):
 
     # Initial convolution
     x = layers.Conv2D(base_filters, kernel_size=3, strides=1, padding='same')(inputs)
-    x = layers.BatchNormalization()(x)
+    x = normalisation()(x)
     x = layers.Activation('relu')(x)
 
     # Stage 1
@@ -55,10 +56,12 @@ def build_encoder(input_shape, base_filters=16, name="encoder"):
     stage3 = build_dense_block(x.shape[1:], base_filters * 4, num_layers=2, stride=2, name="encoder_stage3")
     x = stage3(x)
 
-    block = layers.Conv2D(11, kernel_size=3, strides=1,
-                          padding='same', activation='tanh')(x)
+    encoded = layers.Conv2D(11, kernel_size=3, strides=1,
+                          padding='same')(x)
+    encoded = normalisation()(encoded)
+    encoded = layers.Activation('relu')(encoded)
 
-    encoder = models.Model(inputs, block, name=name)
+    encoder = models.Model(inputs, encoded, name=name)
     return encoder
 
 
@@ -83,8 +86,8 @@ def build_decoder(input_shape, output_channels, base_filters=16):
     # Final convolution
     decoded = layers.Conv2DTranspose(output_channels, kernel_size=3, strides=1,
                                      padding='same')(x)
-    decoded = layers.BatchNormalization()(decoded)
-    decode = layers.Activation("relu")(decoded)
+    decoded = normalisation()(decoded)
+    decoded = layers.Activation("softmax")(decoded)
 
     decoder = models.Model(decoder_input, decoded, name="decoder")
     return decoder
@@ -99,7 +102,7 @@ def build_parameters(input_shape, squeezed_neurons=8):
     ## attention
     squeezed = squeeze_input
     squeezed = layers.Dense(units=n_neurons, use_bias=False)(squeezed)
-    squeezed = layers.BatchNormalization()(squeezed)
+    squeezed = normalisation()(squeezed)
     squeezed = layers.Activation("sigmoid", activity_regularizer="l1")(squeezed)
     squeezed = layers.Reshape(target_shape=input_shape[1:])(squeezed)
     squeeze_model = models.Model(squeeze_input, squeezed, name="attention_direct")
@@ -109,7 +112,7 @@ def build_parameters(input_shape, squeezed_neurons=8):
     ss_prime_parameters = (layers.Dense(units=squeezed_neurons,
                                         use_bias=False)
                            (ss_prime_parameters))
-    ss_prime_parameters = layers.BatchNormalization()(ss_prime_parameters)
+    ss_prime_parameters = normalisation()(ss_prime_parameters)
     ss_prime_parameters = layers.Activation("tanh")(ss_prime_parameters)
     param_encoder = models.Model(parameters_input,
                                  squeeze_model(ss_prime_parameters),

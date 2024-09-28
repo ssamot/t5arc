@@ -71,7 +71,7 @@ data: data_pure_train data_pure_eval data_augmented_train
 
 
 data_cnn:
-	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/cnn_create_ds.py data/processed/cnn_pretrain.npz 1000
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/cnn_create_ds.py data/processed/cnn_pretrain.npz 1002
 train_cnn:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_generator.py data/processed/cnn_pretrain.npz models/
 
