@@ -8,7 +8,8 @@ from pathlib import Path
 from utils import CustomModelCheckpoint
 from cnn_models import get_components, build_end_to_end
 from cnn_data_generator import DataGenerator, BatchedDataGenerator
-from lm import b_acc
+from lm import b_acc, cce
+from tqdm.keras import TqdmCallback
 
 
 
@@ -47,11 +48,14 @@ def main(input_filepath, output_filepath):
     optimizer = keras.optimizers.AdamW(gradient_accumulation_steps=10)
     model.compile(optimizer=optimizer,
                   loss=keras.losses.categorical_crossentropy,
-                  metrics = ["acc", b_acc],
+                  metrics = ["acc", b_acc, cce],
                   )
     model.fit(x=training_generator,batch_size=1000,
-              epochs=10000,
-              callbacks=CustomModelCheckpoint(models,"./models", 100))
+              epochs=10000,verbose=False,
+              callbacks=[CustomModelCheckpoint(models, output_filepath, 100),
+                         TqdmCallback(verbose=1)
+                         ]
+              )
 
 
 
