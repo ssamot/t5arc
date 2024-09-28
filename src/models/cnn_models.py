@@ -92,7 +92,7 @@ def build_decoder(input_shape, output_channels, base_filters=16):
 
 def build_parameters(input_shape, squeezed_neurons=8):
     ## inputs
-    paramters_input = layers.Input(shape=input_shape[1:])
+    parameters_input = layers.Input(shape=input_shape[1:])
     n_neurons = math.prod(input_shape[1:])
     squeeze_input = layers.Input(shape=(squeezed_neurons,))
 
@@ -105,13 +105,13 @@ def build_parameters(input_shape, squeezed_neurons=8):
     squeeze_model = models.Model(squeeze_input, squeezed, name="attention_direct")
 
     ##bottlenectk
-    ss_prime_parameters = layers.Flatten()(paramters_input)
+    ss_prime_parameters = layers.Flatten()(parameters_input)
     ss_prime_parameters = (layers.Dense(units=squeezed_neurons,
                                         use_bias=False)
                            (ss_prime_parameters))
     ss_prime_parameters = layers.BatchNormalization()(ss_prime_parameters)
     ss_prime_parameters = layers.Activation("tanh")(ss_prime_parameters)
-    param_encoder = models.Model(paramters_input,
+    param_encoder = models.Model(parameters_input,
                                  squeeze_model(ss_prime_parameters),
                                  name="attention_through_ssprime")
 

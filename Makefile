@@ -54,8 +54,6 @@ train_augmented_inout:
 	CUDA_VISIBLE_DEVICES="0,1", KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_inout.py data/processed/train_augmented_inout.npz data/processed/eval_augmented_inout.npz  models/
 
 
-train_generator:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_generator.py models/
 
 data_pure_train:
 	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 train
@@ -70,6 +68,12 @@ data_augmented_eval:
 	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ augmented 1000 eval
 
 data: data_pure_train data_pure_eval data_augmented_train
+
+
+data_cnn:
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/cnn_create_ds.py data/processed/cnn_pretrain.npz 1000
+train_cnn:
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_generator.py data/processed/cnn_pretrain.npz models/
 
 
 predict_clf:

@@ -61,16 +61,3 @@ class BinarizingNeuron(keras.layers.Layer):
 
         }
 
-# Example model using these neurons
-def create_model(input_shape, binarizing_method='passthrough', regularizer_weight=0.1):
-    inputs = keras.Input(shape=input_shape)
-    x = keras.layers.Dense(64)(inputs)
-    x = BinarizingNeuron(method=binarizing_method, regularizer_weight=regularizer_weight)(x)
-    outputs = keras.layers.Dense(1, activation='sigmoid')(x)
-    return keras.Model(inputs, outputs)
-
-# Create models with different binarizing methods
-model_passthrough = create_model((10,), 'passthrough')
-model_gumbel = create_model((10,), 'gumbel_sigmoid')
-model_entropy = create_model((10,), 'sigmoid_with_entropy')
-model_msd = create_model((10,), 'mean_squared_diff')

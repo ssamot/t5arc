@@ -1,27 +1,32 @@
 import keras
 import click
 import logging
+
+import numpy as np
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from utils import CustomModelCheckpoint
 from cnn_models import get_components, build_end_to_end
-from cnn_data_generator import DataGenerator
+from cnn_data_generator import DataGenerator, BatchedDataGenerator
 from lm import b_acc
 
 
 
 @click.command()
+@click.argument('input_filepath', type=click.Path())
 @click.argument('output_filepath', type=click.Path())
-def main(output_filepath):
+def main(input_filepath, output_filepath):
     # build_model()
     # Initialize a list to store the contents of the JSON files
 
     encoder_units = 16
+    samples = np.load(input_filepath, allow_pickle=True)["samples"]
+    training_generator = BatchedDataGenerator(samples)
 
 
-    training_generator = DataGenerator(len = 1000,
-                                             use_multiprocessing=True, workers=50,
-                                             max_queue_size=1000)
+    # training_generator = DataGenerator(len = 1000,
+    #                                          use_multiprocessing=True, workers=50,
+    #                                          max_queue_size=1000)
 
     (s_input, ssprime_input,
      s_encoder, ssprime_encoder, sprime_decoder,

@@ -12,6 +12,24 @@ def merge_arrays(array1, array2):
     return np.concatenate((array1, array2), axis=-1)
 
 
+class BatchedDataGenerator(keras.utils.PyDataset):
+    def __init__(self, data_array, **kwargs):
+        super().__init__(**kwargs)
+        self.data_array = data_array
+
+    def __len__(self):
+        return len(self.data_array)
+
+    def __getitem__(self, idx):
+        original_images, new_images = self.data_array[idx]
+        s = original_images
+
+        ssprime = merge_arrays(original_images, new_images)
+        return (s, ssprime), s
+
+    def on_epoch_end(self):
+        # Shuffle the data at the end of each epoch if needed
+        np.random.shuffle(self.data_array)
 
 
 class DataGenerator(keras.utils.PyDataset):
