@@ -55,7 +55,7 @@ train_augmented_inout:
 
 
 train_generator:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_generator.py models/
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_generator.py models/
 
 data_pure_train:
 	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 train

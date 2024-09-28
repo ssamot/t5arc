@@ -33,10 +33,10 @@ def main(output_filepath):
 
     model.summary()
     models = {f"s_encoder_{encoder_units}": s_encoder,
-              f"ssprime_encoder{encoder_units}": ssprime_encoder,
-              f"sprime_decoder{encoder_units}": sprime_decoder,
-              f"param_layer{encoder_units}": param_layer,
-              f"squeeze_layer{encoder_units}": squeeze_layer,
+              f"ssprime_encoder_{encoder_units}": ssprime_encoder,
+              f"sprime_decoder_{encoder_units}": sprime_decoder,
+              f"param_layer_{encoder_units}": param_layer,
+              f"squeeze_layer_{encoder_units}": squeeze_layer,
               }
 
     optimizer = keras.optimizers.AdamW(gradient_accumulation_steps=10)
@@ -44,7 +44,7 @@ def main(output_filepath):
                   loss=keras.losses.categorical_crossentropy,
                   metrics = ["acc", b_acc],
                   )
-    model.fit(x=training_generator,
+    model.fit(x=training_generator,batch_size=1000,
               epochs=10000,
               callbacks=CustomModelCheckpoint(models,"./models", 100))
 
