@@ -173,6 +173,11 @@ class Canvas:
             ymin = int(ymin)
             ymax = int(ymax)
 
+            ymin_canv = int(ymin_canv)
+            ymax_canv = int(ymax_canv)
+            xmin_canv = int(xmin_canv)
+            xmax_canv = int(xmax_canv)
+
             # The following will add to the canvas only the object's pixels that are not 1
             bbox_to_embed = copy(obj.actual_pixels[ymin:ymax, xmin:xmax])
             bbox_to_embed_in = copy(self.actual_pixels[ymin_canv: ymax_canv, xmin_canv: xmax_canv])
@@ -181,6 +186,11 @@ class Canvas:
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
 
     def add_new_object(self, obj: Primitive):
+        if obj.id == None:
+            if len(self.objects) == 0:
+                obj.id = 0
+            else:
+                obj.id = np.max([o.id for o in self.objects]) + 1
         self.objects.append(obj)
         obj.canvas_id = self.id
         self.embed_objects()

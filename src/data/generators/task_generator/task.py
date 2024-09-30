@@ -346,7 +346,7 @@ class Task:
 
         if debug: print(f'number of transforms = {num_of_transformations}')
 
-        possible_transform_indices = [0, 1, 2, 3, 4, 5, 6]
+        possible_transform_indices = range(len(Transformations))
 
         for i in range(num_of_transformations):
             random_transform_index = np.random.choice(possible_transform_indices, p=probs_of_transformations)

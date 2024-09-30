@@ -76,6 +76,10 @@ class Orientation(Enum):
 
         return step
 
+    @staticmethod
+    def random(probs: List = (1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8)) -> Orientation:
+        return Orientation(np.random.choice(range(8), p=probs))
+
 
 class OrientationZ(Enum):
     Away: int = -1
@@ -92,6 +96,10 @@ class RelativePoint(Enum):
     Bottom_Left: int = 6
     Bottom_Center: int = 7
     Bottom_Right: int = 8
+
+    @staticmethod
+    def random() -> RelativePoint:
+        return RelativePoint(np.random.randint(0, 9))
 
 
 @dataclass
@@ -202,6 +210,10 @@ class Dimension2D:
     def to_numpy(self):
         return np.array([self.dx, self.dy])
 
+    @staticmethod
+    def random(min_dx: int = -32, max_dx: int = 32, min_dy: int = 32, max_dy: int = 32):
+        return Dimension2D(np.random.randint(min_dx, max_dx + 1), np.random.randint(min_dy, max_dy + 1))
+
 
 class Point:
     def __init__(self, x: float = 0, y: float = 0, z: float = 0, array: None | List | np.ndarray = None):
@@ -213,6 +225,11 @@ class Point:
             self.x = array[0]
             self.y = array[1]
             self.z = array[2]
+
+    @staticmethod
+    def random(min_x: int = -32, max_x: int = 32, min_y: int = -32, max_y: int = 32, min_z: int = -100, max_z: int = 100):
+        return Point(np.random.randint(min_x, max_x + 1), np.random.randint(min_y, max_y + 1),
+                     np.random.randint(min_z, max_z + 1))
 
     def __add__(self, other) -> Point:
         if type(other) == Point:
@@ -432,6 +449,15 @@ class Vector:
 
         self.origin.transform(affine_matrix, rotation, shear, translation, scale)
 
+    @staticmethod
+    def random(given_origin: Point | None = None,min_length: int = 0, max_length: int = 32,
+               orientation_probs: List = (1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8)) -> Vector:
+        orientation = Orientation.random(probs=orientation_probs)
+        length = np.random.randint(min_length, max_length + 1)
+        origin = given_origin if given_origin is not None else Point.random(min_x=0, min_y=0, min_z=0)
+
+        return Vector(orientation=orientation, length=length, origin=origin)
+
 
 class Bbox:
     def __init__(self, top_left: Point = Point(0, 0), bottom_right: Point = Point(0, 0)):
@@ -508,6 +534,9 @@ class Bbox:
             self.bottom_right.transform(affine_matrix, rotation, shear, translation, scale)
 
         self.center = self._calculate_center()
+
+    def area(self) -> int | float:
+        return (self.bottom_right.x - self.top_left.x) * (self.top_left.y - self.bottom_right.y)
 
 
 

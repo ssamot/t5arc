@@ -87,7 +87,7 @@ class AutoEncoderDataTask(Task):
             number_of_mirrors = np.random.randint(2, MAX_NUMBER_OF_MIRRORS)
         if number_of_mirrors == 0:
             return None
-        transform_index = 3
+        transform_index = 9
 
         obj_to_mirror = copy(obj)
 
@@ -238,9 +238,10 @@ class AutoEncoderDataTask(Task):
 
         return result
 
-    def show(self, canvas_index: int | str = 'all', save_as: str | None = None):
+    def show(self, canvas_index: int | str = 'all', save_as: str | None = None, two_cols: bool = False):
         """
         Shows some (canvas_index is int or 'test') or all (canvas_index = 'all') the Canvases of the Experiment
+        :param two_cols: Not used
         :param save_as:  If not None then save the figure generated as save_as file (but do not show it).
         :param canvas_index: Which Canvases to show (int, 'test' or 'all')
         :return:

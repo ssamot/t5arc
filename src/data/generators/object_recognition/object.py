@@ -41,6 +41,16 @@ class Transformations(int, Enum):
 
     def get_random_parameters(self, random_obj_or_not: str = 'Random'):
         args = {}
+        if self.name == 'translate_to_coordinates':
+            args['target_point'] = Point.random(min_x=0, min_y=0, min_z=0)
+            args['object_point'] = Point.random(min_x=0, min_y=0, min_z=0)
+        if self.name == 'translate_by':
+            args['distance'] = Dimension2D.random(min_dx=-20, max_dx=20, min_dy=-20, max_dy=20)
+        if self.name == 'translate_along':
+            args['direction'] = Vector.random()
+        if self.name == 'translate_relative_point_to_point':
+            args['relative_point'] = RelativePoint.random()
+            args['other_point'] = Point.random(min_x=0, min_y=0, min_z=0)
         if self.name == 'scale':
             args['factor'] = np.random.choice([-4, -3, -2, 2, 3, 4], p=[0.05, 0.15, 0.3, 0.3, 0.15, 0.05])
         if self.name == 'rotate':
@@ -83,6 +93,7 @@ class Transformations(int, Enum):
             args['colour'] = np.random.randint(2, 10)
 
         return args
+
 
     @staticmethod
     def get_specific_parameters(transformation_name, values):
@@ -425,11 +436,11 @@ class Object:
         if object_point is None:
             object_point = self.canvas_pos
 
-        self.transformations.append([Transformations.translate_to.name,
+        self.transformations.append([Transformations.translate_to_coordinates.name,
                                      {'distance': (target_point - object_point).to_numpy().tolist()}])
 
         object_point = self.canvas_pos - object_point
-        self.canvas_pos = target_point - object_point
+        self.canvas_pos = target_point + object_point
 
     def translate_by(self, distance: Dimension2D):
         """
@@ -477,7 +488,7 @@ class Object:
             difference = other_point - this_point
             self.canvas_pos += difference
 
-            self.transformations.append([Transformations.translate.name,
+            self.transformations.append([Transformations.translate_relative_point_to_point.name,
                                          {'distance': difference.to_numpy().tolist()}])
 
         self._reset_dimensions()
@@ -579,6 +590,7 @@ class Object:
 
         old_canvas_pos = copy(self.canvas_pos).to_numpy()
 
+        '''
         if times == 1:
             self.canvas_pos.x = self.canvas_pos.x - self.dimensions.dy + 1
         elif times == 2:
@@ -586,7 +598,7 @@ class Object:
             self.canvas_pos.y = self.canvas_pos.y - self.dimensions.dy + 1
         elif times == 3:
             self.canvas_pos.y = self.canvas_pos.y - self.dimensions.dx + 1
-
+        '''
         self.actual_pixels = skimage.transform.rotate(self.actual_pixels, degrees, resize=True, order=0, center=[0, 0])
 
         for sym in self.symmetries:
@@ -691,10 +703,12 @@ class Object:
             symmetry_vector = Vector(orientation=Orientation.Up, origin=new_symmetry_axis_origin,
                                      length=self.actual_pixels.shape[0] - 1)
 
+        '''
         if axis == Orientation.Left:
             self.canvas_pos.x -= self.dimensions.dx
         if axis == Orientation.Down:
             self.canvas_pos.y -= self.dimensions.dy
+        '''
 
         self.symmetries.append(symmetry_vector)
         self.transformations.append([Transformations.mirror.name, {'axis': axis}])
@@ -1136,13 +1150,16 @@ class Object:
             result[col] = positions
         return result
 
+    def get_most_common_colour(self) -> int:
+        colours = self.actual_pixels[np.where(self.actual_pixels > 1)]
+        return int(np.median(colours))
+
     def set_colour_to_most_common(self):
         """
         Sets the colour property of the Object to the most common colour (with the most pixels)
         :return:
         """
-        colours = self.actual_pixels[np.where(self.actual_pixels > 1)]
-        self.colour = int(np.median(colours))
+        self.colour = self.get_most_common_colour()
 
     def pick_random_pixels(self, coloured_or_background: str = 'coloured', ratio: int = 10) -> None | np.ndarray:
         """

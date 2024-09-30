@@ -6,7 +6,7 @@ from visualization.visualse_training_data_sets import visualise_training_data
 
 
 # Usage of Random Data Generation for the auto-encoder training
-e = AutoEncoderDataTask(number_of_canvases=20, percentage_of_arc_canvases=1, train_or_eval_arc='train')
+e = AutoEncoderDataTask(number_of_canvases=4, percentage_of_arc_canvases=0, train_or_eval_arc='train')
 array = e.get_canvases_as_numpy_array()
 string = e.get_canvasses_as_string()
 

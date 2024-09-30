@@ -1,6 +1,6 @@
 
 
-MIN_PAD_SIZE = 1
+MIN_PAD_SIZE = 3
 MAX_PAD_SIZE = 32
 MAX_EXAMPLE_PAIRS = 10
 
@@ -15,7 +15,6 @@ COLOR_MAP = {0: [0, 0, 0, 0],                       # Transparent / Mask
              8: [255/255, 133/255, 27/255, 1],      # Orange #FF851B
              9: [127/255, 219/255, 255/255, 1],     # Azure #7FDBFF
              10: [135/255, 12/255, 37/255, 1],      # Burgundy #870C25
-             11: [255/255, 255/255, 255/255, 1],
              255: [255/255, 255/255, 255/255, 1]}    # White (used for denoting holes)
 
 BAD_TRAIN_DATA = ['bda2d7a6', 'd511f180', 'd4f3cd78', 'd4a91cb9', 'd4469b4b', 'd5d6de2d', 'dc433765', 'e9614598']

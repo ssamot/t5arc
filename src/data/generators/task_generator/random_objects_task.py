@@ -49,12 +49,11 @@ class RandomObjectsTask(Task):
             number_of_mirrors = np.random.randint(2, MAX_NUMBER_OF_MIRRORS)
         if number_of_mirrors == 0:
             return None
-        transform_index = 3
 
         obj_to_mirror = copy(obj)
 
         for i in range(number_of_mirrors):
-            mirror_name = Transformations(transform_index)
+            mirror_name = Transformations.get_transformation_from_name('mirror')
             args = mirror_name.get_random_parameters()
             mirror_method = getattr(obj_to_mirror, mirror_name.name)
             mirror_method(**args)

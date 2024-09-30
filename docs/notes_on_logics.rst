@@ -19,13 +19,13 @@ Object Relationships that must be encoded:
 1. In
 2. Out
 3. Through
-4. Right
-5. Left
-6. Over
-7. Under
-8. Touching
-9. Overlapping
-10. Underlapping
+4. Right (Done)
+5. Left (Done)
+6. Over (Done)
+7. Under (Done)
+8. Touching (Done)
+9. Overlapping (Done)
+10. Underlapping (Done)
 11. Along X
 12. Along Y
 13. Along XY diagonal
