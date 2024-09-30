@@ -50,7 +50,7 @@ def main(input_filepath, output_filepath):
                   loss=keras.losses.categorical_crossentropy,
                   metrics = ["acc", b_acc, cce],
                   )
-    model.fit(x=training_generator,batch_size=1000,
+    model.fit(x=training_generator,validation_batch_size=1000,
               epochs=10000,verbose=False,
               callbacks=[CustomModelCheckpoint(models, output_filepath, 100),
                          TqdmCallback(verbose=1)
