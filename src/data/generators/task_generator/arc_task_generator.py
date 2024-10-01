@@ -99,7 +99,6 @@ class ARCTask(Task):
             input_data = np.flipud(np.array(self.task_data['train'][pair]['input']) + 1)
             output_data = np.flipud(np.array(self.task_data['train'][pair]['output']) + 1)
             if not empty:
-                print('hello')
                 self.input_canvases.append(Canvas(actual_pixels=input_data, _id=pair * 2))
                 self.output_canvases.append(Canvas(actual_pixels=output_data, _id=pair * 2 + 1))
             else:

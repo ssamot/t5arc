@@ -7,9 +7,11 @@ from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from utils import CustomModelCheckpoint
 from cnn_models import get_components, build_end_to_end
-from cnn_data_generator import DataGenerator, BatchedDataGenerator
+from cnn_data_generator import DataGenerator, BatchedDataGenerator, merge_arrays
 from lm import b_acc, cce
 from tqdm.keras import TqdmCallback
+from data.generators.task_generator.ttt_data_generator import ArcTaskData
+
 
 
 
@@ -37,6 +39,25 @@ def main(input_filepath, output_filepath):
                      s_encoder, ssprime_encoder, sprime_decoder, param_layer )
 
 
+    ## find validation data;
+
+    it = ArcTaskData('train')
+
+    relevant = ["b775ac94"]
+
+
+    for task in it:
+        if(task["name"] in relevant):
+            s = np.array(task["input"], dtype=np.int32)
+            sprime = np.array(task["output"], dtype=np.int32)
+
+            ssprime = merge_arrays(s, sprime)
+            validation_data = (s,ssprime), s
+            break
+
+
+
+
     model.summary()
     models = {f"s_encoder_{encoder_units}": s_encoder,
               f"ssprime_encoder_{encoder_units}": ssprime_encoder,
@@ -51,6 +72,7 @@ def main(input_filepath, output_filepath):
                   metrics = ["acc", b_acc, cce],
                   )
     model.fit(x=training_generator,validation_batch_size=1000,
+              validation_data=validation_data,
               epochs=10000,verbose=False,
               callbacks=[CustomModelCheckpoint(models, output_filepath, 100),
                          TqdmCallback(verbose=1)
