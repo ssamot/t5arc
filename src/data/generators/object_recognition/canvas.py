@@ -26,9 +26,10 @@ class Canvas:
                                                                    f'Both size and actual_pixels are None!')
 
         if type(size) != Dimension2D and size is not None:
+            size = [int(size[0]), int(size[1])]
             self.size = Dimension2D(array=size)
         elif type(size) == Dimension2D:
-            self.size = size
+            self.size = Dimension2D(int(size.dx), int(size.dy))
 
         if objects is None:
             self.objects = []
@@ -58,6 +59,18 @@ class Canvas:
         new_canvas.full_canvas = copy(self.full_canvas)
         new_canvas.actual_pixels = copy(self.actual_pixels)
         return new_canvas
+
+    def resize_canvas(self, new_size: Dimension2D):
+        """
+        Resize the Canvas. This will remove any actual_pixels info that is not in the canvas' objects.
+        :param new_size: The new size
+        :return:
+        """
+        self.size = Dimension2D(int(new_size.dx), int(new_size.dy))
+        self.actual_pixels = np.ones((self.size.dy, self.size.dx))
+        self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
+        self.background_pixels = np.ndarray.copy(self.actual_pixels)
+        self.embed_objects()
 
     def sort_objects_by_size(self, used_dim: str = 'area') -> List[Primitive]:
         """

@@ -60,7 +60,6 @@ class Task:
         self._canvas_ids = c_ids
         return self._canvas_ids
 
-
     @staticmethod
     def get_random_colour(other_colour: int | None = None):
         colour = np.random.randint(2, len(const.COLOR_MAP) - 1)
@@ -496,6 +495,7 @@ class Task:
         thin_lines = True
         if save_as is None:
             thin_lines = False
+
         if type(canvas_index) == int:
             if canvas_index % 2 == 0:
                 canvas = self.input_canvases[canvas_index // 2]
