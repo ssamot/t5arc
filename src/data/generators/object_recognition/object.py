@@ -703,13 +703,6 @@ class Object:
             symmetry_vector = Vector(orientation=Orientation.Up, origin=new_symmetry_axis_origin,
                                      length=self.actual_pixels.shape[0] - 1)
 
-        '''
-        if axis == Orientation.Left:
-            self.canvas_pos.x -= self.dimensions.dx
-        if axis == Orientation.Down:
-            self.canvas_pos.y -= self.dimensions.dy
-        '''
-
         self.symmetries.append(symmetry_vector)
         self.transformations.append([Transformations.mirror.name, {'axis': axis}])
 
@@ -929,9 +922,12 @@ class Object:
         self.bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
 
         coloured_pixels = self.get_coloured_pixels_positions()
-        bb_top_left = Point(np.min(coloured_pixels, axis=0)[1], np.max(coloured_pixels, axis=0)[0])
-        bb_bottom_right = Point(np.max(coloured_pixels, axis=0)[1], np.min(coloured_pixels, axis=0)[0])
-        self._visible_bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
+        if len(coloured_pixels) > 0:
+            bb_top_left = Point(np.min(coloured_pixels, axis=0)[1], np.max(coloured_pixels, axis=0)[0])
+            bb_bottom_right = Point(np.max(coloured_pixels, axis=0)[1], np.min(coloured_pixels, axis=0)[0])
+            self._visible_bbox = Bbox(top_left=bb_top_left, bottom_right=bb_bottom_right)
+        else:
+            self._visible_bbox = None
 
     def get_distance_to_object(self, other: Object, dist_type: str = 'min') -> Vector:
         """
