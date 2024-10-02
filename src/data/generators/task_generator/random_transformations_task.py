@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import numpy as np
 from copy import copy
@@ -410,6 +410,21 @@ class RandomTransformationsTask(Task):
             trans = [Transformations(i).name for i in output_transformations]
             print(f'OBJECT {output_obj.get_str_type()} : {output_obj.id} TRANSFORMED: {trans}')
 
+    def get_cnavasses_as_arrays(self) -> Tuple[np.ndarray, np.ndarray]:
+
+        n = self.num_of_outputs
+        num_of_colours = 11
+        x = np.zeros((n, 32, 32, num_of_colours))
+        y = np.zeros((n, 32, 32, num_of_colours))
+
+        for i in range(n):
+            in_pixels = self.input_canvases[0].full_canvas.astype(int)
+            x[i, :, :, :] = np.eye(num_of_colours)[in_pixels]
+            out_pixels = self.output_canvases[i].full_canvas.astype(int)
+            y[i, :, :, :] = np.eye(num_of_colours)[out_pixels]
+
+        return x, y
+
     def show(self, canvas_index: int | str = 'all', save_as: str | None = None, two_cols: bool = False):
         thin_lines = True
         if save_as is None:
@@ -427,3 +442,4 @@ class RandomTransformationsTask(Task):
             self.output_canvases[i].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
                                          thin_lines=thin_lines)
             index += 1
+

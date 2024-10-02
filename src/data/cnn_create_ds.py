@@ -12,13 +12,21 @@ import os
 import time
 
 
+from data.generators.task_generator.random_transformations_task import RandomTransformationsTask
+
 
 # Function that generates random arrays (x, y) using a random seed.
 def generate_samples(seed):
     np.random.seed(os.getpid() + int(time.time()) + seed)
     n = np.random.randint(1, 11)  # Randomly choose n between 1 and 10
-    x = np.random.randn(n, 32, 32, 11)  # Generate random array for x
-    y = np.random.randn(n, 32, 32, 11)  # Generate random array for y
+
+    #x = np.random.randn(n, 32, 32, 11)  # Generate random array for x
+    #y = np.random.randn(n, 32, 32, 11)  # Generate random array for y
+
+    t = RandomTransformationsTask(num_of_outputs=n)
+    t.generate_sample()
+    x, y = t.get_cnavasses_as_arrays()
+
     return (x, y)
 
 
