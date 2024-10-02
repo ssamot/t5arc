@@ -330,7 +330,7 @@ class Task:
                 out_canvas.add_new_object(new_obj)
 
     def do_random_transformations(self, obj: Primitive, debug: bool = False, num_of_transformations: int = 0,
-                                  probs_of_transformations: List = (0.1, 0.2, 0.1, 0.1, 0.25, 0.25)):
+                                  probs_of_transformations: List = tuple([1/len(Transformations) * len(Transformations)])):
         """
         Transform the obj Primitive num_of_transformations times with randomly selected Transformations (except mirror).
         The arguments of each Transformation are also chosen randomly

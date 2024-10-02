@@ -249,14 +249,15 @@ class Random(Primitive):
                            required_dist_to_others=required_dist_to_others, colour=colour)
 
         array = np.ones((self.size.dy, self.size.dx))
-        for x in range(self.size.dx):
-            for y in range(self.size.dy):
-                if np.random.random() < occupancy_prob:
-                    array[y, x] = self.colour
+        while np.all(array == 1):
+            for x in range(self.size.dx):
+                for y in range(self.size.dy):
+                    if np.random.random() < occupancy_prob:
+                        array[y, x] = self.colour
 
         Object.__init__(self, actual_pixels=self.generate_actual_pixels(array=array), border_size=border_size,
                         canvas_pos=canvas_pos,
-                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id =canvas_id)
+                        _id=_id, actual_pixels_id=actual_pixels_id, canvas_id=canvas_id)
 
 
 class Parallelogram(Primitive):

@@ -57,7 +57,7 @@ class Orientation(Enum):
 
     def get_step_towards_orientation(self) -> Dimension2D:
         step = Dimension2D(0, 0)
-        if self.name  == 'Left':
+        if self.name == 'Left':
             step = Dimension2D(-1, 0)
         elif self.name == 'Right':
             step = Dimension2D(1, 0)
@@ -65,7 +65,7 @@ class Orientation(Enum):
             step = Dimension2D(0, 1)
         elif self.name == 'Down':
             step = Dimension2D(0, -1)
-        if self.name == 'Left':
+        if self.name == 'Up_Left':
             step = Dimension2D(-1, 1)
         elif self.name == 'Up_Right':
             step = Dimension2D(1, 1)
@@ -212,6 +212,10 @@ class Dimension2D:
 
     @staticmethod
     def random(min_dx: int = -32, max_dx: int = 32, min_dy: int = 32, max_dy: int = 32):
+        if min_dx >= max_dx:
+            print(f'Error in random Point: min_dx = {min_dx}, max_dx = {max_dx}')
+        if min_dy >= max_dy:
+            print(f'Error in random Point: min_dy = {min_dy}, max_dy = {max_dy}')
         return Dimension2D(np.random.randint(min_dx, max_dx + 1), np.random.randint(min_dy, max_dy + 1))
 
 

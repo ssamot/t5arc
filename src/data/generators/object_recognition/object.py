@@ -90,7 +90,7 @@ class Transformations(int, Enum):
                                         6: new_colours[4], 7: new_colours[5], 8: new_colours[6], 9: new_colours[7],
                                         10: new_colours[8]}
         if self.name == 'fill':
-            args['colour'] = np.random.randint(2, 10)
+            args['colour'] = np.random.randint(2, 11)
 
         return args
 
@@ -776,7 +776,7 @@ class Object:
         self.actual_pixels[np.where(self.actual_pixels == initial_colour)] = final_colour
         if self.colour == initial_colour:
             self.colour = final_colour
-        self.transformations.append([Transformations.replace_colour, {'initial_colour': initial_colour,
+        self.transformations.append([Transformations.replace_colour.name, {'initial_colour': initial_colour,
                                                                       'final_colour': final_colour}])
 
     def replace_all_colours(self, colours_hash: dict[int, int]):
@@ -842,13 +842,17 @@ class Object:
                     new_colour = int(colour)
 
             elif add_or_subtract == 'subtract':
+                if len(new_pixels_pos) == self.actual_pixels.size:  # Stop all pixels becoming black
+                    ratio /= 2
+                    new_pixels_pos = self.pick_random_pixels(coloured_or_background=coloured_or_background, ratio=ratio)
                 new_colour = 1
 
             self.actual_pixels[new_pixels_pos[:, 0], new_pixels_pos[:, 1]] = new_colour
 
             self.symmetries = []
 
-            self.transformations.append([Transformations.randomise_shape.name, {'ratio': ratio}])
+            self.transformations.append([Transformations.randomise_shape.name, {'add_or_subtract': add_or_subtract,
+                                                                                'ratio': ratio}])
 
     def create_random_hole(self, hole_size: int) -> bool:
         """
@@ -1148,6 +1152,8 @@ class Object:
 
     def get_most_common_colour(self) -> int:
         colours = self.actual_pixels[np.where(self.actual_pixels > 1)]
+        if len(colours) == 0:  # A totally empty object
+            return 1
         return int(np.median(colours))
 
     def set_colour_to_most_common(self):
