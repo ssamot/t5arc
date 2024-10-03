@@ -76,11 +76,12 @@ PROBS_OF_OUTPUT_TRANSFORMATIONS = {'translate_to_coordinates': 0,
 
 
 class RandomTransformationsTask(Task):
-    def __init__(self, num_of_outputs: int = 10):
+    def __init__(self, num_of_outputs: int = 10, debug: bool = False):
         super().__init__(min_canvas_size_for_background_object=MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
                          prob_of_background_object=0, number_of_io_pairs=1)
 
         self.num_of_outputs = num_of_outputs
+        self.debug = debug
 
         min_pad_size = const.MIN_PAD_SIZE
         self.output_canvases = []
@@ -91,14 +92,13 @@ class RandomTransformationsTask(Task):
             output_canvas = Canvas(size=output_size, _id=i + 2)
             self.output_canvases.append(output_canvas)
 
-    @staticmethod
-    def redimension_canvas_if_required(canvas: Canvas, min_dimensions: Dimension2D):
+    def redimension_canvas_if_required(self, canvas: Canvas, min_dimensions: Dimension2D):
         if canvas.size.dx < min_dimensions.dx:
             canvas.resize_canvas(Dimension2D(int(min_dimensions.dx + 1), canvas.size.dy))
-            print(f'Redimensioned canvas to {canvas.size}')
+            if self.debug: print(f'Redimensioned canvas to {canvas.size}')
         if canvas.size.dy < min_dimensions.dy:
             canvas.resize_canvas(Dimension2D( canvas.size.dx, int(min_dimensions.dy + 1)))
-            print(f'Redimensioned canvas tp {canvas.size}')
+            if self.debug: print(f'Redimensioned canvas tp {canvas.size}')
 
     def do_output_transformations_with_random_parameters(self, obj: Primitive, transformations: List[int],
                                                          for_canvas: Canvas,
@@ -110,7 +110,7 @@ class RandomTransformationsTask(Task):
 
             random_obj_or_not = 'Random' if obj.get_str_type() == 'Random' else 'Non-Random'
 
-            print(obj.get_str_type(), obj.id, transform_function)
+            if self.debug: print(obj.get_str_type(), obj.id, transform_function)
 
             args = {}
             if transform_function.name == 'translate_to_coordinates':
@@ -142,29 +142,32 @@ class RandomTransformationsTask(Task):
                 if obj.canvas_pos.y >= for_canvas.size.dy - obj.dimensions.dy:
                     orientation_probs_mask = orientation_probs_mask * np.array([0, 0, 1, 1, 1, 1, 1, 0])
 
-                orientation = Orientation(np.random.choice(range(8),
-                                                           p=orientation_probs_mask / orientation_probs_mask.sum()))
+                orientation = None if orientation_probs_mask.sum() == 0 else \
+                    Orientation(np.random.choice(range(8), p=orientation_probs_mask / orientation_probs_mask.sum()))
 
                 if orientation == Orientation.Up:
                     length = np.random.randint(1, for_canvas.size.dy - obj.canvas_pos.y - obj.dimensions.dy + 1)
-                if orientation == Orientation.Up_Right:
+                elif orientation == Orientation.Up_Right:
                     length = np.random.randint(1, np.min([for_canvas.size.dy - obj.canvas_pos.y - obj.dimensions.dy + 1,
                                                           for_canvas.size.dx - obj.canvas_pos.x - obj.dimensions.dx + 1]))
-                if orientation == Orientation.Right:
+                elif orientation == Orientation.Right:
                     length = np.random.randint(1, for_canvas.size.dx - obj.canvas_pos.x - obj.dimensions.dx + 1)
-                if orientation == Orientation.Down_Right:
+                elif orientation == Orientation.Down_Right:
                     length = np.random.randint(1, np.min([obj.canvas_pos.y + 1,
                                                           for_canvas.size.dx - obj.canvas_pos.x - obj.dimensions.dx + 1]))
-                if orientation == Orientation.Down:
+                elif orientation == Orientation.Down:
                     length = np.random.randint(1, obj.canvas_pos.y + 1)
-                if orientation == Orientation.Down_Left:
+                elif orientation == Orientation.Down_Left:
                     length = np.random.randint(1, np.min([obj.canvas_pos.y + 1,
                                                           obj.canvas_pos.x + 1]))
-                if orientation == Orientation.Left:
+                elif orientation == Orientation.Left:
                     length = np.random.randint(1, obj.canvas_pos.x + 1)
-                if orientation == Orientation.Up_Left:
+                elif orientation == Orientation.Up_Left:
                     length = np.random.randint(1, np.min([for_canvas.size.dy - obj.canvas_pos.y - obj.dimensions.dy + 1,
                                                           obj.canvas_pos.x + 1]))
+                else:  # if no correct orientation can be found set the length to 0 so no movement happens
+                    orientation = Orientation.Up
+                    length = 0
 
                 args['direction'] = Vector(orientation=orientation, length=length, origin=obj.canvas_pos)
             if transform_function.name == 'translate_relative_point_to_point':
@@ -181,9 +184,9 @@ class RandomTransformationsTask(Task):
                 if to_other_obj is not None:
                     args['other'] = to_other_obj
                 else:
-                    objects_ids = [o.id for o in for_canvas.objects if o.id != obj.id]
+                    objects_ids = [o.id for o in self.objects if o.id != obj.id]
                     choice_id = np.random.choice(objects_ids)
-                    args['other'] = [o for o in for_canvas.objects if o.id == choice_id][0]
+                    args['other'] = [o for o in self.objects if o.id == choice_id][0]
             if transform_function.name == 'rotate':
                 args['times'] = np.random.randint(1, 4)
             if transform_function.name == 'scale':
@@ -247,16 +250,15 @@ class RandomTransformationsTask(Task):
 
             transform_method = getattr(obj, transform_function.name)
             transform_method(**args)
-            try:
-                a = args['other']
-                print(args['other'].id)
-            except:
-               print(args)
 
-            print(f'New object pos and dims {obj.canvas_pos} // {obj.dimensions}')
-            #print(f'New canvas size {for_canvas.size}')
-
-        print('---')
+            if self.debug:
+                try:
+                    a = args['other']
+                    print(args['other'].id)
+                except:
+                   print(args)
+            if self.debug: print(f'New object pos and dims {obj.canvas_pos} // {obj.dimensions}')
+        if self.debug: print('---')
 
     def get_list_of_output_transformations(self, num_of_output_transformations: int) -> List[int]:
         output_transformations_indices = []
@@ -265,18 +267,18 @@ class RandomTransformationsTask(Task):
             random_transform_index = np.random.choice(possible_transform_indices,
                                                       p=list(PROBS_OF_OUTPUT_TRANSFORMATIONS.values()))
             if random_transform_index in [4, 5] and \
-                    (len(self.input_canvases[0].objects) < 2 or \
-                     4 in output_transformations_indices or \
+                    (len(self.input_canvases[0].objects) < 2 or
+                     4 in output_transformations_indices or
                      5 in output_transformations_indices):
                 return self.get_list_of_output_transformations(num_of_output_transformations)
             output_transformations_indices.append(random_transform_index)
 
         return output_transformations_indices
 
-    def randomise_canvas_pos(self, obj: Primitive, for_canvas: Canvas, fully_in_canvas: bool = False):
+    def randomise_canvas_pos(self, obj: Primitive, for_canvas: Canvas, fully_in_canvas: bool = False) -> bool:
 
         too_much_overlap = True
-
+        tries = 0
         while too_much_overlap:
             too_much_overlap = False
 
@@ -307,7 +309,12 @@ class RandomTransformationsTask(Task):
                 if intersection_area > MAX_OVERLAP_RATIO * np.min([obj_area, o_area]):
                     too_much_overlap = True
 
+            tries += 1
+            if tries > 1000:
+                return False
+
         obj.canvas_pos = possible_canvas_pos
+        return True
 
     def get_min_dimension_of_all_canvasses(self):
         canvasses_dims = []
@@ -327,16 +334,17 @@ class RandomTransformationsTask(Task):
         :return:
         """
         for out_canvas in self.output_canvases:
-            print(f'=== CANVAS {out_canvas.id} ======')
-            print(f'CANVAS size {out_canvas.size}')
+            if self.debug:
+                print(f'=== CANVAS {out_canvas.id} ======')
+                print(f'CANVAS size {out_canvas.size}')
 
             for obj_and_trans in input_objects_with_transformations:
 
                 output_obj = copy(obj_and_trans[0])
                 output_transformations = obj_and_trans[1]
 
-                print(f'Object {output_obj.get_str_type()} {output_obj.id} canvas pos = {output_obj.canvas_pos}'
-                      ' and dims = {output_obj.dimensions}')
+                if self.debug: print(f'Object {output_obj.get_str_type()} {output_obj.id} '
+                                     f'canvas pos = {output_obj.canvas_pos} and dims = {output_obj.dimensions}')
                 self.do_output_transformations_with_random_parameters(obj=output_obj,
                                                                       transformations=output_transformations,
                                                                       for_canvas=out_canvas)
@@ -358,7 +366,7 @@ class RandomTransformationsTask(Task):
                 target_size = int(np.max(dims_y)) if np.max(dims_y) <= MAX_PAD_SIZE else MAX_PAD_SIZE
                 out_canvas.resize_canvas(Dimension2D(out_canvas.size.dx, target_size))
 
-            print('============')
+            if self.debug: print('============')
 
     def generate_sample(self):
         """
@@ -369,46 +377,51 @@ class RandomTransformationsTask(Task):
         """
 
         num_of_objects = np.random.randint(1, MAX_NUM_OF_DIFFERENT_PRIMITIVES + 1)
+        probs_of_input_transformations = list(PROBS_OF_INPUT_TRANSFORMATIONS.values())
 
-        input_objects = []
-
+        # Make the objects and place them in the Input Canvas
         for _ in range(num_of_objects):
-            max_size_of_object = np.min([MAX_SIZE_OF_OBJECT, self.get_min_dimension_of_all_canvasses()])
-            input_objects.append(self.create_object(debug=False,
-                                                   max_size_of_obj=Dimension2D(max_size_of_object,
-                                                                               max_size_of_object),
-                                                   overlap_prob=1, far_away_prob=1))
+            # Try to create an Object and place it in the Input Canvas.
+            # If an Object doesn't fit discard it and try again.
+            object_works = False
+            while not object_works:
+                max_size_of_object = np.min([MAX_SIZE_OF_OBJECT, self.get_min_dimension_of_all_canvasses()])
+                obj = self.create_object(debug=False, max_size_of_obj=Dimension2D(max_size_of_object,
+                                                                                  max_size_of_object),
+                                         overlap_prob=1, far_away_prob=1)
+
+                num_of_input_transformations = np.random.randint(1, NUMBER_OF_INPUT_TRANSFORMATIONS + 1)
+
+                self.do_random_transformations(obj, num_of_transformations=num_of_input_transformations,
+                                               debug=False,
+                                               probs_of_transformations=probs_of_input_transformations)
+
+                self.redimension_canvas_if_required(self.input_canvases[0], obj.dimensions + [1, 1])
+                if self.randomise_canvas_pos(obj, self.input_canvases[0], fully_in_canvas=True):
+                    object_works = True
+                    obj.id = 0 if len(self.input_canvases[0].objects) == 0 else \
+                        self.input_canvases[0].objects[-1].id + 1
+                    self.add_object_on_canvasses(obj, [1])
+
+        # Define the Objects Output Transformations
         input_objects_with_transformations = []
-        print(f'Number of input objects" {len(input_objects)}')
-
-        for obj in input_objects:
-
-            num_of_input_transformations = np.random.randint(1, NUMBER_OF_INPUT_TRANSFORMATIONS + 1)
-            probs_of_input_transformations = list(PROBS_OF_INPUT_TRANSFORMATIONS.values())
-
-            self.do_random_transformations(obj, num_of_transformations=num_of_input_transformations,
-                                           debug=False,
-                                           probs_of_transformations=probs_of_input_transformations)
-
-            self.randomise_canvas_pos(obj, self.input_canvases[0], fully_in_canvas=True)
-
-            obj.id = 0 if len(self.input_canvases[0].objects) == 0 else \
-                self.input_canvases[0].objects[-1].id + 1
-            self.add_object_on_canvasses(obj, [1])
-
+        if self.debug: print(f'Number of input objects" {len(self.input_canvases[0].objects)}')
+        for obj in self.input_canvases[0].objects:
             num_of_output_transformations = np.random.randint(1, NUMBER_OF_OUTPUT_TRANSFORMATIONS + 1)
             output_transformations = self.get_list_of_output_transformations(num_of_output_transformations)
-
             input_objects_with_transformations.append([obj, output_transformations])
 
+        # Make the Output Canvasses and populate them with the Transformed Objects
         self.place_new_objects_on_output_canvases(input_objects_with_transformations)
 
-        print('==========')
-        for obj_and_trans in input_objects_with_transformations:
-            output_obj = copy(obj_and_trans[0])
-            output_transformations = obj_and_trans[1]
-            trans = [Transformations(i).name for i in output_transformations]
-            print(f'OBJECT {output_obj.get_str_type()} : {output_obj.id} TRANSFORMED: {trans}')
+        # Print all the Objects and their Transformations
+        if self.debug:
+            print('==========')
+            for obj_and_trans in input_objects_with_transformations:
+                output_obj = copy(obj_and_trans[0])
+                output_transformations = obj_and_trans[1]
+                trans = [Transformations(i).name for i in output_transformations]
+                print(f'OBJECT {output_obj.get_str_type()} : {output_obj.id} TRANSFORMED: {trans}')
 
     def get_cnavasses_as_arrays(self) -> Tuple[np.ndarray, np.ndarray]:
 

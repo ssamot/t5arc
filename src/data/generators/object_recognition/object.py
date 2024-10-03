@@ -835,7 +835,10 @@ class Object:
             if add_or_subtract == 'add':
                 if colour == 'common':
                     colours = self.actual_pixels[np.where(self.actual_pixels > 1)].astype(int)
-                    new_colour = int(np.argmax(np.bincount(colours)))
+                    if len(colours) == 0:
+                        new_colour = np.random.randint(2, 10, 1)
+                    else:
+                        new_colour = int(np.argmax(np.bincount(colours)))
                 elif colour == 'random':
                     new_colour = np.random.randint(2, 10, 1)
                 else:

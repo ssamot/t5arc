@@ -348,24 +348,34 @@ class Task:
         possible_transform_indices = range(len(Transformations))
 
         for i in range(num_of_transformations):
-            random_transform_index = np.random.choice(possible_transform_indices, p=probs_of_transformations)
 
-            transform_name = Transformations(random_transform_index)
-            if debug: print(f'Transform = {transform_name.name}')
+            transformation_result_ok = False
+            while not transformation_result_ok:
+                temp_obj = copy(obj)
+                random_transform_index = np.random.choice(possible_transform_indices, p=probs_of_transformations)
 
-            obj_type = 'Random' if obj.get_str_type() == 'Random' else 'Non-Random'
-            args = transform_name.get_random_parameters(obj_type)
-            if debug: print(f'Arguments = {args}')
+                transform_name = Transformations(random_transform_index)
+                if debug: print(f'Transform = {transform_name.name}')
+
+                obj_type = 'Random' if temp_obj.get_str_type() == 'Random' else 'Non-Random'
+                args = transform_name.get_random_parameters(obj_type)
+                if debug: print(f'Arguments = {args}')
+
+                transform_method = getattr(temp_obj, transform_name.name)
+
+                # Do not allow Cross or InvertedCross to scale by an even factor
+                if np.any(np.array(['Cross', 'InvertedCross']) == obj.get_str_type()) and \
+                    transform_name == Transformations.scale and args['factor'] % 2 == 0:
+                    break
+
+                transform_method(**args)
+
+                # Make sure the resulting object isn't too big
+                if temp_obj.dimensions.dx < const.MAX_PAD_SIZE - 6 and temp_obj.dimensions.dy < const.MAX_PAD_SIZE - 6:
+                    transformation_result_ok = True
 
             transform_method = getattr(obj, transform_name.name)
-
-            # Do not allow Cross or InvertedCross to scale by an even factor
-            if np.any(np.array(['Cross', 'InvertedCross']) == obj.get_str_type()) and \
-                transform_name == Transformations.scale and args['factor'] % 2 == 0:
-                continue
-
             transform_method(**args)
-
             obj.actual_pixels_id = self.actual_pixel_ids[-1] + 1
             self.actual_pixel_ids.append(obj.actual_pixels_id)
 
