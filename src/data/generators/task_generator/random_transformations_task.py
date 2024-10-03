@@ -112,144 +112,162 @@ class RandomTransformationsTask(Task):
 
             if self.debug: print(obj.get_str_type(), obj.id, transform_function)
 
-            args = {}
-            if transform_function.name == 'translate_to_coordinates':
-                self.redimension_canvas_if_required(for_canvas,
-                                                    Dimension2D(np.ceil(obj.dimensions.dx / 2),
-                                                                np.ceil(obj.dimensions.dy / 2)))
-                args['target_point'] = Point.random(min_x=0, max_x=for_canvas.size.dx - np.ceil(obj.dimensions.dx / 2),
-                                                    min_y=0, max_y=for_canvas.size.dy - np.ceil(obj.dimensions.dy / 2),
-                                                    min_z=-10, max_z=10)
-                args['object_point'] = Point.random(min_x=obj.canvas_pos.x, max_x=obj.canvas_pos.x + obj.dimensions.dx,
-                                                    min_y=obj.canvas_pos.y, max_y=obj.canvas_pos.y + obj.dimensions.dy,
-                                                    min_z=0, max_z=0)
-            if transform_function.name == 'translate_by':
-                self.redimension_canvas_if_required(for_canvas,
-                                                    Dimension2D(obj.canvas_pos.x + np.ceil(obj.dimensions.dx / 2),
-                                                                obj.canvas_pos.y + np.ceil(obj.dimensions.dy / 2)))
-                args['distance'] = Dimension2D.random(min_dx=-obj.canvas_pos.x - np.ceil(obj.dimensions.dx / 2),
-                                                      max_dx=for_canvas.size.dx - obj.canvas_pos.x - np.ceil(obj.dimensions.dx / 2),
-                                                      min_dy=-obj.canvas_pos.y - np.ceil(obj.dimensions.dy / 2),
-                                                      max_dy=for_canvas.size.dy - obj.canvas_pos.y - np.ceil(obj.dimensions.dy / 2))
-            if transform_function.name == 'translate_along':
-                orientation_probs_mask = np.array([1]*8)
-                if obj.canvas_pos.x <= 0:
-                    orientation_probs_mask = orientation_probs_mask * np.array([1, 1, 1, 1, 1, 0, 0, 0])
-                if obj.canvas_pos.y <= 0:
-                    orientation_probs_mask = orientation_probs_mask * np.array([1, 1, 1, 0, 0, 0, 1, 1])
-                if obj.canvas_pos.x >= for_canvas.size.dx - obj.dimensions.dx:
-                    orientation_probs_mask = orientation_probs_mask * np.array([1, 0, 0, 0, 1, 1, 1, 1])
-                if obj.canvas_pos.y >= for_canvas.size.dy - obj.dimensions.dy:
-                    orientation_probs_mask = orientation_probs_mask * np.array([0, 0, 1, 1, 1, 1, 1, 0])
+            transformation_result_ok = False
+            tries = 0
+            while transformation_result_ok is not True:
+                args = {}
+                temp_obj = copy(obj)
+                if transform_function.name == 'translate_to_coordinates':
+                    self.redimension_canvas_if_required(for_canvas,
+                                                        Dimension2D(np.ceil(temp_obj.dimensions.dx / 2),
+                                                                    np.ceil(temp_obj.dimensions.dy / 2)))
+                    args['target_point'] = Point.random(min_x=0, max_x=for_canvas.size.dx - np.ceil(temp_obj.dimensions.dx / 2),
+                                                        min_y=0, max_y=for_canvas.size.dy - np.ceil(temp_obj.dimensions.dy / 2),
+                                                        min_z=-10, max_z=10)
+                    args['object_point'] = Point.random(min_x=temp_obj.canvas_pos.x, max_x=temp_obj.canvas_pos.x + temp_obj.dimensions.dx,
+                                                        min_y=temp_obj.canvas_pos.y, max_y=temp_obj.canvas_pos.y + temp_obj.dimensions.dy,
+                                                        min_z=0, max_z=0)
+                if transform_function.name == 'translate_by':
+                    self.redimension_canvas_if_required(for_canvas,
+                                                        Dimension2D(temp_obj.canvas_pos.x + np.ceil(temp_obj.dimensions.dx / 2),
+                                                                    temp_obj.canvas_pos.y + np.ceil(temp_obj.dimensions.dy / 2)))
+                    args['distance'] = Dimension2D.random(min_dx=-temp_obj.canvas_pos.x - np.ceil(temp_obj.dimensions.dx / 2),
+                                                          max_dx=for_canvas.size.dx - temp_obj.canvas_pos.x - np.ceil(temp_obj.dimensions.dx / 2),
+                                                          min_dy=-temp_obj.canvas_pos.y - np.ceil(temp_obj.dimensions.dy / 2),
+                                                          max_dy=for_canvas.size.dy - temp_obj.canvas_pos.y - np.ceil(temp_obj.dimensions.dy / 2))
+                if transform_function.name == 'translate_along':
+                    orientation_probs_mask = np.array([1]*8)
+                    if temp_obj.canvas_pos.x <= 0:
+                        orientation_probs_mask = orientation_probs_mask * np.array([1, 1, 1, 1, 1, 0, 0, 0])
+                    if temp_obj.canvas_pos.y <= 0:
+                        orientation_probs_mask = orientation_probs_mask * np.array([1, 1, 1, 0, 0, 0, 1, 1])
+                    if temp_obj.canvas_pos.x >= for_canvas.size.dx - temp_obj.dimensions.dx:
+                        orientation_probs_mask = orientation_probs_mask * np.array([1, 0, 0, 0, 1, 1, 1, 1])
+                    if temp_obj.canvas_pos.y >= for_canvas.size.dy - temp_obj.dimensions.dy:
+                        orientation_probs_mask = orientation_probs_mask * np.array([0, 0, 1, 1, 1, 1, 1, 0])
 
-                orientation = None if orientation_probs_mask.sum() == 0 else \
-                    Orientation(np.random.choice(range(8), p=orientation_probs_mask / orientation_probs_mask.sum()))
+                    orientation = None if orientation_probs_mask.sum() == 0 else \
+                        Orientation(np.random.choice(range(8), p=orientation_probs_mask / orientation_probs_mask.sum()))
 
-                if orientation == Orientation.Up:
-                    length = np.random.randint(1, for_canvas.size.dy - obj.canvas_pos.y - obj.dimensions.dy + 1)
-                elif orientation == Orientation.Up_Right:
-                    length = np.random.randint(1, np.min([for_canvas.size.dy - obj.canvas_pos.y - obj.dimensions.dy + 1,
-                                                          for_canvas.size.dx - obj.canvas_pos.x - obj.dimensions.dx + 1]))
-                elif orientation == Orientation.Right:
-                    length = np.random.randint(1, for_canvas.size.dx - obj.canvas_pos.x - obj.dimensions.dx + 1)
-                elif orientation == Orientation.Down_Right:
-                    length = np.random.randint(1, np.min([obj.canvas_pos.y + 1,
-                                                          for_canvas.size.dx - obj.canvas_pos.x - obj.dimensions.dx + 1]))
-                elif orientation == Orientation.Down:
-                    length = np.random.randint(1, obj.canvas_pos.y + 1)
-                elif orientation == Orientation.Down_Left:
-                    length = np.random.randint(1, np.min([obj.canvas_pos.y + 1,
-                                                          obj.canvas_pos.x + 1]))
-                elif orientation == Orientation.Left:
-                    length = np.random.randint(1, obj.canvas_pos.x + 1)
-                elif orientation == Orientation.Up_Left:
-                    length = np.random.randint(1, np.min([for_canvas.size.dy - obj.canvas_pos.y - obj.dimensions.dy + 1,
-                                                          obj.canvas_pos.x + 1]))
-                else:  # if no correct orientation can be found set the length to 0 so no movement happens
-                    orientation = Orientation.Up
-                    length = 0
+                    if orientation == Orientation.Up:
+                        length = np.random.randint(1, for_canvas.size.dy - temp_obj.canvas_pos.y - temp_obj.dimensions.dy + 1)
+                    elif orientation == Orientation.Up_Right:
+                        length = np.random.randint(1, np.min([for_canvas.size.dy - temp_obj.canvas_pos.y - temp_obj.dimensions.dy + 1,
+                                                              for_canvas.size.dx - temp_obj.canvas_pos.x - temp_obj.dimensions.dx + 1]))
+                    elif orientation == Orientation.Right:
+                        length = np.random.randint(1, for_canvas.size.dx - temp_obj.canvas_pos.x - temp_obj.dimensions.dx + 1)
+                    elif orientation == Orientation.Down_Right:
+                        length = np.random.randint(1, np.min([temp_obj.canvas_pos.y + 1,
+                                                              for_canvas.size.dx - temp_obj.canvas_pos.x - temp_obj.dimensions.dx + 1]))
+                    elif orientation == Orientation.Down:
+                        length = np.random.randint(1, temp_obj.canvas_pos.y + 1)
+                    elif orientation == Orientation.Down_Left:
+                        length = np.random.randint(1, np.min([temp_obj.canvas_pos.y + 1,
+                                                              temp_obj.canvas_pos.x + 1]))
+                    elif orientation == Orientation.Left:
+                        length = np.random.randint(1, temp_obj.canvas_pos.x + 1)
+                    elif orientation == Orientation.Up_Left:
+                        length = np.random.randint(1, np.min([for_canvas.size.dy - temp_obj.canvas_pos.y - temp_obj.dimensions.dy + 1,
+                                                              temp_obj.canvas_pos.x + 1]))
+                    else:  # if no correct orientation can be found set the length to 0 so no movement happens
+                        orientation = Orientation.Up
+                        length = 0
 
-                args['direction'] = Vector(orientation=orientation, length=length, origin=obj.canvas_pos)
-            if transform_function.name == 'translate_relative_point_to_point':
-                self.redimension_canvas_if_required(for_canvas,
-                                                    Dimension2D(np.ceil(obj.dimensions.dx / 2),
-                                                                np.ceil(obj.dimensions.dy / 2)))
-                args['relative_point'] = RelativePoint.random()
-                args['other_point'] = Point.random(min_x=np.ceil(obj.dimensions.dx / 2),
-                                                   max_x=for_canvas.size.dx - np.ceil(obj.dimensions.dx / 2),
-                                                   min_y=np.ceil(obj.dimensions.dy / 2),
-                                                   max_y=for_canvas.size.dy - np.ceil(obj.dimensions.dy / 2),
-                                                   min_z=obj.canvas_pos.z, max_z=obj.canvas_pos.z)
-            if transform_function.name in ['translate_until_touch', 'translate_until_fit']:
-                if to_other_obj is not None:
-                    args['other'] = to_other_obj
-                else:
-                    objects_ids = [o.id for o in self.objects if o.id != obj.id]
-                    choice_id = np.random.choice(objects_ids)
-                    args['other'] = [o for o in self.objects if o.id == choice_id][0]
-            if transform_function.name == 'rotate':
-                args['times'] = np.random.randint(1, 4)
-            if transform_function.name == 'scale':
-                scale_probs_mask = np.array([1] * 6)
-                if for_canvas.size.dx - obj.canvas_pos.x < 3 * obj.dimensions.dx or\
-                        for_canvas.size.dy - obj.canvas_pos.y < 3 * obj.dimensions.dy:
-                    scale_probs_mask = scale_probs_mask * np.array([1, 1, 1, 1, 1, 0])
-                if for_canvas.size.dx - obj.canvas_pos.x < 2 * obj.dimensions.dx or \
-                        for_canvas.size.dy - obj.canvas_pos.y < 2 * obj.dimensions.dy:
-                    scale_probs_mask = scale_probs_mask * np.array([1, 1, 1, 1, 0, 0])
-                if for_canvas.size.dx - obj.canvas_pos.x < 1 * obj.dimensions.dx or \
-                        for_canvas.size.dy - obj.canvas_pos.y < 1 * obj.dimensions.dy:
-                    scale_probs_mask = scale_probs_mask * np.array([1, 1, 1, 0, 0, 0])
-                if obj.dimensions.dx < 8 or obj.dimensions.dy < 8:
-                    scale_probs_mask = scale_probs_mask * np.array([0, 1, 1, 1, 1, 1])
-                if obj.dimensions.dx < 6 or obj.dimensions.dy < 6:
-                    scale_probs_mask = scale_probs_mask * np.array([0, 0, 1, 1, 1, 1])
-                if obj.dimensions.dx < 4 or obj.dimensions.dy < 4:
-                    scale_probs_mask = scale_probs_mask * np.array([0, 0, 0, 1, 1, 1])
+                    args['direction'] = Vector(orientation=orientation, length=length, origin=temp_obj.canvas_pos)
+                if transform_function.name == 'translate_relative_point_to_point':
+                    self.redimension_canvas_if_required(for_canvas,
+                                                        Dimension2D(np.ceil(temp_obj.dimensions.dx / 2),
+                                                                    np.ceil(temp_obj.dimensions.dy / 2)))
+                    args['relative_point'] = RelativePoint.random()
+                    args['other_point'] = Point.random(min_x=np.ceil(temp_obj.dimensions.dx / 2),
+                                                       max_x=for_canvas.size.dx - np.ceil(temp_obj.dimensions.dx / 2),
+                                                       min_y=np.ceil(temp_obj.dimensions.dy / 2),
+                                                       max_y=for_canvas.size.dy - np.ceil(temp_obj.dimensions.dy / 2),
+                                                       min_z=temp_obj.canvas_pos.z, max_z=temp_obj.canvas_pos.z)
+                if transform_function.name in ['translate_until_touch', 'translate_until_fit']:
+                    if to_other_obj is not None:
+                        args['other'] = to_other_obj
+                    else:
+                        objects_ids = [o.id for o in self.objects if o.id != temp_obj.id]
+                        choice_id = np.random.choice(objects_ids)
+                        args['other'] = [o for o in self.objects if o.id == choice_id][0]
+                if transform_function.name == 'rotate':
+                    args['times'] = np.random.randint(1, 4)
+                if transform_function.name == 'scale':
+                    scale_probs_mask = np.array([1] * 6)
+                    if for_canvas.size.dx - temp_obj.canvas_pos.x < 3 * temp_obj.dimensions.dx or\
+                            for_canvas.size.dy - temp_obj.canvas_pos.y < 3 * temp_obj.dimensions.dy:
+                        scale_probs_mask = scale_probs_mask * np.array([1, 1, 1, 1, 1, 0])
+                    if for_canvas.size.dx - temp_obj.canvas_pos.x < 2 * temp_obj.dimensions.dx or \
+                            for_canvas.size.dy - temp_obj.canvas_pos.y < 2 * temp_obj.dimensions.dy:
+                        scale_probs_mask = scale_probs_mask * np.array([1, 1, 1, 1, 0, 0])
+                    if for_canvas.size.dx - temp_obj.canvas_pos.x < 1 * temp_obj.dimensions.dx or \
+                            for_canvas.size.dy - temp_obj.canvas_pos.y < 1 * temp_obj.dimensions.dy:
+                        scale_probs_mask = scale_probs_mask * np.array([1, 1, 1, 0, 0, 0])
+                    if temp_obj.dimensions.dx < 8 or temp_obj.dimensions.dy < 8:
+                        scale_probs_mask = scale_probs_mask * np.array([0, 1, 1, 1, 1, 1])
+                    if temp_obj.dimensions.dx < 6 or temp_obj.dimensions.dy < 6:
+                        scale_probs_mask = scale_probs_mask * np.array([0, 0, 1, 1, 1, 1])
+                    if temp_obj.dimensions.dx < 4 or temp_obj.dimensions.dy < 4:
+                        scale_probs_mask = scale_probs_mask * np.array([0, 0, 0, 1, 1, 1])
 
-                if scale_probs_mask.sum() > 0:
-                    args['factor'] = np.random.choice([-4, -3, -2, 2, 3, 4], p=scale_probs_mask / scale_probs_mask.sum())
-                else:
-                    args['factor'] = 1
-            if transform_function.name == 'shear':
-                if random_obj_or_not == 'Random':
-                    args['_shear'] = int(np.random.gamma(shape=1, scale=15) + 10)  # Mainly between 1 and 75
-                else:
-                    args['_shear'] = int(np.random.gamma(shape=1, scale=10) + 5)  # Mainly between 0.05 and 0.4
-                    args['_shear'] = 40 if args['_shear'] > 40 else args['_shear']
-            if transform_function.name == 'mirror' or transform_function.name == 'flip':
-                args['axis'] = np.random.choice([Orientation.Up, Orientation.Down, Orientation.Left, Orientation.Right])
-            if transform_function.name == 'mirror':
-                args['on_axis'] = False if np.random.rand() < 0.5 else True
-            if transform_function.name == 'randomise_colour':
-                if random_obj_or_not == 'Random':
-                    args['ratio'] = int(np.random.gamma(shape=2, scale=10) + 1)  # Mainly between 10 and 40
-                    args['ratio'] = int(60) if args['ratio'] > 60 else args['ratio']
-                else:
-                    args['ratio'] = int(np.random.gamma(shape=3, scale=5) + 2)  # Mainly between 10 and 40
-                    args['ratio'] = int(60) if args['ratio'] > 60 else args['ratio']
-            if transform_function.name == 'randomise_shape':
-                args['add_or_subtract'] = 'add' if np.random.random() > 0.5 else 'subtract'
-                if random_obj_or_not == 'Random':
-                    args['ratio'] = int(np.random.gamma(shape=3, scale=7) + 1)  # Mainly between 0.1 and 0.3
-                    args['ratio'] = 50 if args['ratio'] > 50 else args['ratio']
-                else:
-                    args['ratio'] = int(np.random.gamma(shape=3, scale=5) + 2)  # Mainly between 0.1 and 0.3
-                    args['ratio'] = 50 if args['ratio'] > 50 else args['ratio']
-            if transform_function.name == 'replace_colour':
-                args['initial_colour'] = obj.get_most_common_colour()
-                args['final_colour'] = np.random.choice(np.arange(2, 11)[np.arange(2, 11) != args['initial_colour']])
-            if transform_function.name == 'replace_all_colours':
-                new_colours = np.arange(2, 11)
-                np.random.shuffle(new_colours)
-                args['colour_swap_hash'] = {2: new_colours[0], 3: new_colours[1], 4: new_colours[2], 5: new_colours[3],
-                                            6: new_colours[4], 7: new_colours[5], 8: new_colours[6], 9: new_colours[7],
-                                            10: new_colours[8]}
-            if transform_function.name == 'fill':
-                args['colour'] = np.random.randint(2, 10)
+                    if scale_probs_mask.sum() > 0:
+                        args['factor'] = np.random.choice([-4, -3, -2, 2, 3, 4], p=scale_probs_mask / scale_probs_mask.sum())
+                    else:
+                        args['factor'] = 1
+                if transform_function.name == 'shear':
+                    if random_obj_or_not == 'Random':
+                        args['_shear'] = int(np.random.gamma(shape=1, scale=15) + 10)  # Mainly between 1 and 75
+                    else:
+                        args['_shear'] = int(np.random.gamma(shape=1, scale=10) + 5)  # Mainly between 0.05 and 0.4
+                        args['_shear'] = 40 if args['_shear'] > 40 else args['_shear']
+                if transform_function.name == 'mirror' or transform_function.name == 'flip':
+                    args['axis'] = np.random.choice([Orientation.Up, Orientation.Down, Orientation.Left, Orientation.Right])
+                if transform_function.name == 'mirror':
+                    args['on_axis'] = False if np.random.rand() < 0.5 else True
+                if transform_function.name == 'randomise_colour':
+                    if random_obj_or_not == 'Random':
+                        args['ratio'] = int(np.random.gamma(shape=2, scale=10) + 1)  # Mainly between 10 and 40
+                        args['ratio'] = int(60) if args['ratio'] > 60 else args['ratio']
+                    else:
+                        args['ratio'] = int(np.random.gamma(shape=3, scale=5) + 2)  # Mainly between 10 and 40
+                        args['ratio'] = int(60) if args['ratio'] > 60 else args['ratio']
+                if transform_function.name == 'randomise_shape':
+                    args['add_or_subtract'] = 'add' if np.random.random() > 0.5 else 'subtract'
+                    if random_obj_or_not == 'Random':
+                        args['ratio'] = int(np.random.gamma(shape=3, scale=7) + 1)  # Mainly between 0.1 and 0.3
+                        args['ratio'] = 50 if args['ratio'] > 50 else args['ratio']
+                    else:
+                        args['ratio'] = int(np.random.gamma(shape=3, scale=5) + 2)  # Mainly between 0.1 and 0.3
+                        args['ratio'] = 50 if args['ratio'] > 50 else args['ratio']
+                if transform_function.name == 'replace_colour':
+                    args['initial_colour'] = temp_obj.get_most_common_colour()
+                    args['final_colour'] = np.random.choice(np.arange(2, 11)[np.arange(2, 11) != args['initial_colour']])
+                if transform_function.name == 'replace_all_colours':
+                    new_colours = np.arange(2, 11)
+                    np.random.shuffle(new_colours)
+                    args['colour_swap_hash'] = {2: new_colours[0], 3: new_colours[1], 4: new_colours[2], 5: new_colours[3],
+                                                6: new_colours[4], 7: new_colours[5], 8: new_colours[6], 9: new_colours[7],
+                                                10: new_colours[8]}
+                if transform_function.name == 'fill':
+                    args['colour'] = np.random.randint(2, 10)
 
-            transform_method = getattr(obj, transform_function.name)
-            transform_method(**args)
+                transform_method = getattr(temp_obj, transform_function.name)
+                transform_method(**args)
+                tries += 1
+
+                if temp_obj.dimensions.dx < const.MAX_PAD_SIZE * 2 and temp_obj.dimensions.dy < const.MAX_PAD_SIZE * 2:
+                    transformation_result_ok = True
+                if tries == 10:
+                    transformation_result_ok = True
+
+            if tries < 10:
+                transform_method = getattr(obj, transform_function.name)
+                transform_method(**args)
+            else:
+                if self.debug:
+                    print(f'TRIED 10 TIMES TO DO {transform_function.name} AND FAILED. SKIPPING')
+                    print(f'Object dimensions are {temp_obj.dimensions}')
 
             if self.debug:
                 try:
