@@ -94,9 +94,13 @@ class RandomTransformationsTask(Task):
 
     def redimension_canvas_if_required(self, canvas: Canvas, min_dimensions: Dimension2D):
         if canvas.size.dx < min_dimensions.dx:
+            if min_dimensions.dx > 31:
+                min_dimensions.dx = 31
             canvas.resize_canvas(Dimension2D(int(min_dimensions.dx + 1), canvas.size.dy))
             if self.debug: print(f'Redimensioned canvas to {canvas.size}')
         if canvas.size.dy < min_dimensions.dy:
+            if min_dimensions.dy > 31:
+                min_dimensions.dy = 31
             canvas.resize_canvas(Dimension2D( canvas.size.dx, int(min_dimensions.dy + 1)))
             if self.debug: print(f'Redimensioned canvas tp {canvas.size}')
 
