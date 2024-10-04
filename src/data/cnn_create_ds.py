@@ -23,8 +23,8 @@ def generate_samples(seed):
     #x = np.random.randn(n, 32, 32, 11)  # Generate random array for x
     #y = np.random.randn(n, 32, 32, 11)  # Generate random array for y
 
-    t = RandomTransformationsTask(num_of_outputs=n)
-    t.generate_sample()
+    t = RandomTransformationsTask(num_of_outputs=n, one_to_one=True)
+    t.generate_samples()
     x, y = t.get_cnavasses_as_arrays()
 
     return (x, y)

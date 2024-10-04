@@ -76,21 +76,32 @@ PROBS_OF_OUTPUT_TRANSFORMATIONS = {'translate_to_coordinates': 0,
 
 
 class RandomTransformationsTask(Task):
-    def __init__(self, num_of_outputs: int = 10, debug: bool = False):
+    def __init__(self, num_of_outputs: int = 10, one_to_one: bool = True, debug: bool = False):
         super().__init__(min_canvas_size_for_background_object=MIN_CANVAS_SIZE_FOR_BACKGROUND_OBJ,
                          prob_of_background_object=0, number_of_io_pairs=1)
 
         self.num_of_outputs = num_of_outputs
+        self.one_to_one = one_to_one
         self.debug = debug
 
         min_pad_size = const.MIN_PAD_SIZE
         self.output_canvases = []
+        self.input_canvases = [] if self.one_to_one else self.input_canvases
+
         for i in range(self.num_of_outputs):
             output_size = Dimension2D(np.random.randint(min_pad_size, const.MAX_PAD_SIZE),
                                       np.random.randint(min_pad_size, const.MAX_PAD_SIZE))
 
-            output_canvas = Canvas(size=output_size, _id=i + 2)
+            out_id = i + 2 if not self.one_to_one else i * 2 + 2
+            output_canvas = Canvas(size=output_size, _id=out_id)
             self.output_canvases.append(output_canvas)
+
+            if self.one_to_one:
+                input_size = Dimension2D(np.random.randint(min_pad_size, const.MAX_PAD_SIZE),
+                                          np.random.randint(min_pad_size, const.MAX_PAD_SIZE))
+
+                input_canvas = Canvas(size=input_size, _id=2 * i + 1)
+                self.input_canvases.append(input_canvas)
 
     def redimension_canvas_if_required(self, canvas: Canvas, min_dimensions: Dimension2D):
         if canvas.size.dx < min_dimensions.dx:
@@ -349,13 +360,14 @@ class RandomTransformationsTask(Task):
 
         return np.min(canvasses_dims)
 
-    def place_new_objects_on_output_canvases(self, input_objects_with_transformations: List[List[Primitive, List[int]]]):
+    def place_new_objects_on_output_canvases(self, input_objects_with_transformations: List[List[Primitive, List[int]]],
+                                             canvasses: List[Canvas]):
         """
         Takes an object together with a series of transformations that need to be done on that object and does those
         number of output_canvases times and puts each resulting object in an output canvas.
         :return:
         """
-        for out_canvas in self.output_canvases:
+        for out_canvas in canvasses:
             if self.debug:
                 print(f'=== CANVAS {out_canvas.id} ======')
                 print(f'CANVAS size {out_canvas.size}')
@@ -390,7 +402,48 @@ class RandomTransformationsTask(Task):
 
             if self.debug: print('============')
 
-    def generate_sample(self):
+    def generate_one_to_one_samples_task(self):
+        num_of_objects = np.random.randint(1, MAX_NUM_OF_DIFFERENT_PRIMITIVES + 1)
+        probs_of_input_transformations = list(PROBS_OF_INPUT_TRANSFORMATIONS.values())
+
+        transformations = []
+        for _ in range(num_of_objects):
+            num_of_output_transformations = np.random.randint(1, NUMBER_OF_OUTPUT_TRANSFORMATIONS + 1)
+            output_transformations = self.get_list_of_output_transformations(num_of_output_transformations)
+            transformations.append(output_transformations)
+
+        for c in range(self.num_of_outputs):
+            # Define the Objects Output Transformations
+            input_objects_with_transformations = []
+            if self.debug: print(f'Number of input objects" {len(self.input_canvases[0].objects)}')
+
+            for o in range(num_of_objects):
+                object_works = False
+                while not object_works:
+                    max_size_of_object = np.min([MAX_SIZE_OF_OBJECT, self.get_min_dimension_of_all_canvasses()])
+                    obj = self.create_object(debug=False, max_size_of_obj=Dimension2D(max_size_of_object,
+                                                                                      max_size_of_object),
+                                             overlap_prob=1, far_away_prob=1)
+
+                    num_of_input_transformations = np.random.randint(1, NUMBER_OF_INPUT_TRANSFORMATIONS + 1)
+
+                    self.do_random_transformations(obj, num_of_transformations=num_of_input_transformations,
+                                                   debug=False,
+                                                   probs_of_transformations=probs_of_input_transformations)
+
+                    self.redimension_canvas_if_required(self.input_canvases[c], obj.dimensions + [1, 1])
+                    if self.randomise_canvas_pos(obj, self.input_canvases[c], fully_in_canvas=True):
+                        object_works = True
+                        obj.id = 0 if len(self.input_canvases[c].objects) == 0 else \
+                            self.input_canvases[c].objects[-1].id + 1
+
+                        self.add_object_on_canvasses(obj, [2 * c + 1])
+                        input_objects_with_transformations.append([obj, transformations[o]])
+
+            self.place_new_objects_on_output_canvases(input_objects_with_transformations,
+                                                      [self.output_canvases[c]])
+
+    def generate_one_to_many_samples_task(self):
         """
         This is the main function to call to generate the Random Experiment.
         It generates a random number of objects (if experiment_type is 'Object') or just one object (if type is
@@ -434,7 +487,7 @@ class RandomTransformationsTask(Task):
             input_objects_with_transformations.append([obj, output_transformations])
 
         # Make the Output Canvasses and populate them with the Transformed Objects
-        self.place_new_objects_on_output_canvases(input_objects_with_transformations)
+        self.place_new_objects_on_output_canvases(input_objects_with_transformations, self.output_canvases)
 
         # Print all the Objects and their Transformations
         if self.debug:
@@ -445,6 +498,12 @@ class RandomTransformationsTask(Task):
                 trans = [Transformations(i).name for i in output_transformations]
                 print(f'OBJECT {output_obj.get_str_type()} : {output_obj.id} TRANSFORMED: {trans}')
 
+    def generate_samples(self):
+        if self.one_to_one:
+            self.generate_one_to_one_samples_task()
+        else:
+            self.generate_one_to_many_samples_task()
+
     def get_cnavasses_as_arrays(self) -> Tuple[np.ndarray, np.ndarray]:
 
         n = self.num_of_outputs
@@ -453,7 +512,8 @@ class RandomTransformationsTask(Task):
         y = np.zeros((n, 32, 32, num_of_colours))
 
         for i in range(n):
-            in_pixels = self.input_canvases[0].full_canvas.astype(int)
+            input_index = i if self.one_to_one else 0
+            in_pixels = self.input_canvases[input_index].full_canvas.astype(int)
             x[i, :, :, :] = np.eye(num_of_colours)[in_pixels]
             out_pixels = self.output_canvases[i].full_canvas.astype(int)
             y[i, :, :, :] = np.eye(num_of_colours)[out_pixels]
@@ -468,13 +528,21 @@ class RandomTransformationsTask(Task):
         fig = plt.figure(figsize=(6, 16))
         index = 1
         ncoloumns = 4
-        nrows = int(np.ceil((self.num_of_outputs + 1) / ncoloumns))
 
-        self.input_canvases[0].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
-                                    thin_lines=thin_lines)
-        index += 1
-        for i in range(self.num_of_outputs):
-            self.output_canvases[i].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
-                                         thin_lines=thin_lines)
+        if not self.one_to_one:
+            nrows = int(np.ceil((self.num_of_outputs + 1) / ncoloumns))
+
+            self.input_canvases[0].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
+                                        thin_lines=thin_lines)
             index += 1
+            for i in range(self.num_of_outputs):
+                self.output_canvases[i].show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index,
+                                             thin_lines=thin_lines)
+                index += 1
+        else:
+            nrows = int(np.ceil((2 * self.num_of_outputs + 1) / ncoloumns))
+            for i, o in zip(self.input_canvases, self.output_canvases):
+                i.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index, thin_lines=thin_lines)
+                o.show(fig_to_add=fig, nrows=nrows, ncoloumns=ncoloumns, index=index + 1, thin_lines=thin_lines)
 
+                index += 2
