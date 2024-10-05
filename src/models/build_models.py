@@ -1,5 +1,6 @@
 from keras import layers
 from keras import models
+from keras import ops
 
 def build_end_to_end(s_input, ssprime_input,
                      s_encoder, ssprime_encoder, sprime_decoder, param_layer, BatchAverageLayerMLP):
@@ -10,6 +11,34 @@ def build_end_to_end(s_input, ssprime_input,
 
     merged = layers.add([encoded,
                          BatchAverageLayerMLP()(ssprime_decoded),
+                         layers.multiply([encoded, attention])
+                         ])
+
+
+    autoencoder = models.Model([s_input, ssprime_input],
+                               sprime_decoder(merged),
+                               name="autoencoder")
+
+    # Compile the autoencoder
+    autoencoder.compile(optimizer='adam', loss='mse')
+
+    return autoencoder
+
+
+def build_end_to_end_single(s_input, ssprime_input,
+                     s_encoder, ssprime_encoder, sprime_decoder, param_layer):
+
+    image_pairs = ops.split(ssprime_input, 10, axis=-1)
+
+    output_group = [ssprime_encoder(pair) for pair in image_pairs]
+    ssprime_decoded = layers.maximum(output_group)
+    #ssprime_decoded = ssprime_encoder(ssprime_input)
+    attention = param_layer(ssprime_decoded)
+    encoded = s_encoder(s_input)
+
+
+    merged = layers.add([encoded,
+                         ssprime_decoded,
                          layers.multiply([encoded, attention])
                          ])
 

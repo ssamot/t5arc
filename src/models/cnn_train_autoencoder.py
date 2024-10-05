@@ -25,7 +25,8 @@ class AutoencoderDataGenerator(keras.utils.PyDataset):
 
     def __getitem__(self, index):
         original_images, new_images = generate_samples(True)
-        return new_images/11.0, new_images/11.0
+        images = np.concatenate([original_images, new_images])
+        return images-0.5, images
 
 
 @click.command()
@@ -58,22 +59,38 @@ def main(input_filepath, output_filepath):
     ## find validation data;
 
     it = ArcTaskData('train')
-
-    relevant = ["b775ac94"]
-
+    validation_x = []
+    validation_y = []
     for task in it:
-        if (task["name"] in relevant):
-            s = np.array(task["input"], dtype=np.int32)
-            s = np.eye(11)[s]
-            sprime = np.array(task["output"], dtype=np.int32)
-            sprime = np.eye(11)[sprime]
+        s = np.array(task["input"], dtype=np.int32)
+        s = np.eye(11)[s]
+        sprime = np.array(task["output"], dtype=np.int32)
+        sprime = np.eye(11)[sprime]
 
-            merged = np.concatenate([s,sprime], axis = 0)
-            print(merged.shape)
+        validation_x.append(s)
+        validation_x.append(sprime)
+        validation_y.append(s)
+        validation_y.append(sprime)
 
-            #ssprime = merge_arrays(s, sprime)
-            validation_data = merged, merged
-            break
+    it = ArcTaskData('eval')
+    validation_x = []
+    validation_y = []
+    for task in it:
+        s = np.array(task["input"], dtype=np.int32)
+        s = np.eye(11)[s]
+        sprime = np.array(task["output"], dtype=np.int32)
+        sprime = np.eye(11)[sprime]
+
+        validation_x.append(s)
+        validation_x.append(sprime)
+        validation_y.append(s)
+        validation_y.append(sprime)
+
+
+    validation_x = np.concatenate(validation_x, axis = 0) - 0.5
+    validation_y = np.concatenate(validation_y, axis = 0)
+    print("Validation shape:",validation_x.shape)
+    validation_data = (validation_x, validation_y)
 
     model.summary()
     models = {f"s_ae_encoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": s_encoder,
@@ -91,7 +108,7 @@ def main(input_filepath, output_filepath):
                   loss=keras.losses.categorical_crossentropy,
                   metrics=["acc", b_acc, cce],
                   )
-    model.fit(x=training_generator, validation_batch_size=1000,
+    model.fit(x=training_generator, validation_batch_size=32,
               validation_data=validation_data,
               epochs=10000, verbose=False,
               callbacks=[CustomModelCheckpoint(models, output_filepath, 100),

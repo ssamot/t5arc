@@ -30,7 +30,7 @@ class EndToEndDataGenerator(keras.utils.PyDataset):
         s = original_images
         ssprime = merge_arrays(original_images, new_images)
 
-        return (s,ssprime), s
+        return (s-0.5,ssprime-0.5), s
 
 @click.command()
 @click.argument('input_filepath', type=click.Path())
@@ -43,7 +43,7 @@ def main(input_filepath, output_filepath):
     # samples = np.load(input_filepath, allow_pickle=True)["samples"]
     # training_generator = BatchedDataGenerator(samples)
 
-    squeeze_neurons = 64
+    squeeze_neurons = 512
     base_filters = 128
     encoder_filters = 64
 
@@ -78,7 +78,7 @@ def main(input_filepath, output_filepath):
 
 
             ssprime = merge_arrays(s, sprime)
-            validation_data = (s,ssprime), s
+            validation_data = (s-0.5,ssprime-0.5), s
             break
 
 
