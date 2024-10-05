@@ -1,7 +1,7 @@
 import math
 from keras import layers, models, ops
 import keras
-from cnn_neuron_binarizers import entropy_loss
+#from cnn_neuron_binarizers import entropy_loss
 
 normalisation = layers.LayerNormalization
 
@@ -36,7 +36,7 @@ def build_dense_block(input_shape, filters, num_layers, stride=1, transpose=Fals
     return models.Model(inputs, x, name=name)
 
 
-def build_encoder(input_shape, base_filters=16, name="encoder"):
+def build_encoder(input_shape, base_filters, encoder_filters,  name="encoder"):
     inputs = layers.Input(shape=input_shape)
 
     # Initial convolution
@@ -56,7 +56,7 @@ def build_encoder(input_shape, base_filters=16, name="encoder"):
     stage3 = build_dense_block(x.shape[1:], base_filters * 4, num_layers=2, stride=2, name="encoder_stage3")
     x = stage3(x)
 
-    encoded = layers.Conv2D(11, kernel_size=3, strides=1,
+    encoded = layers.Conv2D(encoder_filters, kernel_size=3, strides=1,
                           padding='same')(x)
     encoded = normalisation()(encoded)
     encoded = layers.Activation('relu')(encoded)
@@ -65,7 +65,7 @@ def build_encoder(input_shape, base_filters=16, name="encoder"):
     return encoder
 
 
-def build_decoder(input_shape, output_channels, base_filters=16):
+def build_decoder(input_shape, output_channels, base_filters):
     decoder_input = layers.Input(shape=input_shape)
     x = decoder_input
 
@@ -86,14 +86,13 @@ def build_decoder(input_shape, output_channels, base_filters=16):
     # Final convolution
     decoded = layers.Conv2DTranspose(output_channels, kernel_size=3, strides=1,
                                      padding='same')(x)
-    decoded = normalisation()(decoded)
     decoded = layers.Activation("softmax")(decoded)
 
     decoder = models.Model(decoder_input, decoded, name="decoder")
     return decoder
 
 
-def build_parameters(input_shape, squeezed_neurons=8):
+def build_parameters(input_shape, squeezed_neurons):
     ## inputs
     parameters_input = layers.Input(shape=input_shape[1:])
     n_neurons = math.prod(input_shape[1:])
@@ -103,7 +102,7 @@ def build_parameters(input_shape, squeezed_neurons=8):
     squeezed = squeeze_input
     squeezed = layers.Dense(units=n_neurons, use_bias=False)(squeezed)
     squeezed = normalisation()(squeezed)
-    squeezed = layers.Activation("sigmoid", activity_regularizer="l1")(squeezed)
+    squeezed = layers.Activation("sigmoid")(squeezed)
     squeezed = layers.Reshape(target_shape=input_shape[1:])(squeezed)
     squeeze_model = models.Model(squeeze_input, squeezed, name="attention_direct")
 
@@ -121,18 +120,6 @@ def build_parameters(input_shape, squeezed_neurons=8):
     return param_encoder, squeeze_model
 
 
-def build_autoencoder(input_shape, base_filters=16):
-    encoder = build_encoder(input_shape, base_filters)
-
-    encoder_output_shape = encoder.output.shape[1:]
-    decoder = build_decoder(encoder_output_shape, input_shape[-1], base_filters)
-
-    inputs = layers.Input(shape=input_shape)
-    encoded = encoder(inputs)
-    decoded = decoder(encoded)
-
-    autoencoder = models.Model(inputs, decoded, name="autoencoder")
-    return encoder, decoder, autoencoder
 
 
 @keras.saving.register_keras_serializable()
@@ -156,124 +143,23 @@ class BatchAverageLayer(layers.Layer):
         return input_shape
 
 
-def get_components(squeeze_neurons):
+def get_components(squeeze_neurons, base_filters, encoder_filters):
     # Create the models
     input_shape = (32, 32, 11)
     ssprime_input_shape = (32, 32, 22)
-    base_filters = 32
     s_input = layers.Input(shape=input_shape)
     ssprime_input = layers.Input(shape=ssprime_input_shape)
 
-    s_encoder = build_encoder(input_shape, base_filters, "s_encoder")
+    s_encoder = build_encoder(input_shape, base_filters, encoder_filters, "s_encoder")
 
     encoder_output_shape = s_encoder.output.shape[1:]
     sprime_decoder = build_decoder(encoder_output_shape, input_shape[-1], base_filters)
 
-    ssprime_encoder = build_encoder(ssprime_input_shape, base_filters, "ssprime_encoder")
+    ssprime_encoder = build_encoder(ssprime_input_shape, base_filters,encoder_filters, "ssprime_encoder")
 
     ssprime_decoded = ssprime_encoder(ssprime_input)
 
     param_layer, squize_layer = build_parameters(ssprime_decoded.shape, squeeze_neurons)
 
-    return s_input, ssprime_input, s_encoder, ssprime_encoder, sprime_decoder, param_layer, squize_layer
+    return s_input, ssprime_input, s_encoder, ssprime_encoder, sprime_decoder, param_layer, squize_layer, BatchAverageLayer
 
-
-def build_end_to_end(s_input, ssprime_input,
-                     s_encoder, ssprime_encoder, sprime_decoder, param_layer):
-    ssprime_decoded = ssprime_encoder(ssprime_input)
-    attention = param_layer(ssprime_decoded)
-    encoded = s_encoder(s_input)
-    merged = layers.add([encoded,
-                         BatchAverageLayer()(ssprime_decoded),
-                         layers.multiply([encoded, attention])
-                         ])
-
-    autoencoder = models.Model([s_input, ssprime_input],
-                               sprime_decoder(merged),
-                               name="autoencoder")
-
-    # Compile the autoencoder
-    autoencoder.compile(optimizer='adam', loss='mse')
-
-    return autoencoder
-
-
-def build_ttt(s_input, ssprime_input,
-              s_encoder, ssprime_encoder, sprime_decoder, squize_layer):
-    ssprime_decoded = ssprime_encoder(ssprime_input)
-
-    ttt_ssprime_encoded = layers.Input(ssprime_decoded.shape[1:])
-    ttt_ssprime_params = layers.Input(squize_layer.input.shape[1:])
-
-    attention = squize_layer(ttt_ssprime_params)
-    encoded = s_encoder(s_input)
-
-    ttt_merged = layers.add([encoded,
-                             ttt_ssprime_encoded,
-                             layers.multiply([encoded, attention])
-                             ])
-
-    ttt_model = models.Model([s_input, ttt_ssprime_encoded, ttt_ssprime_params],
-                             sprime_decoder(ttt_merged), name="ttt_model")
-
-    return ttt_model
-
-
-def build_ssprime_ave_model(ssprime_input, ssprime_encoder, param_layer):
-    ssprime_decoded = ssprime_encoder(ssprime_input)
-    ave = BatchAverageLayer()(ssprime_decoded)
-    params = param_layer(ssprime_decoded)
-
-    model = models.Model(ssprime_input, [ave, params], name="ssprime_ave_model")
-
-    return model
-
-
-def build_s_encoder(s_input, s_encoder):
-    s_encoded = s_encoder(s_input)
-    model = models.Model(s_input, s_encoded, name="ssprime_ave_model")
-
-    return model
-
-
-if __name__ == '__main__':
-    (s_input, ssprime_input,
-     s_encoder, ssprime_encoder, sprime_decoder,
-     param_layer, squeeze_layer) = get_components()
-
-    e2e = build_end_to_end(s_input, ssprime_input,
-                           s_encoder, ssprime_encoder, sprime_decoder, param_layer)
-
-    ttt = build_ttt(s_input, ssprime_input,
-                    s_encoder, ssprime_encoder, sprime_decoder, squeeze_layer)
-
-    ## get X_train, X_test for TTT
-    s_encoder = build_s_encoder(s_input, s_encoder)
-
-    ## get y_train for TTT, y_test for TTT
-    ave_model = build_ssprime_ave_model(ssprime_input, ssprime_encoder, param_layer)
-
-    e2e.summary()
-    ttt.summary()
-    ave_model.summary()
-    s_encoder.summary()
-
-#autoencoder.summary()
-
-# Print model summaries
-
-# print("\nEncoder Block Summaries:")
-# for i, block in enumerate(encoder_blocks):
-#     print(f"Encoder Block {i + 1}:")
-#     block.summary()
-#
-# print("\nDecoder Block Summaries:")
-# for i, block in enumerate(decoder_blocks):
-#     print(f"Decoder Block {i + 1}:")
-#     block.summary()
-#
-# # Test the autoencoder
-# test_input = tf.random.normal((1,) + input_shape)
-# test_output = autoencoder(test_input)
-# print(f"\nTest input shape: {test_input.shape}")
-# print(f"Test output shape: {test_output.shape}")

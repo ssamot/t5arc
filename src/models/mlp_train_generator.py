@@ -6,31 +6,14 @@ import numpy as np
 from dotenv import find_dotenv, load_dotenv
 from pathlib import Path
 from utils import CustomModelCheckpoint
-from cnn_models import get_components
-from cnn_data_generator import generate_samples, merge_arrays
+from mlp_models import build_autoencoder, get_components, build_end_to_end
+from cnn_data_generator import EndToEndDataGenerator, BatchedDataGenerator, merge_arrays
 from lm import b_acc, cce
 from tqdm.keras import TqdmCallback
-from build_models import build_end_to_end
 from data.generators.task_generator.ttt_data_generator import ArcTaskData
 
 
-class EndToEndDataGenerator(keras.utils.PyDataset):
-    def __init__(self, len=10,
-                 **kwargs):
 
-        super().__init__(**kwargs)
-        self.len = len
-        self.on_epoch_end()
-
-    def __len__(self):
-        return self.len
-
-    def __getitem__(self, index):
-        original_images, new_images = generate_samples(True)
-        s = original_images
-        ssprime = merge_arrays(original_images, new_images)
-
-        return (s,ssprime), s
 
 @click.command()
 @click.argument('input_filepath', type=click.Path())
@@ -39,13 +22,11 @@ def main(input_filepath, output_filepath):
     # build_model()
     # Initialize a list to store the contents of the JSON files
 
-
+    squeeze_neurons = 64
+    base_filters = 512
+    encoder_filters = 1024
     # samples = np.load(input_filepath, allow_pickle=True)["samples"]
     # training_generator = BatchedDataGenerator(samples)
-
-    squeeze_neurons = 64
-    base_filters = 128
-    encoder_filters = 64
 
 
     training_generator = EndToEndDataGenerator(len = 10000,
@@ -54,12 +35,12 @@ def main(input_filepath, output_filepath):
 
     (s_input, ssprime_input,
      s_encoder, ssprime_encoder, sprime_decoder,
-     param_layer, squeeze_layer, BatchAverageLayer) = get_components(squeeze_neurons,
-                                                  base_filters,
-                                                  encoder_filters )
+     param_layer, squeeze_layer) = get_components(squeeze_neurons,
+                            base_filters,
+                            encoder_filters)
 
     model = build_end_to_end(s_input, ssprime_input,
-                     s_encoder, ssprime_encoder, sprime_decoder, param_layer, BatchAverageLayer )
+                     s_encoder, ssprime_encoder, sprime_decoder, param_layer )
 
 
     ## find validation data;
@@ -85,12 +66,11 @@ def main(input_filepath, output_filepath):
 
 
     model.summary()
-    models = {f"s_ee_encoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": s_encoder,
-              f"ssprime_ee_encoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": ssprime_encoder,
-              f"ssprimeee__encoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": ssprime_encoder,
-              f"sprime_ee_decoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": sprime_decoder,
-              f"param_ee_layer_{squeeze_neurons}_{base_filters}_{encoder_filters}": param_layer,
-              f"squeeze_ee_layer_{squeeze_neurons}_{base_filters}_{encoder_filters}": squeeze_layer,
+    models = {f"s_encoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": s_encoder,
+              f"ssprime_encoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": ssprime_encoder,
+              f"sprime_decoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": sprime_decoder,
+              f"param_layer_{squeeze_neurons}_{base_filters}_{encoder_filters}": param_layer,
+              f"squeeze_layer_{squeeze_neurons}_{base_filters}_{encoder_filters}": squeeze_layer,
               }
 
     optimizer = keras.optimizers.AdamW(gradient_accumulation_steps=50)

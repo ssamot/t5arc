@@ -44,16 +44,6 @@ clean:
 	rm -rf $(BUILD_DIR) $(EXTENSION) $(SO_FILE)
 
 
-train:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model.py data/processed/train_pure.npz data/processed/eval_pure.npz  models/
-
-train_pure_inout:
-	CUDA_VISIBLE_DEVICES="0,1", KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_inout.py data/processed/train_pure_inout.npz data/processed/eval_pure_inout.npz  models/
-
-train_augmented_inout:
-	CUDA_VISIBLE_DEVICES="0,1", KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/train_model_inout.py data/processed/train_augmented_inout.npz data/processed/eval_augmented_inout.npz  models/
-
-
 
 data_pure_train:
 	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/create_ds.py data/processed/ pure 1000 train
@@ -71,9 +61,16 @@ data: data_pure_train data_pure_eval data_augmented_train
 
 
 data_cnn:
-	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/cnn_create_ds.py data/processed/cnn_pretrain.npz 1002
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/cnn_create_ds.py data/processed/cnn_pretrain.npz 100000
 train_cnn:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_generator.py data/processed/cnn_pretrain.npz models/
+	CUDA_VISIBLE_DEVICES="1" KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_generator.py data/processed/cnn_pretrain.npz models/
+train_mlp:
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/mlp_train_generator.py data/processed/cnn_pretrain.npz models/
+train_mlp_autoencoder:
+	CUDA_VISIBLE_DEVICES="1" KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/mlp_train_autoencoder.py data/processed/cnn_pretrain.npz models/
+train_cnn_autoencoder:
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_autoencoder.py data/processed/cnn_pretrain.npz models/
+
 
 
 predict_clf:

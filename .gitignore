@@ -169,3 +169,4 @@ deployIADS4.sh
 logs/
 scratch/
 data/processed
+dummy/

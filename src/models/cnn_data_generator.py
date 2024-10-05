@@ -1,12 +1,42 @@
 import keras
 import numpy as np
-#import os
+import os
+import time
+from data.generators.task_generator.random_transformations_task import RandomTransformationsTask
 
 
 def generate_random_arrays(n):
     array1 = np.random.rand(n, 32, 32, 11)
     array2 = np.random.rand(n, 32, 32, 11)
     return array1, array2
+
+
+def generate_samples(one_to_one):
+    pid = os.getpid()
+
+    # Check if this process has already executed the command
+    if not hasattr(generate_samples, f'executed_{pid}'):
+        seed = (os.getpid() * int(time.time())) % 123456789
+        #print(f"Setting seed for process {pid}, {seed}")
+        # Your command here
+        np.random.seed(seed)
+
+        # Mark this process as having executed the command
+        setattr(generate_samples, f'executed_{pid}', True)
+    else:
+        pass
+
+
+    n = np.random.randint(4, 11)  # Randomly choose n between 1 and 10
+
+    #x = np.random.randn(n, 32, 32, 11)  # Generate random array for x
+    #y = np.random.randn(n, 32, 32, 11)  # Generate random array for y
+
+    t = RandomTransformationsTask(num_of_outputs=n, one_to_one = one_to_one)
+    t.generate_samples()
+    x, y = t.get_cnavasses_as_arrays()
+
+    return (x, y)
 
 def merge_arrays(array1, array2):
     return np.concatenate((array1, array2), axis=-1)
@@ -32,40 +62,9 @@ class BatchedDataGenerator(keras.utils.PyDataset):
         np.random.shuffle(self.data_array)
 
 
-class DataGenerator(keras.utils.PyDataset):
-    def __init__(self, len=10,
-                 **kwargs):
-        """
-        :param train_data: List of image paths or pre-loaded images.
-        :param batch_size: Size of each batch.
-        :param augment_fn: Function to augment images.
-        :param shuffle: Whether to shuffle the order of images after each epoch.
-        """
-        super().__init__(**kwargs)
-
-        self.len = len
-
-
-        self.on_epoch_end()
-
-    def __len__(self):
-        """Denotes the number of batches per epoch."""
-        return self.len
-
-    def __getitem__(self, index):
-        """Generate one batch of data."""
-        # Generate data
-        original_images, new_images = generate_random_arrays(5)
-        s = original_images
-        ssprime = merge_arrays(original_images, new_images)
-        #print(ssprime.shape)
-        #exit()
 
 
 
-        return (s,ssprime), s
 
-    def on_epoch_end(self):
-        """Updates indices after each epoch."""
-        pass
+
 
