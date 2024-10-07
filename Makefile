@@ -70,6 +70,8 @@ train_mlp_autoencoder:
 	CUDA_VISIBLE_DEVICES="1" KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/mlp_train_autoencoder.py data/processed/cnn_pretrain.npz models/
 train_cnn_autoencoder:
 	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_autoencoder.py data/processed/cnn_pretrain.npz models/
+viz_log:
+	 PYTHONPATH=./src $(PYTHON_INTERPRETER) src/visualization/vis.py
 
 
 
@@ -90,6 +92,10 @@ generate_dsl_programmes:
 
 run_mcts:
 	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/search/run_mcts.py test ./data
+
+manual:
+	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/man/manual.py
+
 
 
 

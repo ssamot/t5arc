@@ -170,3 +170,4 @@ logs/
 scratch/
 data/processed
 dummy/
+*.log

@@ -25,6 +25,39 @@ def build_end_to_end(s_input, ssprime_input,
     return autoencoder
 
 
+# def build_end_to_end_copy(s_input, ssprime_input,
+#                      s_encoder, ssprime_encoder, sprime_decoder, param_layer, BatchAverageLayerMLP):
+#     masks = sprime_decoder(ssprime_encoder(ssprime_input))
+#     transformations = ssprime_encoder(ssprime_input)
+#
+#
+#
+#     merged = layers.add([encoded,
+#                          BatchAverageLayerMLP()(ssprime_decoded),
+#                          layers.multiply([encoded, attention])
+#                          ])
+#
+#
+#     autoencoder = models.Model([s_input, ssprime_input],
+#                                sprime_decoder(merged),
+#                                name="autoencoder")
+#
+#     # Apply the transformation
+#     invert_x = layers.Lambda(lambda x: 1 - x)
+#
+#
+#     # Combine the original and transformed regions
+#     #result = image * (1 - mask_3d) + transformed_region * mask_3d
+#
+#     result = (ops.multiply([s_input, invert_x(mask_3d)]) +
+#               ops.multiply([transformed_region, mask_3d])
+#
+#     # Compile the autoencoder
+#     autoencoder.compile(optimizer='adam', loss='mse')
+#
+#     return autoencoder
+
+
 def build_end_to_end_single(s_input, ssprime_input,
                      s_encoder, ssprime_encoder, sprime_decoder, param_layer):
 

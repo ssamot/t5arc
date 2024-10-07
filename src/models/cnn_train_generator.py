@@ -43,9 +43,9 @@ def main(input_filepath, output_filepath):
     # samples = np.load(input_filepath, allow_pickle=True)["samples"]
     # training_generator = BatchedDataGenerator(samples)
 
-    squeeze_neurons = 512
-    base_filters = 128
-    encoder_filters = 64
+    squeeze_neurons = 64
+    base_filters = 64
+    encoder_filters = 32
 
 
     training_generator = EndToEndDataGenerator(len = 10000,
@@ -66,7 +66,7 @@ def main(input_filepath, output_filepath):
 
     it = ArcTaskData('train')
 
-    relevant = ["b775ac94"]
+    relevant = ["05f2a901"]
 
 
     for task in it:
@@ -87,13 +87,16 @@ def main(input_filepath, output_filepath):
     model.summary()
     models = {f"s_ee_encoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": s_encoder,
               f"ssprime_ee_encoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": ssprime_encoder,
-              f"ssprimeee__encoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": ssprime_encoder,
               f"sprime_ee_decoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": sprime_decoder,
               f"param_ee_layer_{squeeze_neurons}_{base_filters}_{encoder_filters}": param_layer,
               f"squeeze_ee_layer_{squeeze_neurons}_{base_filters}_{encoder_filters}": squeeze_layer,
               }
 
-    optimizer = keras.optimizers.AdamW(gradient_accumulation_steps=50)
+
+    optimizer = keras.optimizers.Adamax(gradient_accumulation_steps=20,
+                                        learning_rate=0.0001,
+                                        weight_decay=0.00001,
+                                        epsilon=0.00001)
     model.compile(optimizer=optimizer,
                   loss=keras.losses.categorical_crossentropy,
                   metrics = ["acc", b_acc, cce],
@@ -102,7 +105,8 @@ def main(input_filepath, output_filepath):
               validation_data=validation_data,
               epochs=10000,verbose=False,
               callbacks=[CustomModelCheckpoint(models, output_filepath, 100),
-                         TqdmCallback(verbose=1)
+                         TqdmCallback(verbose=1),
+                         keras.callbacks.CSVLogger(f"ee_training_{squeeze_neurons}_{base_filters}_{encoder_filters}.log")
                          ]
               )
 

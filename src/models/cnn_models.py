@@ -122,6 +122,8 @@ def build_parameters(input_shape, squeezed_neurons):
 
 
 
+
+
 @keras.saving.register_keras_serializable()
 class BatchAverageLayer(layers.Layer):
     def __init__(self, **kwargs):
@@ -163,3 +165,24 @@ def get_components(squeeze_neurons, base_filters, encoder_filters):
 
     return s_input, ssprime_input, s_encoder, ssprime_encoder, sprime_decoder, param_layer, squize_layer, BatchAverageLayer
 
+def get_components_single(squeeze_neurons, base_filters, encoder_filters):
+    # Create the models
+    input_shape = (32, 32, 11)
+    ssprime_input_shape = (32, 32, 22)
+    s_input = layers.Input(shape=input_shape)
+    ssprime_input = layers.Input(shape=ssprime_input_shape)
+
+    s_encoder_masks = build_encoder(input_shape, base_filters, encoder_filters, "s_encoder")
+    s_encoder_tranformer = build_encoder(input_shape, base_filters, encoder_filters, "s_encoder")
+
+    encoder_output_shape = s_encoder_masks.output.shape[1:]
+    sprime_decoder_masks = build_decoder(encoder_output_shape, 10, base_filters)
+
+    ssprime_encoder_masks = build_encoder(ssprime_input_shape, base_filters,encoder_filters, "ssprime_encoder")
+    ssprime_encoder_transformed = build_encoder(ssprime_input_shape, base_filters, encoder_filters, "ssprime_encoder")
+
+    ssprime_decoded = ssprime_encoder(ssprime_input)
+
+    param_layer, squize_layer = build_parameters(ssprime_decoded.shape, squeeze_neurons)
+
+    return s_input, ssprime_input, s_encoder, ssprime_encoder, sprime_decoder, param_layer, squize_layer, BatchAverageLayer
