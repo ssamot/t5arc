@@ -59,6 +59,8 @@ class ARCTask(Task):
                 arc_data = deepcopy(arc_data)
                 self.name = arc_data['name']
                 self.task_data = {'test': [], 'train': []}
+                arc_data['input'] = np.array(arc_data['input'])
+                arc_data['output'] = np.array(arc_data['output'])
                 for in_data, out_data in zip(arc_data['input'][:-1], arc_data['output'][:-1]):
                     in_data -= 1
                     out_data -= 1
