@@ -37,7 +37,7 @@ def solution_97a05b5b(canvas: Canvas) -> Canvas:
     canvas_out = dsl.add_object_to_canvas(canvas_out, new_oo)
 
     for oo in other_objects:
-        match_position, rotation = dsl.get_point_and_rotation_for_match_shape_furthest(oo, neg_object,
+        match_position, rotation = dsl.get_point_and_rotation_for_match_shape_furthest(neg_object, oo,
                                                                                        match_shape_only=False,
                                                                                        padding=Surround(1, 1, 1, 1))
         oo = dsl.object_transform_rotate(oo, rotation=rotation)

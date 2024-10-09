@@ -103,9 +103,8 @@ def get_distance_touching_between_objects(first: Primitive, second: Primitive) -
 
 def get_point_for_match_shape_furthest(base_obj: Primitive, target_obj: Primitive, match_shape_only: bool,
                                        padding: Surround = Surround(0, 0, 0, 0)) -> Point:
-    match_positions, _ = base_obj.match(target_obj, after_rotation=True,
-                                                match_shape_only=match_shape_only, padding=padding)
-
+    result = base_obj.match(target_obj, match_shape_only=match_shape_only, padding=padding)
+    match_positions = result[0]['canvas_pos']
     _, index = furthest_point_to_point(base_obj.canvas_pos, match_positions)
 
     return match_positions[index]
@@ -113,9 +112,9 @@ def get_point_for_match_shape_furthest(base_obj: Primitive, target_obj: Primitiv
 
 def get_point_and_rotation_for_match_shape_furthest(base_obj: Primitive, target_obj: Primitive, match_shape_only: bool,
                                                     padding: Surround = Surround(0, 0, 0, 0)) -> Tuple[Point, int]:
-    match_positions, rotations = base_obj.match(target_obj, after_rotation=True,
-                                                match_shape_only=match_shape_only, padding=padding)
-
+    result = base_obj.match(target_obj, match_shape_only=match_shape_only, padding=padding)
+    match_positions = [result[i]['canvas_pos'] for i in range(len(result))]
+    rotations = [result[i]['rotation'] for i in range(len(result))]
     _, index = furthest_point_to_point(base_obj.canvas_pos, match_positions)
 
     return match_positions[index], rotations[index]

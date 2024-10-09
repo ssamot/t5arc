@@ -257,7 +257,10 @@ class Task:
             if obj_type == 'Bolt':
                 args['_center_on'] = obj_discr['center_on']
 
-            args['colour'] = obj_discr['colour']
+            try:
+                args['colour'] = obj_discr['colour']
+            except:
+                pass
             args['_id'] = obj_discr['id']
             args['actual_pixels_id'] = obj_discr['actual_pixels_id']
 
