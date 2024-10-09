@@ -91,26 +91,60 @@ def build_ttt(s_input, ssprime_input,
     ssprime_decoded = ssprime_encoder(ssprime_input)
 
     ttt_ssprime_encoded = layers.Input(ssprime_decoded.shape[1:])
-    ttt_ssprime_params = layers.Input(squize_layer.input.shape[1:])
 
-    attention = squize_layer(ttt_ssprime_params)
+    #print(squize_layer.input.shape[1:])
+    #exit()
+
+
+    ttt_ssprime_params_input = layers.Input((squize_layer.input.shape[-1],))
+
+    attention = squize_layer(ttt_ssprime_params_input)
     encoded = s_encoder(s_input)
-
 
     ttt_merged = layers.add([encoded,
                              ttt_ssprime_encoded,
                              layers.multiply([encoded, attention])
                              ])
 
-    ttt_model = models.Model([s_input, ttt_ssprime_encoded, ttt_ssprime_params],
+    ttt_model = models.Model([s_input, ttt_ssprime_encoded,ttt_ssprime_params_input],
                              sprime_decoder(ttt_merged), name="ttt_model")
 
     return ttt_model
 
 
-def build_ssprime_ave_model(ssprime_input, ssprime_encoder, param_layer, BatchAverageLayerMLP):
+
+def build_ttt_emb(s_input, ssprime_input,
+              s_encoder, ssprime_encoder, sprime_decoder, squize_layer):
     ssprime_decoded = ssprime_encoder(ssprime_input)
-    ave = BatchAverageLayerMLP()(ssprime_decoded)
+
+    ttt_ssprime_encoded = layers.Input(ssprime_decoded.shape[1:])
+
+    #print(squize_layer.input.shape[1:])
+    #exit()
+
+
+    ttt_ssprime_params_input = layers.Input((1,))
+    ttt_ssprime_params = layers.Embedding(5,squize_layer.input.shape[-1])(ttt_ssprime_params_input)
+    ttt_ssprime_params = layers.Flatten()(ttt_ssprime_params)
+    ttt_ssprime_params = layers.Activation("tanh")(ttt_ssprime_params)
+
+    attention = squize_layer(ttt_ssprime_params)
+    encoded = s_encoder(s_input)
+
+    ttt_merged = layers.add([encoded,
+                             ttt_ssprime_encoded,
+                             layers.multiply([encoded, attention])
+                             ])
+
+    ttt_model = models.Model([s_input, ttt_ssprime_encoded,ttt_ssprime_params_input],
+                             sprime_decoder(ttt_merged), name="ttt_model")
+
+    return ttt_model
+
+
+def build_ssprime_ave_model(ssprime_input, ssprime_encoder, param_layer, BatchAverageLayer):
+    ssprime_decoded = ssprime_encoder(ssprime_input)
+    ave = BatchAverageLayer()(ssprime_decoded)
     params = param_layer(ssprime_decoded)
 
     model = models.Model(ssprime_input, [ave, params], name="ssprime_ave_model")

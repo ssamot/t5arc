@@ -28,9 +28,10 @@ class EndToEndDataGenerator(keras.utils.PyDataset):
     def __getitem__(self, index):
         original_images, new_images = generate_samples(True)
         s = original_images
+        sprime = new_images
         ssprime = merge_arrays(original_images, new_images)
 
-        return (s-0.5,ssprime-0.5), s
+        return (s,ssprime), sprime
 
 @click.command()
 @click.argument('input_filepath', type=click.Path())
@@ -43,7 +44,7 @@ def main(input_filepath, output_filepath):
     # samples = np.load(input_filepath, allow_pickle=True)["samples"]
     # training_generator = BatchedDataGenerator(samples)
 
-    squeeze_neurons = 64
+    squeeze_neurons = 63
     base_filters = 64
     encoder_filters = 32
 
@@ -78,7 +79,7 @@ def main(input_filepath, output_filepath):
 
 
             ssprime = merge_arrays(s, sprime)
-            validation_data = (s-0.5,ssprime-0.5), s
+            validation_data = (s,ssprime), sprime
             break
 
 
@@ -90,6 +91,8 @@ def main(input_filepath, output_filepath):
               f"sprime_ee_decoder_{squeeze_neurons}_{base_filters}_{encoder_filters}": sprime_decoder,
               f"param_ee_layer_{squeeze_neurons}_{base_filters}_{encoder_filters}": param_layer,
               f"squeeze_ee_layer_{squeeze_neurons}_{base_filters}_{encoder_filters}": squeeze_layer,
+              #f"model_{squeeze_neurons}_{base_filters}_{encoder_filters}": model,
+
               }
 
 
@@ -104,7 +107,7 @@ def main(input_filepath, output_filepath):
     model.fit(x=training_generator,validation_batch_size=1000,
               validation_data=validation_data,
               epochs=10000,verbose=False,
-              callbacks=[CustomModelCheckpoint(models, output_filepath, 100),
+              callbacks=[CustomModelCheckpoint(models, output_filepath, 2),
                          TqdmCallback(verbose=1),
                          keras.callbacks.CSVLogger(f"ee_training_{squeeze_neurons}_{base_filters}_{encoder_filters}.log")
                          ]

@@ -60,18 +60,15 @@ data_augmented_eval:
 data: data_pure_train data_pure_eval data_augmented_train
 
 
-data_cnn:
-	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/cnn_create_ds.py data/processed/cnn_pretrain.npz 100000
 train_cnn:
-	CUDA_VISIBLE_DEVICES="1" KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_generator.py data/processed/cnn_pretrain.npz models/
-train_mlp:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/mlp_train_generator.py data/processed/cnn_pretrain.npz models/
-train_mlp_autoencoder:
-	CUDA_VISIBLE_DEVICES="1" KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/mlp_train_autoencoder.py data/processed/cnn_pretrain.npz models/
-train_cnn_autoencoder:
-	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_autoencoder.py data/processed/cnn_pretrain.npz models/
+	CUDA_VISIBLE_DEVICES="1" KERAS_BACKEND="tensorflow" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_generator.py data/processed/cnn_pretrain.npz models/
 viz_log:
 	 PYTHONPATH=./src $(PYTHON_INTERPRETER) src/visualization/vis.py
+
+cnn_predict:
+	KERAS_BACKEND="tensorflow" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_predict_model.py data/processed/ models/ data/processed/eval/spider dev
+
+
 
 
 
@@ -96,7 +93,15 @@ run_mcts:
 manual:
 	PYTHONPATH=./src $(PYTHON_INTERPRETER) src/man/manual.py
 
+train_mlp:
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/mlp_train_generator.py data/processed/cnn_pretrain.npz models/
+train_mlp_autoencoder:
+	CUDA_VISIBLE_DEVICES="1" KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/mlp_train_autoencoder.py data/processed/cnn_pretrain.npz models/
+train_cnn_autoencoder:
+	KERAS_BACKEND="jax" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/models/cnn_train_autoencoder.py data/processed/cnn_pretrain.npz models/
 
+data_cnn:
+	CUDA_VISIBLE_DEVICES="" PYTHONPATH=./src $(PYTHON_INTERPRETER) src/data/cnn_create_ds.py data/processed/cnn_pretrain.npz 100000
 
 
 

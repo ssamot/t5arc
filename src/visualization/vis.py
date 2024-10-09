@@ -3,7 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Read the CSV file
-filename = 'ee_training_128_64_32.log'
+filename = 'ee_training_63_64_32.log'
 
 df = pd.read_csv(filename)
 
