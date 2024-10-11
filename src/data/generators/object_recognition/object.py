@@ -12,7 +12,6 @@ import skimage
 from visualization import visualize_data as vis
 from data.generators.object_recognition.basic_geometry import Point, Vector, Orientation, Surround, Bbox, \
     Dimension2D, RelativePoint
-from data.generators.object_recognition import utils
 
 from data.generators import constants as const
 
@@ -353,72 +352,110 @@ class Object:
         return result
 
     @staticmethod
-    def _match(obj_a: Object, obj_b: Object, padding: Surround | None = None, match_shape_only: bool = False) \
-            -> Tuple[List[Point], np.ndarray]:
+    def _match_filter_obj_to_background_obj(background_obj: Object, filter_obj: Object,
+                                            padding: Surround | None = None, try_unique: bool = True,
+                                            match_shape_only: bool = False) -> Tuple[List[Point], np.ndarray]:
         """
-        The basic match between Objects obj_a and obj_b. It calculates the list of coordinates (Points) that the obj_b
-        should move to (its canvas_pos) so that it gives the best match with obj_a. This is a list if multiple
-        positions result in the same match quality.
-        :param obj_a: The object to be macth
-        :param obj_b: The object to match
+        The basic match between a background Object and a filter Object. It calculates the list of coordinates
+        (Points) that the filter Object should translate to so that it gives the best match with background Object.
+        This is a list if multiple positions result in the same match quality. It also returns the match quality.
+        :param background_obj: The object to be matched
+        :param filter_obj: The object to match
         :param padding: Any padding (Surround) that would help with the matching. If (0, 0, 0, 0) doesn't work try (1, 1, 1, 1)
         :param match_shape_only: If True then ignore colours and match only for the shapes the visible pixels generates.
-        :return: The best position(s) obj_b should move to to match obj_a
+        :return: The best position(s) the filter should move to in order to match background, The quality of the match.
         """
         if padding is None:
             padding = Surround(0, 0, 0, 0)
 
-        obj_a_dimensions = Dimension2D(obj_a.dimensions.dx + padding.Left + padding.Right,
-                                       obj_a.dimensions.dy + padding.Up + padding.Down)
+        background_obj_size = Dimension2D(background_obj.dimensions.dx + padding.Left + padding.Right,
+                                          background_obj.dimensions.dy + padding.Up + padding.Down)
 
-        obj_b_dimensions = Dimension2D(obj_b.dimensions.dx + padding.Left + padding.Right,
-                                       obj_b.dimensions.dy + padding.Up + padding.Down)
+        filter_obj_size = Dimension2D(filter_obj.dimensions.dx + padding.Left + padding.Right,
+                                      filter_obj.dimensions.dy + padding.Up + padding.Down)
 
-        x_base_dim = obj_a_dimensions.dx + 2 * obj_b_dimensions.dx - 2
-        y_base_dim = obj_a_dimensions.dy + 2 * obj_b_dimensions.dy - 2
-        base = np.zeros((y_base_dim, x_base_dim))
+        x_base_dim = background_obj_size.dx + 2 * filter_obj_size.dx - 2
+        y_base_dim = background_obj_size.dy + 2 * filter_obj_size.dy - 2
+        background = np.zeros((y_base_dim, x_base_dim))
 
-        x_res_dim = obj_a_dimensions.dx + obj_b_dimensions.dx - 1
-        y_res_dim = obj_a_dimensions.dy + obj_b_dimensions.dy - 1
-        result = np.zeros((y_res_dim, x_res_dim))
+        x_res_dim = background_obj_size.dx + filter_obj_size.dx - 1
+        y_res_dim = background_obj_size.dy + filter_obj_size.dy - 1
+        fit_value = np.zeros((y_res_dim, x_res_dim))
 
-        base_pixels = np.zeros((obj_a_dimensions.dy, obj_a_dimensions.dx))
-        base_pixels[padding.Down: obj_a_dimensions.dy - padding.Up,
-                    padding.Left: obj_a_dimensions.dx - padding.Right] = obj_a.actual_pixels
-        base[obj_b_dimensions.dy - 1: obj_b_dimensions.dy - 1 + obj_a_dimensions.dy,
-             obj_b_dimensions.dx - 1: obj_b_dimensions.dx - 1 + obj_a_dimensions.dx] = base_pixels
+        background_pixels = np.zeros((background_obj_size.dy, background_obj_size.dx))
+        background_pixels[padding.Down: background_obj_size.dy - padding.Up,
+                          padding.Left: background_obj_size.dx - padding.Right] = background_obj.actual_pixels
+        background[filter_obj_size.dy - 1: filter_obj_size.dy - 1 + background_obj_size.dy,
+                   filter_obj_size.dx - 1: filter_obj_size.dx - 1 + background_obj_size.dx] = background_pixels
 
         for x in range(x_res_dim):
             for y in range(y_res_dim):
-                temp = copy(base[y: obj_b_dimensions.dy + y, x: obj_b_dimensions.dx + x])
-                obj_b_pixels = np.ones((obj_b_dimensions.dy, obj_b_dimensions.dx))
-                obj_b_pixels[padding.Down: obj_b_dimensions.dy - padding.Up,
-                             padding.Left: obj_b_dimensions.dx - padding.Right] = copy(obj_b.actual_pixels)
+                part_of_background = copy(background[y: filter_obj_size.dy + y, x: filter_obj_size.dx + x])
+                filter_obj_pixels = np.ones((filter_obj_size.dy, filter_obj_size.dx))
+                filter_obj_pixels[padding.Down: filter_obj_size.dy - padding.Up,
+                                  padding.Left: filter_obj_size.dx - padding.Right] = copy(filter_obj.actual_pixels)
                 if match_shape_only:
-                    temp[np.where(temp == 1)] = 0
-                    temp[np.where(temp > 1)] = 1
-                    obj_b_pixels[np.where(obj_b_pixels == 1)] = 0
-                    obj_b_pixels[np.where(obj_b_pixels > 1)] = 1
-                    comp = (temp == obj_b_pixels).astype(int)
+                    part_of_background[np.where(part_of_background == 1)] = 0
+                    part_of_background[np.where(part_of_background > 1)] = 1
+                    filter_obj_pixels[np.where(filter_obj_pixels == 1)] = 0
+                    filter_obj_pixels[np.where(filter_obj_pixels > 1)] = 1
+                    comp = (part_of_background == filter_obj_pixels).astype(int)
                 else:
-                    comp = np.zeros(temp.shape)
-                    for i in range(temp.shape[0]):
-                        for j in range(temp.shape[1]):
-                            if obj_b_pixels[i, j] != 1 and temp[i, j] != 1:
-                                if temp[i, j] == obj_b_pixels[i, j]:
+                    comp = np.zeros(part_of_background.shape)
+                    for i in range(part_of_background.shape[0]):
+                        for j in range(part_of_background.shape[1]):
+                            if filter_obj_pixels[i, j] != 1 and part_of_background[i, j] != 1:
+                                if part_of_background[i, j] == filter_obj_pixels[i, j]:
                                     comp[i, j] = 1
                                 else:
                                     comp[i, j] = -1
-                            elif obj_b_pixels[i, j] == 1 or temp[i, j] == 1:
+                            elif filter_obj_pixels[i, j] == 1 or part_of_background[i, j] == 1:
                                 comp[i, j] = 0
-                result[y, x] = comp.sum() / len(obj_a.get_coloured_pixels_positions())
+                fit_value[y, x] = comp.sum() / len(filter_obj.get_coloured_pixels_positions())
 
-        best_relative_positions = np.argwhere(result == np.amax(result))
-        best_positions = [Point(x=brp[1] - obj_b_dimensions.dx + padding.Left + obj_a.canvas_pos.x,
-                                y=brp[0] - obj_b_dimensions.dy + padding.Down + obj_a.canvas_pos.y)
+        best_relative_positions = np.argwhere(fit_value == np.amax(fit_value))
+
+        if len(best_relative_positions > 1) and try_unique:
+            center_surround = []
+            for brp in best_relative_positions:
+                x = brp[1]
+                y = brp[0]
+                s = 0
+                surround = 0
+                if y > 0:
+                    surround += fit_value[y - 1, x]
+                    s += 1
+                if y < y_res_dim - 1:
+                    surround += fit_value[y + 1, x]
+                    s += 1
+                if x > 0:
+                    surround += fit_value[y, x - 1]
+                    s += 1
+                    if y > 0:
+                        surround += fit_value[y - 1, x - 1]
+                        s += 1
+                    if y < y_res_dim - 1:
+                        surround += fit_value[y + 1, x - 1]
+                        s += 1
+                if x < x_res_dim - 1:
+                    surround += fit_value[y, x + 1]
+                    s += 1
+                    if y > 0:
+                        surround += fit_value[y - 1, x + 1]
+                        s += 1
+                    if y < y_res_dim - 1:
+                        surround += fit_value[y + 1, x + 1]
+                        s += 1
+                center_surround.append(fit_value[y, x] - surround / s)
+
+            better_index = np.where(center_surround == np.amin(center_surround))
+            best_relative_positions = best_relative_positions[better_index]
+
+        best_positions = [Point(x=brp[1] - filter_obj_size.dx + 1 + background_obj.canvas_pos.x,
+                                y=brp[0] - filter_obj_size.dy + 1 + background_obj.canvas_pos.y)
                           for brp in best_relative_positions]
 
-        return best_positions, np.amax(result)
+        return best_positions, np.amax(fit_value)
 
     def __copy__(self):
         new_obj = Object(actual_pixels=self.actual_pixels, _id=self.id, border_size=self.border_size,
@@ -806,6 +843,16 @@ class Object:
                     self.colour = colours_hash[c]
         self.actual_pixels = copy(temp_pixels)
         self.transformations.append([Transformations.replace_all_colours, {'colours_hash': colours_hash}])
+
+    def create_new_object_from_colour(self, colour: int) -> Object:
+        new_actual_pixels = np.ones(self.actual_pixels.shape)
+        positions = np.array([np.array(pix) - np.array([self.canvas_pos.y, self.canvas_pos.x]) for
+                              pix in self.get_coloured_pixels_positions(colour)])
+        new_actual_pixels[positions[:, 0], positions[:, 1]] = colour
+        new_object = copy(self)
+        new_object.actual_pixels = new_actual_pixels
+
+        return new_object
 
     # </editor-fold>
 
@@ -1227,7 +1274,8 @@ class Object:
 
         return holes, n
 
-    def match(self, other: Object, match_shape_only: bool = False,  padding: Surround = Surround(0, 0, 0, 0)) \
+    def match(self, other: Object, match_shape_only: bool = False, try_unique: bool = True,
+              padding: Surround = Surround(0, 0, 0, 0)) \
             -> List[dict[str, int | List[Point]]]:
 
         positions = []
@@ -1239,8 +1287,10 @@ class Object:
                 obj_b = copy(other)
                 obj_b.rotate(rot)
                 obj_b.scale(scale)
-                position, max_result = Object._match(obj_a=obj_a, obj_b=obj_b, match_shape_only=match_shape_only,
-                                                     padding=padding)
+                position, max_result = Object._match_filter_obj_to_background_obj(background_obj=obj_a, filter_obj=obj_b,
+                                                                                  match_shape_only=match_shape_only,
+                                                                                  try_unique=try_unique,
+                                                                                  padding=padding)
                 transformations.append([rot, scale])
                 positions.append(position)
                 max_results.append(max_result)
@@ -1251,85 +1301,10 @@ class Object:
 
         result = [{'rotation': best_transformations[i][0],
                    'scale': best_transformations[i][1],
-                   'canvas_pos':best_positions[i][0]} for i in range(len(best_transformations))]
+                   'canvas_pos':best_positions[i]} for i in range(len(best_transformations))]
 
         return result
 
-    '''
-
-    def match(self, other: Object, after_rotation: bool = False, match_shape_only: bool = False,
-              padding: Surround = Surround(0, 0, 0, 0)) -> Tuple[List[Point], List[int]]:
-        """
-        Calculates the canvas positions that this Object should be moved to, to generate the best match
-        (cross - correlation) with the other Object. Multiple best matches generate multiple positions.
-        :param padding: Whether the Object should be padded with 1s to allow better matching.
-        :param other: The other Object.
-        :param after_rotation: Also rotates this Object to check for matches.
-        :param match_shape_only: Cares only about the shape of the Objects and ignores the colours
-        :return: The List of Points that this Object could have as canvas_pos that would generate the largest overlap
-        with the other Object. If after_rotation is True then each element of this list is a List[Point, int]
-        where int is the rotation required for that match.
-        """
-
-        def match_for_a_specific_rotation(rot: int):
-
-            self_dimensions = Dimension2D(self.dimensions.dx + padding.Left + padding.Right,
-                                          self.dimensions.dy + padding.Up + padding.Down)
-
-            other_dimensions = Dimension2D(other.dimensions.dx + padding.Left + padding.Right,
-                                           other.dimensions.dy + padding.Up + padding.Down)
-
-            x_base_dim = self_dimensions.dx + 2 * other_dimensions.dx - 2
-            y_base_dim = self_dimensions.dy + 2 * other_dimensions.dy - 2
-            base = np.zeros((y_base_dim, x_base_dim))
-
-            x_res_dim = self_dimensions.dx + other_dimensions.dx - 1
-            y_res_dim = self_dimensions.dy + other_dimensions.dy - 1
-            result = np.zeros((y_res_dim, x_res_dim))
-
-            base_rotated_object = copy(self)
-            base_rotated_object.rotate(rot)
-
-            base_rotated_pixels = np.ones((self_dimensions.dx, self_dimensions.dy))
-            base_rotated_pixels[padding.Down: self_dimensions.dy - padding.Up,
-                                padding.Left: self_dimensions.dx - padding.Right] = base_rotated_object.actual_pixels
-            base[other_dimensions.dy - 1: other_dimensions.dy - 1 + self_dimensions.dy,
-                 other_dimensions.dx - 1: other_dimensions.dx - 1 + self_dimensions.dx] = base_rotated_pixels
-
-            for x in range(x_res_dim):
-                for y in range(y_res_dim):
-                    temp = copy(base[y: other_dimensions.dy + y, x: other_dimensions.dx + x])
-                    other_pixels = np.ones((other_dimensions.dy, other_dimensions.dx))
-                    other_pixels[padding.Down: other_dimensions.dy - padding.Up,
-                                 padding.Left: other_dimensions.dx - padding.Right] = copy(other.actual_pixels)
-                    if match_shape_only:
-                        temp[np.where(temp == 1)] = 0
-                        temp[np.where(temp > 1)] = 1
-                        other_pixels[np.where(other_pixels == 1)] = 0
-                        other_pixels[np.where(other_pixels > 1)] = 1
-                    comp = (temp == other_pixels).astype(int)
-                    result[y, x] = comp.sum()
-            return result
-
-        if not after_rotation:
-            result = match_for_a_specific_rotation(0)
-            best_relative_positions = np.argwhere(result == np.amax(result))
-            best_positions = [Point(x=other.dimensions.dx - brp[1] - 1 + other.canvas_pos.x + 2 * padding.Left,
-                                    y=other.dimensions.dy - brp[0] - 1 + other.canvas_pos.y + 2 * padding.Down)
-                              for brp in best_relative_positions]
-            rotations = [0 for _ in best_relative_positions]
-        else:
-            result = []
-            for rot in range(4):
-                result.append(match_for_a_specific_rotation(rot))
-            best_relative_positions = np.argwhere(result == np.amax(result))
-            best_positions = [Point(x=other.dimensions.dx - brp[2] - 1 + other.canvas_pos.x + 2 * padding.Left,
-                                    y=other.dimensions.dy - brp[1] - 1 + other.canvas_pos.y + 2 * padding.Down)
-                              for brp in best_relative_positions]
-            rotations = [brp[0] for brp in best_relative_positions]
-
-        return best_positions, rotations
-       '''
     def show(self, symmetries_on=True, show_holes=False):
         """
         Show a matplotlib.pyplot.imshow image of the actual_pixels array correctly colour transformed

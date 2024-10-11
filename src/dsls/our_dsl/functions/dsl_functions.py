@@ -101,40 +101,56 @@ def get_distance_touching_between_objects(first: Primitive, second: Primitive) -
     return dist
 
 
-def get_point_for_match_shape_furthest(base_obj: Primitive, target_obj: Primitive, match_shape_only: bool,
+def get_point_for_match_shape_furthest(base_obj: Primitive, target_obj: Primitive,
+                                       match_shape_only: bool, try_unique: bool = True,
                                        padding: Surround = Surround(0, 0, 0, 0)) -> Point:
-    result = base_obj.match(target_obj, match_shape_only=match_shape_only, padding=padding)
-    match_positions = result[0]['canvas_pos']
-    _, index = furthest_point_to_point(base_obj.canvas_pos, match_positions)
+    result = base_obj.match(target_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
+    rotation = 0
+    scale = 1
+    match_positions = []
+    for r in result:
+        if r['rotation'] == rotation and r['scale'] == scale:
+            match_positions.append(r['canvas_pos'])
+    match_positions = match_positions[0]
+    _, index = furthest_point_to_point(target_obj.canvas_pos, match_positions)
 
     return match_positions[index]
 
 
-def get_point_and_rotation_for_match_shape_furthest(base_obj: Primitive, target_obj: Primitive, match_shape_only: bool,
+def get_point_and_rotation_for_match_shape_furthest(base_obj: Primitive, target_obj: Primitive,
+                                                    match_shape_only: bool, try_unique: bool = True,
                                                     padding: Surround = Surround(0, 0, 0, 0)) -> Tuple[Point, int]:
-    result = base_obj.match(target_obj, match_shape_only=match_shape_only, padding=padding)
-    match_positions = [result[i]['canvas_pos'] for i in range(len(result))]
+    result = base_obj.match(target_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
+    match_positions = [result[i]['canvas_pos'][0] for i in range(len(result))]
     rotations = [result[i]['rotation'] for i in range(len(result))]
     _, index = furthest_point_to_point(base_obj.canvas_pos, match_positions)
 
     return match_positions[index], rotations[index]
 
 
-def get_point_for_match_shape_nearest(base_obj: Primitive, target_obj: Primitive, match_shape_only: bool,
+def get_point_for_match_shape_nearest(base_obj: Primitive, target_obj: Primitive,
+                                      match_shape_only: bool, try_unique:bool = True,
                                       padding: Surround = Surround(0, 0, 0, 0)) -> Point:
-    match_positions, _ = base_obj.match(target_obj, after_rotation=True,
-                                                match_shape_only=match_shape_only, padding=padding)
+    result = base_obj.match(target_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
+    rotation = 0
+    scale = 1
+    match_positions = []
+    for r in result:
+        if r['rotation'] == rotation and r['scale'] == scale:
+            match_positions.append(r['canvas_pos'])
+    match_positions = match_positions[0]
 
-    _, index = closest_point_to_point(base_obj.canvas_pos, match_positions)
+    _, index = closest_point_to_point(target_obj.canvas_pos, match_positions)
 
     return match_positions[index]
 
 
-def get_point_and_rotation_for_match_shape_nearest(base_obj: Primitive, target_obj: Primitive, match_shape_only: bool,
+def get_point_and_rotation_for_match_shape_nearest(base_obj: Primitive, target_obj: Primitive,
+                                                   match_shape_only: bool, try_unique:bool = True,
                                                    padding: Surround = Surround(0, 0, 0, 0)) -> Tuple[Point, int]:
-    match_positions, rotations = base_obj.match(target_obj, after_rotation=True,
-                                                match_shape_only=match_shape_only, padding=padding)
-
+    result = base_obj.match(target_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
+    match_positions = [result[i]['canvas_pos'] for i in range(len(result))]
+    rotations = [result[i]['rotation'] for i in range(len(result))]
     _, index = closest_point_to_point(base_obj.canvas_pos, match_positions)
 
     return match_positions[index], rotations[index]

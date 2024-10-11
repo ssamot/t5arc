@@ -9,11 +9,12 @@ from dsls.our_dsl.functions import dsl_functions as dsl
 def solution_045e512c(canvas: Canvas) -> Canvas:
     largest_object = dsl.select_largest_object_by_area(canvas)
     other_objects = dsl.select_rest_of_the_objects(canvas=canvas, obj=largest_object)
-    canvas_pos_lo = dsl.get_object_feature_canvas_pos(largest_object)
     for oo in other_objects:
         point = dsl.get_point_for_match_shape_furthest(largest_object, oo, match_shape_only=True,
+                                                       try_unique=False,
                                                        padding=Surround(0, 0, 0, 0))
-        dist, _ = dsl.furthest_point_to_point(canvas_pos_lo, point)
+        canvas_pos_oo = dsl.get_object_feature_canvas_pos(oo)
+        dist, _ = dsl.furthest_point_to_point(point, canvas_pos_oo)
         colour = dsl.get_object_feature_colour(oo)
         obj = dsl.copy_object(largest_object)
         for _ in range(3):
@@ -39,7 +40,7 @@ def solution_97a05b5b(canvas: Canvas) -> Canvas:
     for oo in other_objects:
         match_position, rotation = dsl.get_point_and_rotation_for_match_shape_furthest(neg_object, oo,
                                                                                        match_shape_only=False,
-                                                                                       padding=Surround(1, 1, 1, 1))
+                                                                                       padding=Surround(0, 0, 0, 0))
         oo = dsl.object_transform_rotate(oo, rotation=rotation)
         oo_pos = dsl.subtract_points(match_position, lo_canvas_pos)
         oo = dsl.object_transform_translate_to_point(oo, oo_pos)
