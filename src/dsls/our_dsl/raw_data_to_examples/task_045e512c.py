@@ -62,12 +62,12 @@ unique_objects = [
      'in_out_transformations': [],
      'symmetries': []},
     {'primitive': 'Diagonal', 'colour': 7, 'id': 5, 'actual_pixels_id': 15, 'dimensions': Dimension2D(2, 2),
-     'canvas_and_position': [4, Point(11, 15, 0)],
+     'canvas_and_position': [4, Point(10, 15, 0)],
      'on_canvas_transformations': [['rotate', 1]],
      'in_out_transformations': [],
      'symmetries': []},
     {'primitive': 'Angle', 'colour': 2, 'id': 6, 'actual_pixels_id': 16, 'dimensions': Dimension2D(2, 2),
-     'canvas_and_position': [4, Point(10, 9, 0)],
+     'canvas_and_position': [4, Point(10, 8, 0)],
      'on_canvas_transformations': [['rotate', 3]],
      'in_out_transformations': [],
      'symmetries': []},
@@ -84,6 +84,7 @@ unique_objects = [
 ]
 
 task.generate_objects_from_output(unique_objects=unique_objects)
+
 task = utils.solve_canvas_pairs(task=task, solution=sols.solution_045e512c, which_pair='all')
 
 task.show()
