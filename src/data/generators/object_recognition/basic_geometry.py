@@ -228,7 +228,10 @@ class Point:
         else:
             self.x = array[0]
             self.y = array[1]
-            self.z = array[2]
+            try:
+                self.z = array[2]
+            except:
+                self.z = 0
 
     @staticmethod
     def random(min_x: int = -32, max_x: int = 32, min_y: int = -32, max_y: int = 32, min_z: int = -100, max_z: int = 100):
