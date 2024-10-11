@@ -5,6 +5,7 @@ from enum import Enum
 from typing import List, Union, Dict, Set
 from copy import copy, deepcopy
 from typing import Tuple
+import itertools
 
 import numpy as np
 from scipy import ndimage as ndi
@@ -93,6 +94,22 @@ class Transformations(int, Enum):
 
         return args
 
+    def get_all_possible_parameters(self) -> List[int | Orientation | None]:
+        if self.name == 'rotate':
+            return [0, 1, 2, 3]
+        if self.name == 'scale':
+            return [-3, -2, 1, 2, 3]
+        if self.name == 'flip':
+            return [None, Orientation.Up, Orientation.Up_Right, Orientation.Right,
+                    Orientation.Down_Right, Orientation.Down,
+                    Orientation.Down_Left, Orientation.Left, Orientation.Up_Left]
+        if self.name == 'mirror':
+            params = list(itertools.product(*[[Orientation.Up, Orientation.Up_Right, Orientation.Right,
+                                               Orientation.Down_Right, Orientation.Down,
+                                               Orientation.Down_Left, Orientation.Left, Orientation.Up_Left],
+                                               [False, True]]))
+            params.append(None)
+            return params
 
     @staticmethod
     def get_specific_parameters(transformation_name, values):
@@ -374,6 +391,9 @@ class Object:
         filter_obj_size = Dimension2D(filter_obj.dimensions.dx + padding.Left + padding.Right,
                                       filter_obj.dimensions.dy + padding.Up + padding.Down)
 
+        # The following does a 2D convolution of the filter Object over the background Object assuming 0 values for the
+        # background's padding (equal to the size of the filter plus the filter's padding).
+
         x_base_dim = background_obj_size.dx + 2 * filter_obj_size.dx - 2
         y_base_dim = background_obj_size.dy + 2 * filter_obj_size.dy - 2
         background = np.zeros((y_base_dim, x_base_dim))
@@ -415,6 +435,7 @@ class Object:
 
         best_relative_positions = np.argwhere(fit_value == np.amax(fit_value))
 
+        # This uses a center surround kind of algorithm to distinguish between multiple positives
         if len(best_relative_positions > 1) and try_unique:
             center_surround = []
             for brp in best_relative_positions:
@@ -693,7 +714,7 @@ class Object:
         self._reset_dimensions()
         self.symmetries = []  # Loose any symmetries
 
-    def mirror(self, axis: Orientation, on_axis=False):
+    def mirror(self, axis: Orientation | None, on_axis=False):
         """
         Mirrors to object (copy, flip and move) along one of the edges (up, down, left or right). If on_axis is True
         the pixels along the mirror axis do not get copied
@@ -702,60 +723,57 @@ class Object:
         :param on_axis: If it is True the pixels along the mirror axis do not get copied
         :return:
         """
-        if axis == Orientation.Up or axis == Orientation.Down:
-            concat_pixels = np.flipud(self.actual_pixels)
-            if on_axis:
-                concat_pixels = concat_pixels[:-1, :] if axis == Orientation.Down else concat_pixels[1:, :]
 
-            self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=0) \
-                if axis == Orientation.Up else np.concatenate((concat_pixels, self.actual_pixels), axis=0)
-            if axis == Orientation.Down:
-                self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y - self.dimensions.dy // 2)
+        if axis is not None:
+            if axis == Orientation.Up or axis == Orientation.Down:
+                concat_pixels = np.flipud(self.actual_pixels)
+                if on_axis:
+                    concat_pixels = concat_pixels[:-1, :] if axis == Orientation.Down else concat_pixels[1:, :]
 
-            new_symmetry_axis_origin = Point(self.canvas_pos.x, self.dimensions.dy / 2 + self.canvas_pos.y) \
-                #if axis == Orientation.Down else Point(self.canvas_pos.x, self.canvas_pos.y)
+                self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=0) \
+                    if axis == Orientation.Up else np.concatenate((concat_pixels, self.actual_pixels), axis=0)
+                if axis == Orientation.Down:
+                    self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y - self.dimensions.dy // 2)
 
-            new_symmetry_axis_origin.y -= 0.5
-            #if on_axis and axis == Orientation.Up:
-            #    new_symmetry_axis_origin.y -= 0.5
+                new_symmetry_axis_origin = Point(self.canvas_pos.x, self.dimensions.dy / 2 + self.canvas_pos.y)
 
-            if on_axis and axis == Orientation.Up:
-                for sym in self.symmetries:
-                    if sym.orientation == Orientation.Right and sym.origin.y > new_symmetry_axis_origin.y:
-                        sym.origin.y -= 1
+                new_symmetry_axis_origin.y -= 0.5
 
-            symmetry_vector = Vector(orientation=Orientation.Right, origin=new_symmetry_axis_origin,
-                                     length=self.actual_pixels.shape[1] - 1)
+                if on_axis and axis == Orientation.Up:
+                    for sym in self.symmetries:
+                        if sym.orientation == Orientation.Right and sym.origin.y > new_symmetry_axis_origin.y:
+                            sym.origin.y -= 1
 
-        elif axis == Orientation.Left or axis == Orientation.Right:
-            concat_pixels = np.fliplr(self.actual_pixels)
-            if on_axis:
-                concat_pixels = concat_pixels[:, 1:] if axis == Orientation.Right else concat_pixels[:, :-1]
+                symmetry_vector = Vector(orientation=Orientation.Right, origin=new_symmetry_axis_origin,
+                                         length=self.actual_pixels.shape[1] - 1)
 
-            self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=1) if axis == Orientation.Right else \
-                np.concatenate((concat_pixels, self.actual_pixels), axis=1)
-            if axis == Orientation.Left:
-                self.canvas_pos = Point(self.canvas_pos.x - self.dimensions.dx // 2, self.canvas_pos.y)
+            elif axis == Orientation.Left or axis == Orientation.Right:
+                concat_pixels = np.fliplr(self.actual_pixels)
+                if on_axis:
+                    concat_pixels = concat_pixels[:, 1:] if axis == Orientation.Right else concat_pixels[:, :-1]
 
-            new_symmetry_axis_origin = Point(self.dimensions.dx / 2 + self.canvas_pos.x, self.canvas_pos.y)\
-               # if axis == Orientation.Right else Point(self.canvas_pos.x, self.canvas_pos.y)
+                self.actual_pixels = np.concatenate((self.actual_pixels, concat_pixels), axis=1) if axis == Orientation.Right else \
+                    np.concatenate((concat_pixels, self.actual_pixels), axis=1)
+                if axis == Orientation.Left:
+                    self.canvas_pos = Point(self.canvas_pos.x - self.dimensions.dx // 2, self.canvas_pos.y)
 
-            new_symmetry_axis_origin.x -= 0.5
-            #if on_axis and axis == Orientation.Left:
-            #    new_symmetry_axis_origin.x -= 0.5
+                new_symmetry_axis_origin = Point(self.dimensions.dx / 2 + self.canvas_pos.x, self.canvas_pos.y)\
+                   # if axis == Orientation.Right else Point(self.canvas_pos.x, self.canvas_pos.y)
 
-            if on_axis and axis == Orientation.Left:
-                for sym in self.symmetries:
-                    if sym.orientation == Orientation.Up and sym.origin.x > new_symmetry_axis_origin.x:
-                        sym.origin.x -= 1
+                new_symmetry_axis_origin.x -= 0.5
 
-            symmetry_vector = Vector(orientation=Orientation.Up, origin=new_symmetry_axis_origin,
-                                     length=self.actual_pixels.shape[0] - 1)
+                if on_axis and axis == Orientation.Left:
+                    for sym in self.symmetries:
+                        if sym.orientation == Orientation.Up and sym.origin.x > new_symmetry_axis_origin.x:
+                            sym.origin.x -= 1
 
-        self.symmetries.append(symmetry_vector)
-        self.transformations.append([Transformations.mirror.name, {'axis': axis}])
+                symmetry_vector = Vector(orientation=Orientation.Up, origin=new_symmetry_axis_origin,
+                                         length=self.actual_pixels.shape[0] - 1)
 
-    def flip(self, axis: Orientation, translate: bool = False):
+            self.symmetries.append(symmetry_vector)
+            self.transformations.append([Transformations.mirror.name, {'axis': axis}])
+
+    def flip(self, axis: Orientation | None, translate: bool = False):
         """
         Flips the object along an axis. If the Orientation is diagonal it will flip twice
         :param axis: The direction to flip towards. The edge of the bbox toward that direction becomes the axis of the flip.
@@ -763,30 +781,31 @@ class Object:
         :return: Nothing
         """
 
-        if axis == Orientation.Up or axis == Orientation.Down:
-            self.actual_pixels = np.flipud(self.actual_pixels)
-            if translate:
-                self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy) \
-                    if axis == Orientation.Up else Point(self.canvas_pos.x, self.canvas_pos.y - self.dimensions.dy)
-        elif axis == Orientation.Left or axis == Orientation.Right:
-            self.actual_pixels = np.fliplr(self.actual_pixels)
-            if translate:
-                self.canvas_pos = Point(self.canvas_pos.x+ self.dimensions.dx, self.canvas_pos.y) \
-                    if axis == Orientation.Right else Point(self.canvas_pos.x - self.dimensions.dx, self.canvas_pos.y)
-        else:
-            self.actual_pixels = np.flipud(self.actual_pixels)
-            self.actual_pixels = np.fliplr(self.actual_pixels)
-            if translate:
-                if axis in [Orientation.Up_Right, Orientation.Up_Left]:
-                    self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy)
-                elif axis in [Orientation.Down_Right, Orientation.Down_Left]:
-                    self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y - self.dimensions.dy)
-                if axis in [Orientation.Up_Right, Orientation.Down_Right]:
-                    self.canvas_pos = Point(self.canvas_pos.x + self.dimensions.dx, self.canvas_pos.y)
-                elif axis in [Orientation.Up_Left, Orientation.Down_Left]:
-                    self.canvas_pos = Point(self.canvas_pos.x - self.dimensions.dx, self.canvas_pos.y)
+        if axis is not None:
+            if axis == Orientation.Up or axis == Orientation.Down:
+                self.actual_pixels = np.flipud(self.actual_pixels)
+                if translate:
+                    self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy) \
+                        if axis == Orientation.Up else Point(self.canvas_pos.x, self.canvas_pos.y - self.dimensions.dy)
+            elif axis == Orientation.Left or axis == Orientation.Right:
+                self.actual_pixels = np.fliplr(self.actual_pixels)
+                if translate:
+                    self.canvas_pos = Point(self.canvas_pos.x+ self.dimensions.dx, self.canvas_pos.y) \
+                        if axis == Orientation.Right else Point(self.canvas_pos.x - self.dimensions.dx, self.canvas_pos.y)
+            else:
+                self.actual_pixels = np.flipud(self.actual_pixels)
+                self.actual_pixels = np.fliplr(self.actual_pixels)
+                if translate:
+                    if axis in [Orientation.Up_Right, Orientation.Up_Left]:
+                        self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y + self.dimensions.dy)
+                    elif axis in [Orientation.Down_Right, Orientation.Down_Left]:
+                        self.canvas_pos = Point(self.canvas_pos.x, self.canvas_pos.y - self.dimensions.dy)
+                    if axis in [Orientation.Up_Right, Orientation.Down_Right]:
+                        self.canvas_pos = Point(self.canvas_pos.x + self.dimensions.dx, self.canvas_pos.y)
+                    elif axis in [Orientation.Up_Left, Orientation.Down_Left]:
+                        self.canvas_pos = Point(self.canvas_pos.x - self.dimensions.dx, self.canvas_pos.y)
 
-        self.transformations.append([Transformations.flip.name, {'axis': axis}])
+            self.transformations.append([Transformations.flip.name, {'axis': axis}])
 
     def delete(self):
         """
@@ -1274,33 +1293,43 @@ class Object:
 
         return holes, n
 
-    def match(self, other: Object, match_shape_only: bool = False, try_unique: bool = True,
-              padding: Surround = Surround(0, 0, 0, 0)) \
+    def match(self, background_obj: Object, match_shape_only: bool = False, try_unique: bool = True,
+              padding: Surround = Surround(0, 0, 0, 0), transformations: List[str] = ('rotate', 'scale', 'flip')) \
             -> List[dict[str, int | List[Point]]]:
 
         positions = []
         max_results = []
-        transformations = []
-        for rot in range(4):
-            for scale in [-3, -2, 1, 2, 3]:
-                obj_a = copy(self)
-                obj_b = copy(other)
-                obj_b.rotate(rot)
-                obj_b.scale(scale)
-                position, max_result = Object._match_filter_obj_to_background_obj(background_obj=obj_a, filter_obj=obj_b,
-                                                                                  match_shape_only=match_shape_only,
-                                                                                  try_unique=try_unique,
-                                                                                  padding=padding)
-                transformations.append([rot, scale])
-                positions.append(position)
-                max_results.append(max_result)
+        transformation_results = []
+        rots = Transformations(6).get_all_possible_parameters() if 'rotate' in transformations else 0
+        scales = Transformations(7).get_all_possible_parameters() if 'scale' in transformations else 1
+        orientations = Transformations(10).get_all_possible_parameters() if 'flip' in transformations else None
+        for rot in rots:
+            for scale in scales:
+                for orientation in orientations:
+                    filter_obj = copy(self)
+                    background_obj_cp = copy(background_obj)
+                    if 'rotate' in transformations:
+                        filter_obj.rotate(rot)
+                    if 'scale' in transformations:
+                        filter_obj.scale(scale)
+                    if 'flip' in transformations:
+                        filter_obj.flip(orientation)
+                    position, max_result = Object._match_filter_obj_to_background_obj(background_obj=background_obj_cp,
+                                                                                      filter_obj=filter_obj,
+                                                                                      match_shape_only=match_shape_only,
+                                                                                      try_unique=try_unique,
+                                                                                      padding=padding)
+                    transformation_results.append([rot, scale, orientation])
+                    positions.append(position)
+                    max_results.append(max_result)
 
         best_results_indices = np.argwhere(max_results == np.amax(max_results))
         best_positions = [positions[i[0]] for i in best_results_indices]
-        best_transformations = [transformations[i[0]] for i in best_results_indices]
+        best_transformations = [transformation_results[i[0]] for i in best_results_indices]
 
         result = [{'rotation': best_transformations[i][0],
                    'scale': best_transformations[i][1],
+                   'flip': best_transformations[i][2],
                    'canvas_pos':best_positions[i]} for i in range(len(best_transformations))]
 
         return result
