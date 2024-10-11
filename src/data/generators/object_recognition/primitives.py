@@ -9,6 +9,7 @@ import numpy as np
 from data.generators import constants as const
 from typing import List
 from enum import Enum
+from scipy import ndimage as ndi
 from data.generators.object_recognition.object import Object
 from data.generators.object_recognition.basic_geometry import Point, Bbox, Dimension2D, Orientation, Surround, Vector
 
@@ -91,6 +92,25 @@ class Primitive(Object):
 
     def split_by_colour(self):
         pass
+
+    def create_new_primitives_from_pixels_of_colour(self, colour: int) -> List[Object]:
+        pixels = copy(self.actual_pixels)
+        connected_components, n = ndi.label(np.array(pixels == colour).astype(int))
+
+        new_objects = []
+        for i in range(1, n + 1):
+            comp_coords = np.where(connected_components == i)
+            d0 = np.max(comp_coords[0]) - np.min(comp_coords[0]) + 1
+            d1 = np.max(comp_coords[1]) - np.min(comp_coords[1]) + 1
+            new_actual_pixels = self.actual_pixels[np.min(comp_coords[0]): np.min(comp_coords[0]) + d0,
+                                                   np.min(comp_coords[1]): np.min(comp_coords[1]) + d1]
+            new_canvas_pos = Point(x=self.canvas_pos.x + comp_coords[1][0],
+                                   y=self.canvas_pos.y + comp_coords[0][0])
+            new_object = Random(size=Dimension2D(array=np.flip(new_actual_pixels.shape)), canvas_pos=new_canvas_pos)
+            new_object.actual_pixels = new_actual_pixels
+            new_objects.append(new_object)
+
+        return new_objects
 
     def get_str_type(self):
         return str(type(self)).split('.')[-1].split("'")[0]
