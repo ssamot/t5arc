@@ -71,11 +71,6 @@ task = utils.solve_canvas_pairs(task=task, solution=sols.solution_b775ac94, whic
 task.show()
 
 
-#canvas = task.input_canvases[0]
-#canvas = task.test_input_canvas
-#out_canvas = sols.solution_b775ac94(canvas)
-#out_canvas.show()
-
 
 
 
