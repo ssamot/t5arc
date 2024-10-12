@@ -1296,12 +1296,21 @@ class Object:
     def match(self, background_obj: Object, match_shape_only: bool = False, try_unique: bool = True,
               padding: Surround = Surround(0, 0, 0, 0), transformations: List[str] = ('rotate', 'scale', 'flip')) \
             -> List[dict[str, int | List[Point]]]:
+        """
+
+        :param background_obj: The Object over which to pass this Object to see if any part of it matches with this Object
+        :param match_shape_only: Only check out the shape similarity and ignore the colour
+        :param try_unique: Does a center surround algorithm trying to increase the accuracy of the match
+        :param padding: Add padding surrounding the objects (Surround).
+        :param transformations: Allow the type of transformations this Object will undergo to try and match
+        :return: A list of dictionaries describing the translations, rotations, scaling and flips of the best matches.
+        """
 
         positions = []
         max_results = []
         transformation_results = []
         rots = Transformations(6).get_all_possible_parameters() if 'rotate' in transformations else 0
-        scales = Transformations(7).get_all_possible_parameters() if 'scale' in transformations else 1
+        scales = [1, 2, 3] if 'scale' in transformations else 1
         orientations = Transformations(10).get_all_possible_parameters() if 'flip' in transformations else None
         for rot in rots:
             for scale in scales:
