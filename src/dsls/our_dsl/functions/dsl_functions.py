@@ -239,6 +239,15 @@ def object_transform_translate_to_point(obj: Primitive, target_point: Point,
     return new_obj
 
 
+def object_transform_change_depth(obj: Primitive, target_depth: int) -> Primitive:
+    new_obj = copy(obj)
+    new_obj.translate_to_coordinates(target_point=Point(obj.canvas_pos.x,
+                                                        obj.canvas_pos.y,
+                                                        target_depth),
+                                     object_point=obj.canvas_pos)
+    return new_obj
+
+
 def object_transform_translate_by_distance(obj: Primitive, distance: Dimension2D) -> Primitive:
     new_obj = copy(obj)
     new_obj.translate_by(distance=distance)
