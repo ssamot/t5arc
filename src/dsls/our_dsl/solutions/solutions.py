@@ -55,6 +55,7 @@ def solution_b775ac94(canvas: Canvas) -> Canvas:
     canvas_out = dsl.copy_canvas(canvas)
 
     for init_obj in object_list:
+        init_obj = dsl.object_transform_change_depth(init_obj, 0)
         canvas_temp = dsl.make_new_canvas_as(canvas)
         canvas_temp = dsl.add_object_to_canvas(canvas_temp, init_obj)
         canvas_temp = dsl.split_object_by_colour_on_canvas(canvas_temp, init_obj)
@@ -73,7 +74,7 @@ def solution_b775ac94(canvas: Canvas) -> Canvas:
 
 #  7 funcs
 def solution_05f2a901(canvas: Canvas) -> Canvas:
-    '''
+
     blue = dsl.select_only_object_of_colour(canvas, 9)
     red = dsl.select_only_object_of_colour(canvas, 3)
     dist = dsl.get_distance_touching_between_objects(red, blue)
@@ -82,8 +83,9 @@ def solution_05f2a901(canvas: Canvas) -> Canvas:
     out_canvas = dsl.make_new_canvas_as(canvas)
     out_canvas = dsl.add_object_to_canvas(out_canvas, updated_red)
     out_canvas = dsl.add_object_to_canvas(out_canvas, blue)
-    '''
+
 ####
+    '''
     out_canvas = \
     dsl.add_object_to_canvas(
         dsl.add_object_to_canvas(
@@ -92,5 +94,5 @@ def solution_05f2a901(canvas: Canvas) -> Canvas:
                 dsl.select_only_object_of_colour(canvas, 3), dsl.get_distance_touching_between_objects(
                     dsl.select_only_object_of_colour(canvas, 3),  dsl.select_only_object_of_colour(canvas, 9)))),
         dsl.select_only_object_of_colour(canvas, 9))
-
+    '''
     return out_canvas
