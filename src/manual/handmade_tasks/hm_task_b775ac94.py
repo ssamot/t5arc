@@ -72,6 +72,8 @@ task.generate_objects_from_json_description(unique_objects=unique_objects)
 
 task.generate_objects_from_data(man_funcs.same_colour)
 
+
+'''
 for i, (in_c, out_c) in enumerate(zip(task.input_canvases, task.output_canvases)):
     data = np.flipud(task.task_data['train'][i]['output']) + 1
     full_canvas_object = Object(actual_pixels=data)
@@ -84,3 +86,4 @@ for i, (in_c, out_c) in enumerate(zip(task.input_canvases, task.output_canvases)
 
 obj = task.input_canvases[0].objects[4]
 a = obj.match(task.output_canvases[0].objects[0], match_shape_only=True, try_unique=True)
+'''

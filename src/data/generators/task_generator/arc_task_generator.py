@@ -214,7 +214,6 @@ class ARCTask(Task):
             for one_obj in individual_objects:
                 self.get_canvas_by_id(i).add_new_object(one_obj)
 
-
     def reset_object_colours(self):
         for o in self.objects:
             o.set_colour_to_most_common()

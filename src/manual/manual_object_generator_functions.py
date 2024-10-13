@@ -22,7 +22,7 @@ def template(obj: Primitive) -> List[Primitive]:
     for a in new_object_arrays:
         new_objects.append(generate_primitive_from_array(a))
 
-    
+
 def same_colour(obj: Primitive):
     colours = obj.get_used_colours()
 
