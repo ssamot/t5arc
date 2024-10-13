@@ -51,4 +51,4 @@ unique_objects = [
      'symmetries': []},
 ]
 
-task.generate_objects_from_output(unique_objects=unique_objects)
+task.generate_objects_from_json_description(unique_objects=unique_objects)

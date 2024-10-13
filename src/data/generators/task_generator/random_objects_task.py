@@ -79,9 +79,9 @@ class RandomObjectsTask(Task):
         """
         if self.experiment_type == 'Object':
 
-            self.temp_objects = [self.create_object(debug=False,
-                                                    max_size_of_obj=Dimension2D(MAX_SIZE_OF_OBJECT, MAX_SIZE_OF_OBJECT),
-                                                    overlap_prob=OVERLAP_PROB, far_away_prob=FAR_AWAY_PROB)]
+            self.temp_objects = [self.create_random_object(debug=False,
+                                                           max_size_of_obj=Dimension2D(MAX_SIZE_OF_OBJECT, MAX_SIZE_OF_OBJECT),
+                                                           overlap_prob=OVERLAP_PROB, far_away_prob=FAR_AWAY_PROB)]
 
             num_of_transformed_copies = np.random.randint(1, MAX_NUM_OF_LARGE_OBJECTS) \
                 if np.any(self.temp_objects[-1].size.to_numpy() > LARGE_OBJECT_THRESHOLD) else \
@@ -106,7 +106,7 @@ class RandomObjectsTask(Task):
             # Make sure the base object of a symmetry object is not a Parallelogram
             base_object = Parallelogram(size=[2, 2])
             while base_object.get_str_type() == 'Parallelogram':
-                base_object = self.create_object(debug=False)
+                base_object = self.create_random_object(debug=False)
 
             obj = self.do_multiple_mirroring(base_object)
             if obj is not None:

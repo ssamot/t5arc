@@ -58,7 +58,7 @@ unique_objects = [
      'symmetries': []},
     ]
 
-task.generate_objects_from_output(unique_objects=unique_objects)
+task.generate_objects_from_json_description(unique_objects=unique_objects)
 task = utils.solve_canvas_pairs(task=task, solution=sols.solution_05f2a901, which_pair='all')
 
 

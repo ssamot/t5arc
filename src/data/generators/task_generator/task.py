@@ -140,10 +140,10 @@ class Task:
 
         return None
 
-    def create_object(self, obj_probs: np.ndarray | None = None, max_size_of_obj: Dimension2D = Dimension2D(15, 15),
-                      overlap_prob: float = 0.8, far_away_prob: float = 0.1, debug: bool = False) -> Primitive:
+    def create_random_object(self, obj_probs: np.ndarray | None = None, max_size_of_obj: Dimension2D = Dimension2D(15, 15),
+                             overlap_prob: float = 0.8, far_away_prob: float = 0.1, debug: bool = False) -> Primitive:
         """
-        Create a new Primitive.
+        Create a new Primitive chosen randomly.
         :param obj_probs: The probabilities of the type of Primitive
         :param max_size_of_obj: The maximum size of the Primitive
         :param overlap_prob: The probability that the Primitive's required_dist_to_others property will be negative
@@ -239,7 +239,7 @@ class Task:
 
         return object
 
-    def generate_objects_from_output(self, unique_objects: List):
+    def generate_objects_from_json_description(self, unique_objects: List):
         for obj_discr in unique_objects:
             obj_type = obj_discr['primitive']
 

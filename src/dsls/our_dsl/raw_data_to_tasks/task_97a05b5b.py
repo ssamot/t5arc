@@ -107,7 +107,7 @@ unique_objects = [
 ]
 
 
-task.generate_objects_from_output(unique_objects=unique_objects)
+task.generate_objects_from_json_description(unique_objects=unique_objects)
 task.reset_object_colours()
 
 example = utils.solve_canvas_pairs(task=task, solution=sols.solution_97a05b5b, which_pair='all')

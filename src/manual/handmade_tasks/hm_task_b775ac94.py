@@ -4,10 +4,12 @@ from copy import copy
 from data.generators.object_recognition.object import Object
 from data.generators.task_generator.arc_task_generator import ARCTask
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
+from manual import manual_object_generator_functions as man_funcs
 
 task = ARCTask('b775ac94')
 task.generate_canvasses()
 
+'''
 unique_objects = [
     {'primitive': 'Random', 'colour': 2, 'id': 0, 'actual_pixels_id': 0, 'dimensions': Dimension2D(5, 5),
      'canvas_and_position': [0, Point(3, 14, 0)],
@@ -65,7 +67,10 @@ unique_objects = [
      'symmetries': []},
 ]
 
-task.generate_objects_from_output(unique_objects=unique_objects)
+task.generate_objects_from_json_description(unique_objects=unique_objects)
+'''
+
+task.generate_objects_from_data(man_funcs.same_colour)
 
 for i, (in_c, out_c) in enumerate(zip(task.input_canvases, task.output_canvases)):
     data = np.flipud(task.task_data['train'][i]['output']) + 1

@@ -421,9 +421,9 @@ class RandomTransformationsTask(Task):
                 object_works = False
                 while not object_works:
                     max_size_of_object = np.min([MAX_SIZE_OF_OBJECT, self.get_min_dimension_of_all_canvasses()])
-                    obj = self.create_object(debug=False, max_size_of_obj=Dimension2D(max_size_of_object,
-                                                                                      max_size_of_object),
-                                             overlap_prob=1, far_away_prob=1)
+                    obj = self.create_random_object(debug=False, max_size_of_obj=Dimension2D(max_size_of_object,
+                                                                                             max_size_of_object),
+                                                    overlap_prob=1, far_away_prob=1)
 
                     num_of_input_transformations = np.random.randint(1, NUMBER_OF_INPUT_TRANSFORMATIONS + 1)
 
@@ -461,9 +461,9 @@ class RandomTransformationsTask(Task):
             object_works = False
             while not object_works:
                 max_size_of_object = np.min([MAX_SIZE_OF_OBJECT, self.get_min_dimension_of_all_canvasses()])
-                obj = self.create_object(debug=False, max_size_of_obj=Dimension2D(max_size_of_object,
-                                                                                  max_size_of_object),
-                                         overlap_prob=1, far_away_prob=1)
+                obj = self.create_random_object(debug=False, max_size_of_obj=Dimension2D(max_size_of_object,
+                                                                                         max_size_of_object),
+                                                overlap_prob=1, far_away_prob=1)
 
                 num_of_input_transformations = np.random.randint(1, NUMBER_OF_INPUT_TRANSFORMATIONS + 1)
 
