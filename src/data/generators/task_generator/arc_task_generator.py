@@ -1,9 +1,10 @@
 
 from copy import deepcopy, copy
-from typing import List, Dict
+from typing import List, Dict, Callable
 import numpy as np
 
 from data import load_data as ld
+from data.generators.object_recognition.primitives import Predefined
 from data.generators.task_generator.task import Task
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from data.generators.object_recognition.canvas import Canvas
@@ -180,29 +181,46 @@ class ARCTask(Task):
 
             j += 4
 
-    def get_object_pixels_from_data(self, canvas_id: int, canvas_pos: Point, size: Dimension2D):
+    def get_object_pixels_from_data(self, canvas_id: int, canvas_pos: Point, size: Dimension2D | None = None):
 
         group = 'train'
         from_in_or_out = 'input'
         if canvas_id % 2 == 1:
             from_in_or_out = 'output'
         from_canvas = canvas_id // 2
-        if canvas_id == self.number_of_io_pairs * 2:
+        if canvas_id == self.test_input_canvas.id:
             group = 'test'
             from_canvas = 0
             from_in_or_out = 'input'
 
-        actual_pixels = np.flipud(self.task_data[group][from_canvas][from_in_or_out])  \
-                                    [canvas_pos.y:canvas_pos.y + size.dy, canvas_pos.x:canvas_pos.x + size.dx] + 1
+        if size is None:
+            actual_pixels = np.flipud(self.task_data[group][from_canvas][from_in_or_out]) \
+                                      [canvas_pos.y:, canvas_pos.x:] + 1
+        else:
+            actual_pixels = np.flipud(self.task_data[group][from_canvas][from_in_or_out])  \
+                                        [canvas_pos.y:canvas_pos.y + size.dy, canvas_pos.x:canvas_pos.x + size.dx] + 1
 
         return actual_pixels
+
+    def generate_objects_from_data(self, gen_function: Callable):
+        ids = range(self.test_output_canvas.id)  # That ignores the test_output_canvas which doesn't have any data
+
+        for i in ids:
+            full_canvas_pixels = self.get_object_pixels_from_data(i, canvas_pos=Point(0, 0, 0), size=None)
+            full_canvas_object = Predefined(actual_pixels=full_canvas_pixels)
+
+            individual_objects = gen_function(full_canvas_object)
+
+            for one_obj in individual_objects:
+                self.get_canvas_by_id(i).add_new_object(one_obj)
+
 
     def reset_object_colours(self):
         for o in self.objects:
             o.set_colour_to_most_common()
 
     def generate_objects_from_description(self, unique_objects: List):
-        super().generate_objects_from_output(unique_objects)
+        super().generate_objects_from_json_description(unique_objects)
 
     def show_augmented(self, index):
         temp_task = Task(run_generate_canvasses=False, number_of_io_pairs=self.number_of_io_pairs)
