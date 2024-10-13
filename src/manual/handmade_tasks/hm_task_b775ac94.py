@@ -72,6 +72,7 @@ task.generate_objects_from_json_description(unique_objects=unique_objects)
 
 task.generate_objects_from_data(man_funcs.same_colour)
 
+task.show()
 
 '''
 for i, (in_c, out_c) in enumerate(zip(task.input_canvases, task.output_canvases)):

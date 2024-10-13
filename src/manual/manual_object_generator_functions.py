@@ -10,6 +10,7 @@ def get_array_from_object(obj: Primitive) -> np.array:
 
 def generate_primitive_from_array(array: np.ndarray) -> Primitive:
     primitive = Predefined(actual_pixels=array)
+    return primitive
 
 
 def template(obj: Primitive) -> List[Primitive]:
