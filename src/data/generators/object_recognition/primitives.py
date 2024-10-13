@@ -43,9 +43,11 @@ class ObjectType(Enum):
     Spiral: int = 12
     Tie: int = 13
     Pyramid: int = 14
+    Predefined: int = 15
 
     @staticmethod
     def random(_probabilities: None | np.ndarray = None):
+        # This ignores the Predefined type and will never return it
         if _probabilities is None:
             probabilities = np.array([0.2, 0.1, 0.1, 0.1, 0.1, 0.08, 0.08, 0.04, 0.04, 0.04, 0.04, 0.02, 0.02, 0.02, 0.02])
         else:
@@ -95,7 +97,8 @@ class Primitive(Object):
 
     def create_new_primitives_from_pixels_of_colour(self, colour: int) -> List[Object]:
         pixels = copy(self.actual_pixels)
-        connected_components, n = ndi.label(np.array(pixels == colour).astype(int))
+        s = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]  # Allow pixels to be considered connected even when they touch diagonally
+        connected_components, n = ndi.label(np.array(pixels == colour).astype(int), structure=s)
 
         new_objects = []
         for i in range(1, n + 1):
@@ -104,8 +107,8 @@ class Primitive(Object):
             d1 = np.max(comp_coords[1]) - np.min(comp_coords[1]) + 1
             new_actual_pixels = self.actual_pixels[np.min(comp_coords[0]): np.min(comp_coords[0]) + d0,
                                                    np.min(comp_coords[1]): np.min(comp_coords[1]) + d1]
-            new_canvas_pos = Point(x=self.canvas_pos.x + comp_coords[1][0],
-                                   y=self.canvas_pos.y + comp_coords[0][0])
+            new_canvas_pos = Point(x=self.canvas_pos.x + np.min(comp_coords[1]),
+                                   y=self.canvas_pos.y + np.min(comp_coords[0]))
             new_object = Random(size=Dimension2D(array=np.flip(new_actual_pixels.shape)), canvas_pos=new_canvas_pos)
             new_object.actual_pixels = new_actual_pixels
             new_objects.append(new_object)
@@ -257,6 +260,19 @@ class Primitive(Object):
             return False
 
         return result
+
+
+class Predefined(Primitive):
+    def __init__(self, actual_pixels: np.ndarray, border_size: Surround = (0, 0, 0, 0),
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0)):
+
+        size = Dimension2D(dx=actual_pixels.shape[1], dy=actual_pixels.shape[0])
+        colour = int(np.argmax(np.bincount(actual_pixels[np.where(actual_pixels > 1)])))
+        Primitive.__init__(self, size=size, border_size=border_size,
+                           required_dist_to_others=required_dist_to_others, colour=colour)
+        Object.__init__(self, actual_pixels=actual_pixels, border_size=border_size,
+                        canvas_pos=Point(0, 0, 0),
+                        _id=0, actual_pixels_id=0, canvas_id=0)
 
 
 class Random(Primitive):
