@@ -5,13 +5,13 @@ from data.generators.object_recognition.object import Object
 from data.generators.object_recognition.primitives import Predefined
 from data.generators.task_generator.arc_task_generator import ARCTask
 from data.generators.object_recognition.basic_geometry import Dimension2D, Point
-from manual import manual_object_generator_functions as man_funcs
+
 
 task = ARCTask('b775ac94')
 #task = ARCTask('00d62c1b')
 task.generate_canvasses()
 
-task.generate_objects_from_data(man_funcs.same_colour_connected_pixels)
+task.generate_objects_from_data(manual_detector_name='SameColourConnectedPixels')
 
 task.show()
 

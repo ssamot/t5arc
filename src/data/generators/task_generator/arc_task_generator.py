@@ -1,6 +1,6 @@
 
 from copy import deepcopy, copy
-from typing import List, Dict, Callable
+from typing import List, Dict
 import numpy as np
 
 from data import load_data as ld
@@ -10,6 +10,7 @@ from data.generators.object_recognition.basic_geometry import Dimension2D, Point
 from data.generators.object_recognition.canvas import Canvas
 from data.generators.task_generator import utils
 from data.generators import constants as const
+import manual.heuristics.heuristics_for_object_detection as obj_dect_heur
 
 from_json = ld.from_json
 
@@ -203,31 +204,25 @@ class ARCTask(Task):
 
         return actual_pixels
 
-    def generate_objects_from_data(self, gen_function: Callable):
-        ids = range(self.test_output_canvas.id)  # That ignores the test_output_canvas which doesn't have any data
+    def generate_objects_from_data(self, manual_detector_name: str):
 
-        for i in range(self.number_of_io_pairs):
-            full_canvas_in_pixels = self.get_object_pixels_from_data(i * 2, canvas_pos=Point(0, 0, 0), size=None)
-            full_canvas_in_object = Predefined(actual_pixels=full_canvas_in_pixels)
+        for j, (i, o) in enumerate(zip(self.input_canvases, self.output_canvases)):
+            in_actual_pixels = np.flipud(self.task_data['train'][j]['input']) + 1
+            base_obj_in = Predefined(actual_pixels=in_actual_pixels)
+            i.add_new_object(base_obj_in)
+            out_actual_pixels = np.flipud(self.task_data['train'][j]['output']) + 1
+            base_obj_out = Predefined(actual_pixels=out_actual_pixels)
+            o.add_new_object(base_obj_out)
 
-            full_canvas_out_pixels = self.get_object_pixels_from_data(i * 2 + 1, canvas_pos=Point(0, 0, 0), size=None)
-            full_canvas_out_object = Predefined(actual_pixels=full_canvas_out_pixels)
+        test_in_actual_pixels = np.flipud(self.task_data['test'][0]['input']) + 1
+        base_obj_test = Predefined(actual_pixels=test_in_actual_pixels)
+        self.test_input_canvas.add_new_object(base_obj_test)
 
-            in_individual_objects = gen_function(full_canvas_in_object, full_canvas_out_object, for_canvas='input')
-            for in_obj in in_individual_objects:
-                self.get_canvas_by_id(i * 2).add_new_object(in_obj)
+        detector = \
+            obj_dect_heur.get_manual_object_detector_subclass_by_name(manual_detector_name=manual_detector_name)(self)
 
-            out_individual_objects = gen_function(full_canvas_in_object, full_canvas_out_object, for_canvas='output')
-            for out_obj in out_individual_objects:
-                self.get_canvas_by_id(i * 2 + 1).add_new_object(out_obj)
-
-        test_in_id = self.number_of_io_pairs * 2
-        full_canvas_test_pixels = self.get_object_pixels_from_data(test_in_id,
-                                                                   canvas_pos=Point(0, 0, 0), size=None)
-        full_canvas_test_object = Predefined(actual_pixels=full_canvas_test_pixels)
-        test_individual_objects = gen_function(full_canvas_test_object, full_canvas_test_object, for_canvas='input')
-        for test_obj in test_individual_objects:
-            self.get_canvas_by_id(test_in_id).add_new_object(test_obj)
+        detector.run_detection()
+        detector.embed_objects_in_canvasses()
 
     def reset_object_colours(self):
         for o in self.objects:
