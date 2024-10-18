@@ -181,7 +181,8 @@ class ARCTask(Task):
 
             j += 4
 
-    def get_object_pixels_from_data(self, canvas_id: int, canvas_pos: Point, size: Dimension2D | None = None):
+    def get_object_pixels_from_data(self, canvas_id: int, canvas_pos: Point, size: Dimension2D | None = None) \
+            -> np.ndarray:
 
         group = 'train'
         from_in_or_out = 'input'
@@ -197,22 +198,36 @@ class ARCTask(Task):
             actual_pixels = np.flipud(self.task_data[group][from_canvas][from_in_or_out]) \
                                       [canvas_pos.y:, canvas_pos.x:] + 1
         else:
-            actual_pixels = np.flipud(self.task_data[group][from_canvas][from_in_or_out])  \
-                                        [canvas_pos.y:canvas_pos.y + size.dy, canvas_pos.x:canvas_pos.x + size.dx] + 1
+            actual_pixels = np.flipud(self.task_data[group][from_canvas][from_in_or_out]) \
+                                      [canvas_pos.y:canvas_pos.y + size.dy, canvas_pos.x:canvas_pos.x + size.dx] + 1
 
         return actual_pixels
 
     def generate_objects_from_data(self, gen_function: Callable):
         ids = range(self.test_output_canvas.id)  # That ignores the test_output_canvas which doesn't have any data
 
-        for i in ids:
-            full_canvas_pixels = self.get_object_pixels_from_data(i, canvas_pos=Point(0, 0, 0), size=None)
-            full_canvas_object = Predefined(actual_pixels=full_canvas_pixels)
+        for i in range(self.number_of_io_pairs):
+            full_canvas_in_pixels = self.get_object_pixels_from_data(i * 2, canvas_pos=Point(0, 0, 0), size=None)
+            full_canvas_in_object = Predefined(actual_pixels=full_canvas_in_pixels)
 
-            individual_objects = gen_function(full_canvas_object)
+            full_canvas_out_pixels = self.get_object_pixels_from_data(i * 2 + 1, canvas_pos=Point(0, 0, 0), size=None)
+            full_canvas_out_object = Predefined(actual_pixels=full_canvas_out_pixels)
 
-            for one_obj in individual_objects:
-                self.get_canvas_by_id(i).add_new_object(one_obj)
+            in_individual_objects = gen_function(full_canvas_in_object, full_canvas_out_object, for_canvas='input')
+            for in_obj in in_individual_objects:
+                self.get_canvas_by_id(i * 2).add_new_object(in_obj)
+
+            out_individual_objects = gen_function(full_canvas_in_object, full_canvas_out_object, for_canvas='output')
+            for out_obj in out_individual_objects:
+                self.get_canvas_by_id(i * 2 + 1).add_new_object(out_obj)
+
+        test_in_id = self.number_of_io_pairs * 2
+        full_canvas_test_pixels = self.get_object_pixels_from_data(test_in_id,
+                                                                   canvas_pos=Point(0, 0, 0), size=None)
+        full_canvas_test_object = Predefined(actual_pixels=full_canvas_test_pixels)
+        test_individual_objects = gen_function(full_canvas_test_object, full_canvas_test_object, for_canvas='input')
+        for test_obj in test_individual_objects:
+            self.get_canvas_by_id(test_in_id).add_new_object(test_obj)
 
     def reset_object_colours(self):
         for o in self.objects:

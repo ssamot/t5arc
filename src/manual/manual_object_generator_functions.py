@@ -24,12 +24,14 @@ def template(obj: Primitive) -> List[Primitive]:
         new_objects.append(generate_primitive_from_array(a))
 
 
-def same_colour(obj: Primitive):
-    colours = obj.get_used_colours()
+def same_colour_connected_pixels(in_obj: Primitive, out_obj: Primitive, for_canvas: str):
+    base_obj = in_obj if for_canvas == 'input' else out_obj
+
+    colours = base_obj.get_used_colours()
 
     all_objects = []
     for colour in colours:
-        one_colour_objects = obj.create_new_primitives_from_pixels_of_colour(colour)
+        one_colour_objects = base_obj.create_new_primitives_from_pixels_of_colour(colour)
 
         for oco in one_colour_objects:
             all_objects.append(oco)
