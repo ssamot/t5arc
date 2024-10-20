@@ -2,6 +2,7 @@
 from copy import deepcopy, copy
 from typing import List, Dict
 import numpy as np
+import networkx as nx
 
 from data import load_data as ld
 from data.generators.object_recognition.primitives import Predefined
@@ -11,6 +12,7 @@ from data.generators.object_recognition.canvas import Canvas
 from data.generators.task_generator import utils
 from data.generators import constants as const
 import manual.heuristics.heuristics_for_object_detection as obj_dect_heur
+import manual.heuristics.heuristics_for_object_linking as obj_link_heur
 
 from_json = ld.from_json
 
@@ -75,6 +77,7 @@ class ARCTask(Task):
 
         super().__init__(run_generate_canvasses=False)
 
+        self.number_of_io_pairs = len(self.task_data['train'])
         self.experiment_type = 'ARC'
         self.input_canvases_augmented = []
         self.output_canvases_augmented = []
@@ -82,6 +85,10 @@ class ARCTask(Task):
         self.test_output_canvas_augmented = []
         self.colour_mappings_for_augmentation = []
         self.number_of_rotations_for_augmentation = 1
+        self.objects_transformations_across_inputs_graph = nx.Graph()
+        self.objects_transformations_across_outputs_graph = nx.Graph()
+        self.objects_transformations_in_example_graphs = [nx.Graph() for _ in range(self.number_of_io_pairs)]
+
 
     def generate_canvasses(self, empty: bool = True, augment_with: List[str] | None = None, max_samples: int = 10000,
                            with_black: bool = True):
@@ -96,7 +103,7 @@ class ARCTask(Task):
          'colour', 'rotation', 'translation'
         :return:
         """
-        self.number_of_io_pairs = len(self.task_data['train'])
+
         self.number_of_canvasses = self.number_of_io_pairs * 2 + 2
 
         for pair in range(self.number_of_io_pairs):
@@ -119,6 +126,9 @@ class ARCTask(Task):
                                             _id=2 * self.number_of_io_pairs)
             self.test_output_canvas = Canvas(size=Dimension2D(test_output_data.shape[1], test_output_data.shape[0]),
                                              _id=2 * self.number_of_io_pairs + 1)
+
+        if not empty:
+            self.populate_object_transformations_graphs_with_nodes()
 
         if augment_with is not None and not empty:
             self.generate_augmented_canvasses(augment_with, max_samples, with_black)
@@ -182,6 +192,20 @@ class ARCTask(Task):
 
             j += 4
 
+    def populate_object_transformations_graphs_with_nodes(self):
+        for c in self.input_canvases:
+            self.objects_transformations_across_inputs_graph.add_nodes_from(c.objects)
+        for c in self.output_canvases:
+            self.objects_transformations_across_outputs_graph.add_nodes_from(c.objects)
+
+        for j, (i, o) in enumerate(zip(self.input_canvases, self.output_canvases)):
+            self.objects_transformations_in_example_graphs[j].add_nodes_from(i.objects)
+            self.objects_transformations_in_example_graphs[j].add_nodes_from(o.objects)
+
+
+    def populate_object_transformations_graphs_with_edges(self):
+        pass
+
     def get_object_pixels_from_data(self, canvas_id: int, canvas_pos: Point, size: Dimension2D | None = None) \
             -> np.ndarray:
 
@@ -210,6 +234,7 @@ class ARCTask(Task):
             in_actual_pixels = np.flipud(self.task_data['train'][j]['input']) + 1
             base_obj_in = Predefined(actual_pixels=in_actual_pixels)
             i.add_new_object(base_obj_in)
+
             out_actual_pixels = np.flipud(self.task_data['train'][j]['output']) + 1
             base_obj_out = Predefined(actual_pixels=out_actual_pixels)
             o.add_new_object(base_obj_out)
@@ -223,6 +248,22 @@ class ARCTask(Task):
 
         detector.run_detection()
         detector.embed_objects_in_canvasses()
+
+        # Create the ids of the new objects
+        for i in range(self.number_of_canvasses):
+            c = self.get_canvas_by_id(i)
+            for obj in c.objects:
+                id = 0 if len(self.objects) == 0 else self.objects[-1].id + 1
+                obj.id = id
+                self.objects.append(obj)
+
+        self.populate_object_transformations_graphs_with_nodes()
+
+    def manually_link_detected_objects(self, manual_linker_name: str):
+
+        linker = obj_link_heur.get_manual_object_linker_subclass_by_name(manual_linker_name=manual_linker_name)(self)
+
+        linker.run_linker()
 
     def reset_object_colours(self):
         for o in self.objects:

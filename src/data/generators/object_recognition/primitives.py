@@ -7,7 +7,7 @@ from json import JSONEncoder
 
 import numpy as np
 from data.generators import constants as const
-from typing import List
+from typing import List, Dict
 from enum import Enum
 from scipy import ndimage as ndi
 from data.generators.object_recognition.object import Object
@@ -54,6 +54,12 @@ class ObjectType(Enum):
             probabilities = _probabilities
         return ObjectType(np.random.choice(np.arange(len(probabilities)), p=probabilities))
 
+    @staticmethod
+    def get_int_from_name(name: str) -> int:
+        for t in ObjectType:
+            if t.name == name:
+                return t.value
+
 
 class Primitive(Object):
     def __init__(self, size: Dimension2D | np.ndarray | List, colour: None | int = None,
@@ -91,9 +97,6 @@ class Primitive(Object):
 
     def set_new_size(self, new_size: Dimension2D):
         self.size = new_size
-
-    def split_by_colour(self):
-        pass
 
     def create_new_primitives_from_pixels_of_colour(self, colour: int) -> List[Object]:
         pixels = copy(self.actual_pixels)
@@ -222,7 +225,6 @@ class Primitive(Object):
         object.border_size = Surround(Up=self.border_size.Up, Down=self.border_size.Down, Left=self.border_size.Left,
                                       Right=self.border_size.Right)
         object.rotation_axis = Point(self.rotation_axis.x, self.rotation_axis.y, self.rotation_axis.z)
-        #object._reset_dimensions()
         return object
 
     def __repr__(self):
@@ -260,6 +262,40 @@ class Primitive(Object):
             return False
 
         return result
+
+    def __hash__(self):
+        return hash(tuple((self.id, self.canvas_id, self.canvas_pos.x, self.canvas_pos.y)))
+
+    def get_features(self) -> Dict:
+        features = {}
+
+        features['Canvas Position X'] = self.canvas_pos.x
+        features['Canvas Position Y'] = self.canvas_pos.y
+        features['Canvas Position Z'] = self.canvas_pos.z
+        features['Dimension X'] = self.dimensions.dx
+        features['Dimension Y'] = self.dimensions.dx
+
+        features['Number of Colours'] = len(self.get_used_colours())
+        features['Number of Pixels with Colour'] = self.get_number_of_pixels_for_each_colour()
+
+        features['Most common Colour'] = self.get_most_common_colour()
+        colours = np.array(list(self.get_used_colours())).astype(int)
+        one_hot_colours = np.zeros(10).astype(int)
+        one_hot_colours[colours] = 1
+        features['Used Colours'] = one_hot_colours
+
+        features['Type'] = ObjectType.get_int_from_name(self.get_str_type())
+        features['Symmetries'] = []  # TODO: fill this
+
+        features['2x2 Shape Index'] = self.get_2x2_shape_index()
+        features['3x3 Shape Index'] = self.get_3x3_shape_index()
+        _, n_holes, size_of_holes = self.detect_holes()
+        features['Number of Holes'] = n_holes
+        ten_holes_sizes = np.zeros(10)
+        ten_holes_sizes[: len(size_of_holes)] = size_of_holes
+        features['Hole sizes'] = ten_holes_sizes
+
+        return features
 
 
 class Predefined(Primitive):

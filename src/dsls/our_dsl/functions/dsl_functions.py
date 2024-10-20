@@ -104,7 +104,7 @@ def get_distance_touching_between_objects(first: Primitive, second: Primitive) -
 def get_point_for_match_shape_furthest(background_obj: Primitive, filter_obj: Primitive,
                                        match_shape_only: bool, try_unique: bool = True,
                                        padding: Surround = Surround(0, 0, 0, 0)) -> Point:
-    result = filter_obj.match(background_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
+    result = filter_obj.match_to_background(background_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
     rotation = 0
     scale = 1
     match_positions = []
@@ -120,7 +120,7 @@ def get_point_for_match_shape_furthest(background_obj: Primitive, filter_obj: Pr
 def get_point_and_rotation_for_match_shape_furthest(background_obj: Primitive, filter_obj: Primitive,
                                                     match_shape_only: bool, try_unique: bool = True,
                                                     padding: Surround = Surround(0, 0, 0, 0)) -> Tuple[Point, int]:
-    result = filter_obj.match(background_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
+    result = filter_obj.match_to_background(background_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
     match_positions = [result[i]['canvas_pos'][0] for i in range(len(result))]
     rotations = [result[i]['rotation'] for i in range(len(result))]
     _, index = furthest_point_to_point(filter_obj.canvas_pos, match_positions)
@@ -131,7 +131,7 @@ def get_point_and_rotation_for_match_shape_furthest(background_obj: Primitive, f
 def get_point_for_match_shape_nearest(background_obj: Primitive, filter_obj: Primitive,
                                       match_shape_only: bool, try_unique:bool = True,
                                       padding: Surround = Surround(0, 0, 0, 0)) -> Point:
-    result = filter_obj.match(background_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
+    result = filter_obj.match_to_background(background_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
     rotation = 0
     scale = 1
     match_positions = []
@@ -148,7 +148,7 @@ def get_point_for_match_shape_nearest(background_obj: Primitive, filter_obj: Pri
 def get_point_and_rotation_for_match_shape_nearest(background_obj: Primitive, filter_obj: Primitive,
                                                    match_shape_only: bool, try_unique:bool = True,
                                                    padding: Surround = Surround(0, 0, 0, 0)) -> Tuple[Point, int]:
-    result = filter_obj.match(background_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
+    result = filter_obj.match_to_background(background_obj, match_shape_only=match_shape_only, try_unique=try_unique, padding=padding)
     match_positions = [result[i]['canvas_pos'] for i in range(len(result))]
     rotations = [result[i]['rotation'] for i in range(len(result))]
     _, index = closest_point_to_point(filter_obj.canvas_pos, match_positions)

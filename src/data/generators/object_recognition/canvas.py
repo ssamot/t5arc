@@ -31,11 +31,8 @@ class Canvas:
         elif type(size) == Dimension2D:
             self.size = Dimension2D(int(size.dx), int(size.dy))
 
-        if objects is None:
-            self.objects = []
-        else:
-            self.objects = objects
         self.id = _id
+        self.objects = []
 
         if actual_pixels is None:
             self.actual_pixels = np.ones((size.dy, size.dx))
@@ -46,8 +43,11 @@ class Canvas:
         self.full_canvas = np.zeros((MAX_PAD_SIZE, MAX_PAD_SIZE))
         self.full_canvas[0: self.size.dy, 0:self.size.dx] = self.actual_pixels
         self.background_pixels = np.ndarray.copy(self.actual_pixels)
+        self.objects_features = {}
 
-        self.embed_objects()
+        if objects is not None:
+            for o in objects:
+                self.add_new_object(o)
 
     def __repr__(self):
         return f'Canvas {self.id} with {len(self.objects)} Primitives'
@@ -106,6 +106,13 @@ class Canvas:
                 result.append(obj)
 
         return result
+
+    def find_object_at_canvas_pos(self, cp: Point) -> Primitive | None:
+        for obj in self.objects:
+            if cp == obj.canvas_pos:
+                return obj
+
+        return None
 
     def get_coloured_pixels_positions(self) -> np.ndarray:
         """
@@ -204,6 +211,7 @@ class Canvas:
                 obj.id = 0
             else:
                 obj.id = np.max([o.id for o in self.objects]) + 1
+        obj.canvas_id = self.id
         self.objects.append(obj)
         obj.canvas_id = self.id
         self.embed_objects()
@@ -282,6 +290,163 @@ class Canvas:
         """
         self.objects[index].canvas_pos = canvas_pos
         self.embed_objects()
+
+    def add_relational_features_to_canvas_objects(self):
+        max_assumed_num_of_objects = 10
+        for obj in self.objects:
+            other_objects = copy(self.objects)
+            other_objects.remove(obj)
+
+            features = obj.get_features()
+
+            features['Touches Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for i, oo in enumerate(other_objects):
+                if obj.is_object_touching(oo):
+                    features['Touches Objects'][j] = oo.id
+                    j += 1
+
+            features['Overlaps Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for i, oo in enumerate(other_objects):
+                if obj.is_object_overlapped(oo):
+                    features['Overlaps Objects'][j] = oo.id
+                    j += 1
+
+            features['Underlaps Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for i, oo in enumerate(other_objects):
+                if obj.is_object_underlapped(oo):
+                    features['Underlaps Objects'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo):
+                    features['Matches Objects'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects Only By Shape'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo, match_shape_only=True):
+                    features['Matches Objects Only By Shape'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects if Rotated'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo, transformations=['rotate']):
+                    features['Matches Objects if Rotated'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects if Rotated Only By Shape'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo, match_shape_only=True, transformations=['rotate']):
+                    features['Matches Objects if Rotated Only By Shape'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects if Scaled'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo, transformations=['scale']):
+                    features['Matches Objects if Scaled'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects if Scaled Only By Shape'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo, match_shape_only=True, transformations=['scale']):
+                    features['Matches Objects if Scaled Only By Shape'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects if Flipped'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo, transformations=['flip']):
+                    features['Matches Objects if Flipped'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects if Flipped Only By Shape'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo, match_shape_only=True, transformations=['flip']):
+                    features['Matches Objects if Flipped Only By Shape'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects if Inverted'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo, transformations=['invert']):
+                    features['Matches Objects if Inverted'][j] = oo.id
+                    j += 1
+
+            features['Matches Objects if Inverted Only By Shape'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_matching_to_object(oo, match_shape_only=True, transformations=['invert']):
+                    features['Matches Objects if Inverted Only By Shape'][j] = oo.id
+                    j += 1
+
+            features['Along X with Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_along_x_to_object(oo):
+                    features['Along X with Objects'][j] = oo.id
+                    j += 1
+
+            features['Along Y with Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_along_y_to_object(oo):
+                    features['Along Y with Objects'][j] = oo.id
+                    j += 1
+
+            features['Along XY with Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_along_xy_to_object(oo):
+                    features['Along XY with Objects'][j] = oo.id
+                    j += 1
+
+            features['Along XminusY with Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_along_xminusy_to_object(oo):
+                    features['Along XminusY with Objects'][j] = oo.id
+                    j += 1
+
+            features['Over Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_over_object(oo):
+                    features['Over Objects'][j] = oo.id
+                    j += 1
+
+            features['Under Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_under_object(oo):
+                    features['Under Objects'][j] = oo.id
+                    j += 1
+
+            features['Left of Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_left_of_object(oo):
+                    features['Left of Objects'][j] = oo.id
+                    j += 1
+
+            features['Right of Objects'] = np.zeros(max_assumed_num_of_objects) - 1
+            j = 0
+            for oo in other_objects:
+                if obj.is_object_right_of_object(oo):
+                    features['Right of Objects'][j] = oo.id
+                    j += 1
+
+            self.objects_features[obj.id] = features
 
     def json_output(self, with_pixels: bool = False) -> dict:
         result = {'objects': []}

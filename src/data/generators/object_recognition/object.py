@@ -222,7 +222,7 @@ class Object:
         The getter of the holes of the Object.
         :return: the holes
         """
-        holes, n = self.detect_holes(self.actual_pixels)
+        holes, n, _ = self.detect_holes(self.actual_pixels)
         if n == 0:
             return None
         self._holes = holes
@@ -373,14 +373,14 @@ class Object:
                                             padding: Surround | None = None, try_unique: bool = True,
                                             match_shape_only: bool = False) -> Tuple[List[Point], np.ndarray]:
         """
-        The basic match between a background Object and a filter Object. It calculates the list of coordinates
-        (Points) that the filter Object should translate to so that it gives the best match with background Object.
-        This is a list if multiple positions result in the same match quality. It also returns the match quality.
+        The basic match_to_background between a background Object and a filter Object. It calculates the list of coordinates
+        (Points) that the filter Object should translate to so that it gives the best match_to_background with background Object.
+        This is a list if multiple positions result in the same match_to_background quality. It also returns the match_to_background quality.
         :param background_obj: The object to be matched
-        :param filter_obj: The object to match
+        :param filter_obj: The object to match_to_background
         :param padding: Any padding (Surround) that would help with the matching. If (0, 0, 0, 0) doesn't work try (1, 1, 1, 1)
-        :param match_shape_only: If True then ignore colours and match only for the shapes the visible pixels generates.
-        :return: The best position(s) the filter should move to in order to match background, The quality of the match.
+        :param match_shape_only: If True then ignore colours and match_to_background only for the shapes the visible pixels generates.
+        :return: The best position(s) the filter should move to in order to match_to_background background, The quality of the match_to_background.
         """
         if padding is None:
             padding = Surround(0, 0, 0, 0)
@@ -944,7 +944,7 @@ class Object:
         :return: True if the process was successful (there is a hole) and False if not
         """
         pixels = copy(self.actual_pixels)
-        initial_holes, initial_n_holes = self.detect_holes()
+        initial_holes, initial_n_holes, _ = self.detect_holes()
         connected_components, n = ndi.label(np.array(pixels > 1).astype(int))
         largest_component = 0
         for i in range(1, np.max(connected_components) + 1):
@@ -983,7 +983,7 @@ class Object:
 
                 for hp in hole_points:
                     pixels[hp[0], hp[1]] = 1
-                final_holes, final_n_holes = self.detect_holes(pixels)
+                final_holes, final_n_holes, _ = self.detect_holes(pixels)
 
                 if final_n_holes > initial_n_holes:
                     self.actual_pixels = pixels
@@ -1173,7 +1173,7 @@ class Object:
 
     def is_object_touching(self, other: Object) -> bool:
         if self.is_object_superimposed(other):
-            return True
+            return False
 
         # Check to see if the Objects touch at a corner
         steps = [Dimension2D(0, 1), Dimension2D(0, -1), Dimension2D(1, 0), Dimension2D(-1, 0),
@@ -1186,6 +1186,108 @@ class Object:
                 return True
 
         return False
+
+    def is_object_matching_to_object(self, obj: Object, match_shape_only: bool = False,
+                                     transformations: List[str] | None = ('rotate', 'scale', 'flip', 'invert')) -> bool:
+        def basic_match(obj_a: Object, obj_b: Object):
+            result = False
+            if match_shape_only:
+                if np.array_equal(obj_a.actual_pixels > 1, obj_b.actual_pixels > 1):
+                    result = True
+            else:
+                if np.array_equal(obj_a.actual_pixels, obj_b.actual_pixels):
+                    result = True
+            return result
+
+        obj_b = copy(obj)
+        if transformations is not None:
+            rots = [1, 2, 3] if 'rotate' in transformations else [0]
+            scales = [2, 3] if 'scale' in transformations else [1]
+            orientations = Transformations(10).get_all_possible_parameters() if 'flip' in transformations else [None]
+            if len(orientations) > 1:
+                orientations.remove(None)
+            for rot in rots:
+                for scale in scales:
+                    for orientation in orientations:
+                        obj_a = copy(self)
+                        if 'rotate' in transformations:
+                            obj_a.rotate(rot)
+                        if 'scale' in transformations:
+                            obj_a.scale(scale)
+                        if 'flip' in transformations:
+                            obj_a.flip(orientation)
+                        if 'invert' in transformations:
+                            obj_a.negate_colour()
+                        if basic_match(obj_a, obj_b):
+                            return True
+        else:
+            return basic_match(self, obj)
+
+        return False
+
+    def is_object_along_x_to_object(self, obj: Object) -> bool:
+        temp_obj = copy(obj)
+        temp_obj.translate_to_coordinates(target_point=Point(self.canvas_pos.x, temp_obj.canvas_pos.y))
+
+        if self.is_object_superimposed(temp_obj):
+            return True
+        else:
+            return False
+
+    def is_object_along_y_to_object(self, obj: Object) -> bool:
+        temp_obj = copy(obj)
+        temp_obj.translate_to_coordinates(target_point=Point(temp_obj.canvas_pos.x, self.canvas_pos.y))
+
+        if self.is_object_superimposed(temp_obj):
+            return True
+        else:
+            return False
+
+    def is_object_along_xy_to_object(self, obj: Object) -> bool:
+        dif = (self.canvas_pos - obj.canvas_pos).to_numpy()[:2]
+        if dif[0] == dif[1]:
+            return True
+        else:
+            return False
+
+    def is_object_along_xminusy_to_object(self, obj: Object) -> bool:
+        dif = (self.canvas_pos - obj.canvas_pos).to_numpy()[:2]
+        if dif[0] == - dif[1]:
+            return True
+        else:
+            return False
+
+    def is_object_over_object(self, obj: Object) -> bool:
+        temp_obj = copy(obj)
+        temp_obj.translate_to_coordinates(Point(self.canvas_pos.x, obj.canvas_pos.y))
+        if not self.is_object_superimposed(temp_obj) and self.canvas_pos.y > temp_obj.canvas_pos.y:
+            return True
+        else:
+            return False
+
+    def is_object_under_object(self, obj: Object) -> bool:
+        temp_obj = copy(obj)
+        temp_obj.translate_to_coordinates(Point(self.canvas_pos.x, obj.canvas_pos.y))
+        if not self.is_object_superimposed(temp_obj) and self.canvas_pos.y < temp_obj.canvas_pos.y:
+            return True
+        else:
+            return False
+
+    def is_object_left_of_object(self, obj: Object) -> bool:
+        temp_obj = copy(obj)
+        temp_obj.translate_to_coordinates(Point(obj.canvas_pos.x, self.canvas_pos.y))
+        if not self.is_object_superimposed(temp_obj) and self.canvas_pos.x < temp_obj.canvas_pos.x:
+            return True
+        else:
+            return False
+
+    def is_object_right_of_object(self, obj: Object) -> bool:
+        temp_obj = copy(obj)
+        temp_obj.translate_to_coordinates(Point(obj.canvas_pos.x, self.canvas_pos.y))
+        if not self.is_object_superimposed(temp_obj) and self.canvas_pos.x > temp_obj.canvas_pos.x:
+            return True
+        else:
+            return False
 
     def get_coloured_pixels_positions(self, col: int | None = None) -> np.ndarray:
         """
@@ -1228,7 +1330,15 @@ class Object:
         colours = self.get_used_colours()
         for col in colours:
             positions = self.get_coloured_pixels_positions(col)
-            result[col] = positions
+            result[int(col)] = positions
+        return result
+
+    def get_number_of_pixels_for_each_colour(self) -> np.ndarray[int]:
+        result = np.zeros(10)
+
+        for i in self.get_colour_groups():
+            result[i] = len(self.get_colour_groups()[i])
+
         return result
 
     def get_most_common_colour(self) -> int:
@@ -1269,12 +1379,12 @@ class Object:
         else:
             return None
 
-    def detect_holes(self, pixels: np.ndarray | None = None) -> Tuple[np.ndarray, int]:
+    def detect_holes(self, pixels: np.ndarray | None = None) -> Tuple[np.ndarray, int, int|None]:
         """
         Detects the presence of any holes. A hole is a spatially contiguous set of empty pixels that are fully
         surrounded by coloured pixels.
         :param pixels: The 2d array of pixels in which to detect the presence of holes.
-        :return: The array marked with the holes' labels and the number of holes found
+        :return: The array marked with the holes' labels, the number of holes found and the size of each hole (in pixels)
         """
         if pixels is None:
             pixels = copy(self.actual_pixels)
@@ -1290,45 +1400,94 @@ class Object:
                 connected_components[comp_coords[0], comp_coords[1]] = 0
 
         holes, n = ndi.label(connected_components)
+        sizes = []
+        if n > 0:
+            for i in range(n+1)[1:]:
+                s = len(np.argwhere(holes == i))
+                sizes.append(s)
+        else:
+            sizes = None
 
-        return holes, n
+        return holes, n, sizes
 
-    def match(self, background_obj: Object, match_shape_only: bool = False, try_unique: bool = True,
-              padding: Surround = Surround(0, 0, 0, 0), transformations: List[str] = ('rotate', 'scale', 'flip')) \
+    def get_shape_index(self) -> int | None:
+        m = self.dimensions.dx
+        n = self.dimensions.dy
+
+        if m * n > 20:
+            return None
+        else:
+            size = m * n
+
+            all_possible_designs = np.array(list(itertools.product([0, 1], repeat=size)))
+            all_possible_designs = [e.reshape((n, m)) for e in all_possible_designs]
+
+            binary_equivalence = [np.array_equal(e, self.actual_pixels > 1) for e in all_possible_designs]
+
+            return np.where(binary_equivalence)[0][0]
+
+    def get_2x2_shape_index(self) -> int | None:
+
+        if self.dimensions != Dimension2D(2, 2):
+            return -1
+        else:
+            self.get_shape_index()
+
+    def get_3x3_shape_index(self) -> int | None:
+
+        if self.dimensions != Dimension2D(3, 3):
+            return -1
+        else:
+            self.get_shape_index()
+
+    def get_3x3_design(self) -> int:
+        all_possible_designs = np.array(list(itertools.product([0, 1], repeat=9)))
+        all_possible_designs = [e.reshape((2, 2)) for e in all_possible_designs]
+
+        binary_equivalence = [np.array_equal(e, self.actual_pixels) for e in all_possible_designs]
+
+        return np.where(binary_equivalence)[0][0]
+
+    def match_to_background(self, background_obj: Object, match_shape_only: bool = False, try_unique: bool = True,
+                            padding: Surround = Surround(0, 0, 0, 0),
+                            transformations: List[str] = ('rotate', 'scale', 'flip', 'invert')) \
             -> List[dict[str, int | List[Point]]]:
         """
 
         :param background_obj: The Object over which to pass this Object to see if any part of it matches with this Object
         :param match_shape_only: Only check out the shape similarity and ignore the colour
-        :param try_unique: Does a center surround algorithm trying to increase the accuracy of the match
+        :param try_unique: Does a center surround algorithm trying to increase the accuracy of the match_to_background
         :param padding: Add padding surrounding the objects (Surround).
-        :param transformations: Allow the type of transformations this Object will undergo to try and match
+        :param transformations: Allow the type of transformations this Object will undergo to try and match_to_background
         :return: A list of dictionaries describing the translations, rotations, scaling and flips of the best matches.
         """
 
         positions = []
         max_results = []
         transformation_results = []
-        rots = Transformations(6).get_all_possible_parameters() if 'rotate' in transformations else 0
-        scales = [1, 2, 3] if 'scale' in transformations else 1
-        orientations = Transformations(10).get_all_possible_parameters() if 'flip' in transformations else None
+        rots = Transformations(6).get_all_possible_parameters() if 'rotate' in transformations else [0]
+        scales = [1, 2, 3] if 'scale' in transformations else [1]
+        orientations = Transformations(10).get_all_possible_parameters() if 'flip' in transformations else [None]
         for rot in rots:
             for scale in scales:
                 for orientation in orientations:
-                    filter_obj = copy(self)
-                    background_obj_cp = copy(background_obj)
-                    if 'rotate' in transformations:
-                        filter_obj.rotate(rot)
-                    if 'scale' in transformations:
-                        filter_obj.scale(scale)
-                    if 'flip' in transformations:
-                        filter_obj.flip(orientation)
-                    position, max_result = Object._match_filter_obj_to_background_obj(background_obj=background_obj_cp,
-                                                                                      filter_obj=filter_obj,
-                                                                                      match_shape_only=match_shape_only,
-                                                                                      try_unique=try_unique,
-                                                                                      padding=padding)
-                    transformation_results.append([rot, scale, orientation])
+                    for inversion in [False, True]:
+                        filter_obj = copy(self)
+                        background_obj_cp = copy(background_obj)
+                        if 'rotate' in transformations:
+                            filter_obj.rotate(rot)
+                        if 'scale' in transformations:
+                            filter_obj.scale(scale)
+                        if 'flip' in transformations:
+                            filter_obj.flip(orientation)
+                        if 'invert' in transformations and inversion is True:
+                            filter_obj.negate_colour()
+                        position, max_result = Object._match_filter_obj_to_background_obj(background_obj=background_obj_cp,
+                                                                                          filter_obj=filter_obj,
+                                                                                          match_shape_only=match_shape_only,
+                                                                                          try_unique=try_unique,
+                                                                                          padding=padding)
+                    transformation_results.append([rot, scale, orientation, inversion])
                     positions.append(position)
                     max_results.append(max_result)
 
@@ -1339,6 +1498,7 @@ class Object:
         result = [{'rotation': best_transformations[i][0],
                    'scale': best_transformations[i][1],
                    'flip': best_transformations[i][2],
+                   'inversion': best_transformations[i][3],
                    'canvas_pos':best_positions[i]} for i in range(len(best_transformations))]
 
         return result
