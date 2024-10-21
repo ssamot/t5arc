@@ -96,9 +96,6 @@ class Canvas:
 
         return sorted_objects
 
-    def group_objects_by_colour(self):
-        pass
-
     def find_objects_of_colour(self, colour: int):
         result = []
         for obj in self.objects:

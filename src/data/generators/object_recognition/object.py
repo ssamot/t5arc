@@ -1487,19 +1487,21 @@ class Object:
                                                                                           match_shape_only=match_shape_only,
                                                                                           try_unique=try_unique,
                                                                                           padding=padding)
-                    transformation_results.append([rot, scale, orientation, inversion])
-                    positions.append(position)
-                    max_results.append(max_result)
+                        transformation_results.append([rot, scale, orientation, inversion])
+                        positions.append(position)
+                        max_results.append(max_result)
 
         best_results_indices = np.argwhere(max_results == np.amax(max_results))
         best_positions = [positions[i[0]] for i in best_results_indices]
         best_transformations = [transformation_results[i[0]] for i in best_results_indices]
+        best_max_results = [max_results[i[0]] for i in best_results_indices]
 
         result = [{'rotation': best_transformations[i][0],
                    'scale': best_transformations[i][1],
                    'flip': best_transformations[i][2],
                    'inversion': best_transformations[i][3],
-                   'canvas_pos':best_positions[i]} for i in range(len(best_transformations))]
+                   'canvas_pos':best_positions[i],
+                   'result': best_max_results[i]} for i in range(len(best_transformations))]
 
         return result
 

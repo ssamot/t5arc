@@ -20,6 +20,8 @@ class PrimitivesJSONEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return 'actual_pixels_id_placeholder' #obj.tolist()
+        if isinstance(obj, np.int64):
+            return int(obj)
         if isinstance(obj, np.int32):
             return int(obj)
         if isinstance(obj, Orientation):
@@ -205,8 +207,12 @@ class Primitive(Object):
         args['_id'] = self.id
         args['actual_pixels_id'] = self.actual_pixels_id
         type_name = self.get_str_type()
-        if type_name in np.array(['InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie']):
+        if type_name in np.array(['Predefined', 'InverseCross', 'Steps', 'Pyramid', 'Dot', 'Diagonal', 'Fish', 'Bolt', 'Tie']):
             args.pop('size', None)
+        if type_name == 'Predefined':
+            args.pop('colour', None)
+            args.pop('canvas_pos', None)
+            args['actual_pixels'] = self.actual_pixels
         if type_name == 'Hole':
             args.pop('hole_bbox', None)
         if type_name == 'Dot':
@@ -264,7 +270,9 @@ class Primitive(Object):
         return result
 
     def __hash__(self):
-        return hash(tuple((self.id, self.canvas_id, self.canvas_pos.x, self.canvas_pos.y)))
+        data = copy(self.actual_pixels)
+        data.flags.writeable = False
+        return hash(tuple((self.id, self.canvas_id, self.canvas_pos.x, self.canvas_pos.y, data.data.tobytes())))
 
     def get_features(self) -> Dict:
         features = {}
@@ -299,16 +307,16 @@ class Primitive(Object):
 
 
 class Predefined(Primitive):
-    def __init__(self, actual_pixels: np.ndarray, border_size: Surround = (0, 0, 0, 0),
-                 required_dist_to_others: Surround = Surround(0, 0, 0, 0)):
+    def __init__(self, actual_pixels: np.ndarray, border_size: Surround = Surround(0, 0, 0, 0),
+                 required_dist_to_others: Surround = Surround(0, 0, 0, 0),
+                 _id: None | int = None, actual_pixels_id: None | int = None, canvas_id: None | int = None):
 
         size = Dimension2D(dx=actual_pixels.shape[1], dy=actual_pixels.shape[0])
-        colour = int(np.argmax(np.bincount(actual_pixels[np.where(actual_pixels > 1)])))
+        colour = int(np.argmax(np.bincount(actual_pixels[np.where(actual_pixels > 1)].astype(int))))
         Primitive.__init__(self, size=size, border_size=border_size,
                            required_dist_to_others=required_dist_to_others, colour=colour)
         Object.__init__(self, actual_pixels=actual_pixels, border_size=border_size,
-                        canvas_pos=Point(0, 0, 0),
-                        _id=0, actual_pixels_id=0, canvas_id=0)
+                        canvas_pos=Point(0, 0, 0), _id=_id, actual_pixels_id=actual_pixels_id, canvas_id=canvas_id)
 
 
 class Random(Primitive):

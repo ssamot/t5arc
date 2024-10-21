@@ -1,6 +1,5 @@
 
 from abc import ABC, abstractmethod
-import numpy as np
 
 from data.generators.task_generator.task import Task
 

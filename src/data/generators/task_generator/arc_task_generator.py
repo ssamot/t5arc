@@ -89,7 +89,6 @@ class ARCTask(Task):
         self.objects_transformations_across_outputs_graph = nx.Graph()
         self.objects_transformations_in_example_graphs = [nx.Graph() for _ in range(self.number_of_io_pairs)]
 
-
     def generate_canvasses(self, empty: bool = True, augment_with: List[str] | None = None, max_samples: int = 10000,
                            with_black: bool = True):
         """
@@ -202,7 +201,6 @@ class ARCTask(Task):
             self.objects_transformations_in_example_graphs[j].add_nodes_from(i.objects)
             self.objects_transformations_in_example_graphs[j].add_nodes_from(o.objects)
 
-
     def populate_object_transformations_graphs_with_edges(self):
         pass
 
@@ -228,7 +226,7 @@ class ARCTask(Task):
 
         return actual_pixels
 
-    def generate_objects_from_data(self, manual_detector_name: str):
+    def generate_objects_from_heuristic(self, manual_detector_name: str):
 
         for j, (i, o) in enumerate(zip(self.input_canvases, self.output_canvases)):
             in_actual_pixels = np.flipud(self.task_data['train'][j]['input']) + 1
@@ -257,9 +255,9 @@ class ARCTask(Task):
                 obj.id = id
                 self.objects.append(obj)
 
-        self.populate_object_transformations_graphs_with_nodes()
+    def link_detected_objects_with_heuristic(self, manual_linker_name: str):
 
-    def manually_link_detected_objects(self, manual_linker_name: str):
+        self.populate_object_transformations_graphs_with_nodes()
 
         linker = obj_link_heur.get_manual_object_linker_subclass_by_name(manual_linker_name=manual_linker_name)(self)
 
